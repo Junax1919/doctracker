@@ -1,0 +1,2884 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DocuTracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --primary: #0f172a;
+      --primary-hover: #1e293b;
+      --bg: #f8fafc;
+      --card: #fff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --blue: #3b82f6;
+      --blue-light: #eff6ff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --sidebar-width: 230px;
+      --sidebar-collapsed: 72px;
+      --topbar-h: 64px;
+      --radius: 8px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);
+      --shadow: 0 1px 3px rgba(0, 0, 0, .1), 0 1px 2px -1px rgba(0, 0, 0, .1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1)
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh
+    }
+
+    /* ---- AUTH VIEWS ---- */
+    .auth-view {
+      display: none;
+      min-height: 100vh;
+      background: #f9fafb;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .auth-view.active {
+      display: flex
+    }
+
+    /* Login page: full background image with dark overlay */
+    #view-login {
+      position: relative;
+      background-image: url('https://images.pexels.com/photos/1797418/pexels-photo-1797418.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed
+    }
+
+    #view-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 15, 30, 0.62);
+      z-index: 0
+    }
+
+    #view-login .brand-header,
+    #view-login .auth-card,
+    #view-login .auth-modal {
+      position: relative;
+      z-index: 1
+    }
+
+    #view-login .brand-header .material-symbols-outlined,
+    #view-login .brand-header span {
+      color: #fff
+    }
+
+    #view-login .auth-card {
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35)
+    }
+
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 24px
+    }
+
+    .brand-header .material-symbols-outlined {
+      font-size: 20px;
+      color: #0f172a
+    }
+
+    .brand-header span {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a
+    }
+
+    .auth-card {
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .05);
+      width: 360px
+    }
+
+    .auth-card h2,
+    .auth-card p.subtitle {
+      text-align: center
+    }
+
+    .auth-card p.subtitle {
+      margin-top: 4px;
+      margin-bottom: 16px;
+      color: #6b7280;
+      font-size: 14px
+    }
+
+    .input-group {
+      margin-bottom: 16px
+    }
+
+    .input-group label {
+      font-size: 13px;
+      color: #374151;
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      box-sizing: border-box;
+      transition: border .2s, box-shadow .2s;
+      font-family: inherit
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #0f172a;
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, .1)
+    }
+
+    .password-wrapper {
+      position: relative
+    }
+
+    .password-wrapper input {
+      padding-right: 42px
+    }
+
+    .eye-icon {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      height: 40px;
+      width: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #9ca3af;
+      transition: color .2s;
+      padding: 0
+    }
+
+    .eye-icon:hover {
+      color: #4b5563
+    }
+
+    .btn-dark {
+      width: 100%;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 4px;
+      font-family: inherit
+    }
+
+    .btn-dark:hover {
+      background: #1e293b
+    }
+
+    .btn-dark:disabled {
+      background: #6b7280;
+      cursor: not-allowed
+    }
+
+    .btn-outline-auth {
+      width: 100%;
+      background: #fff;
+      color: #0f172a;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+      font-family: inherit
+    }
+
+    .notification {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 13.5px;
+      opacity: 0;
+      transition: opacity .4s ease;
+      min-height: 20px
+    }
+
+    .notification.show {
+      opacity: 1
+    }
+
+    .notification.success {
+      color: #16a34a
+    }
+
+    .notification.error {
+      color: #dc2626
+    }
+
+    .auth-footer {
+      margin-top: 14px;
+      font-size: 13px;
+      text-align: center;
+      color: #6b7280
+    }
+
+    .auth-footer a {
+      color: #0f172a;
+      font-weight: 500
+    }
+
+    .auth-modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, .4);
+      justify-content: center;
+      align-items: center
+    }
+
+    .auth-modal.show {
+      display: flex
+    }
+
+    .auth-modal-content {
+      background: #fff;
+      padding: 24px;
+      border-radius: 10px;
+      width: 340px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .15);
+      text-align: center
+    }
+
+    .auth-modal-content h3 {
+      margin-bottom: 8px;
+      font-size: 18px;
+      font-weight: 600
+    }
+
+    .auth-modal-content p {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 12px
+    }
+
+    .auth-modal-content input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 12px;
+      font-family: inherit
+    }
+
+    /* ---- DASHBOARD LAYOUT ---- */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transition: width .3s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed)
+    }
+
+    .sidebar-header {
+      height: var(--topbar-h);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0
+    }
+
+    .logo-icon .material-symbols-outlined {
+      font-size: 22px
+    }
+
+    .brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+      opacity: 1;
+      transition: opacity .2s
+    }
+
+    .sidebar.collapsed .brand-name {
+      opacity: 0;
+      width: 0;
+      overflow: hidden
+    }
+
+    .sidebar-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0
+    }
+
+    .sidebar-toggle:hover {
+      background: var(--bg);
+      color: var(--text)
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px 12px
+    }
+
+    .nav-section {
+      margin-bottom: 24px
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 0 12px;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      transition: opacity .2s
+    }
+
+    .sidebar.collapsed .nav-section-title {
+      opacity: 0;
+      height: 0;
+      margin: 0
+    }
+
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap
+    }
+
+    .nav-link:hover {
+      background: var(--bg);
+      color: var(--primary)
+    }
+
+    .nav-link.active {
+      background: var(--blue-light);
+      color: var(--blue);
+      font-weight: 600
+    }
+
+    .nav-link .material-symbols-outlined {
+      font-size: 20px;
+      flex-shrink: 0
+    }
+
+    .nav-label {
+      flex: 1;
+      transition: opacity .2s
+    }
+
+    .sidebar.collapsed .nav-label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden
+    }
+
+    .nav-badge {
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      min-width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      transition: opacity .2s
+    }
+
+    .sidebar.collapsed .nav-badge {
+      opacity: 0;
+      width: 0
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border);
+      padding: 12px;
+      flex-shrink: 0;
+      position: relative
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .2s;
+      position: relative
+    }
+
+    .user-profile:hover {
+      background: var(--bg)
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--blue) 0%, #6366f1 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+      text-transform: uppercase
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+      transition: opacity .2s
+    }
+
+    .sidebar.collapsed .user-info {
+      opacity: 0;
+      width: 0;
+      overflow: hidden
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .user-role {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .user-menu-btn {
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all .2s;
+      opacity: 0;
+      flex-shrink: 0
+    }
+
+    .user-profile:hover .user-menu-btn {
+      opacity: 1
+    }
+
+    .sidebar.collapsed .user-menu-btn {
+      opacity: 0;
+      width: 0;
+      overflow: hidden
+    }
+
+    .user-dropdown {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 12px;
+      right: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      overflow: hidden
+    }
+
+    .user-dropdown.show {
+      display: block
+    }
+
+    .user-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text);
+      transition: background .15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit
+    }
+
+    .user-dropdown-item:hover {
+      background: var(--bg)
+    }
+
+    .user-dropdown-item .material-symbols-outlined {
+      font-size: 20px;
+      color: var(--muted)
+    }
+
+    .user-dropdown-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      display: flex;
+      flex-direction: column;
+      transition: margin-left .3s;
+      min-height: 100vh
+    }
+
+    .main-content.sidebar-collapsed {
+      margin-left: var(--sidebar-collapsed)
+    }
+
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 90
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    .page-title-top {
+      font-size: 20px;
+      font-weight: 700
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .notification-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+      max-width: 1920px;
+      width: 100%;
+      margin: 0 auto
+    }
+
+    /* ---- STAT CARDS ---- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-2px)
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--blue) 0%, #6366f1 100%);
+      opacity: 0;
+      transition: opacity .2s
+    }
+
+    .stat-card:hover::before {
+      opacity: 1
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500
+    }
+
+    .stat-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--blue-light);
+      color: var(--blue)
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1
+    }
+
+    /* ---- SECTION / TABLE ---- */
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm)
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px
+    }
+
+    .section-title-main {
+      font-size: 18px;
+      font-weight: 700
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 300px;
+      min-width: 200px
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      transition: all .2s;
+      font-family: inherit
+    }
+
+    .search-input:focus {
+      outline: 0;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-light)
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      font-size: 18px
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all .2s;
+      white-space: nowrap;
+      font-family: inherit
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px)
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border)
+    }
+
+    .btn-outline:hover {
+      background: var(--bg)
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      min-width: 200px;
+      z-index: 1000;
+      max-height: 400px;
+      overflow-y: auto
+    }
+
+    .dropdown-menu.show {
+      display: block
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background .15s;
+      user-select: none
+    }
+
+    .dropdown-item:hover {
+      background: var(--bg)
+    }
+
+    .dropdown-item input[type="checkbox"] {
+      cursor: pointer
+    }
+
+    .table-container {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0
+    }
+
+    thead {
+      background: var(--bg)
+    }
+
+    th {
+      text-align: left;
+      padding: 14px 24px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s
+    }
+
+    th:hover {
+      background: #f1f5f9
+    }
+
+    th.sort-asc::after {
+      content: '▲';
+      margin-left: 6px;
+      font-size: 10px;
+      color: var(--blue)
+    }
+
+    th.sort-desc::after {
+      content: '▼';
+      margin-left: 6px;
+      font-size: 10px;
+      color: var(--blue)
+    }
+
+    tbody tr:hover {
+      background: var(--bg)
+    }
+
+    td {
+      padding: 16px 24px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none
+    }
+
+    .doc-id {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .status-badge {
+      display: inline-flex;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .status-incoming,
+    .status-in-review,
+    .status-in-process,
+    .status-approved {
+      background: #eff6ff;
+      color: #3b82f6
+    }
+
+    .status-received {
+      background: #f0fdf4;
+      color: #10b981
+    }
+
+    .status-hold {
+      background: #fef3c7;
+      color: #f59e0b
+    }
+
+    .status-complete,
+    .status-completed,
+    .status-forwarded,
+    .status-outgoing {
+      background: #f0fdf4;
+      color: #10b981
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 8px
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: none;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s
+    }
+
+    .action-btn:hover {
+      background: var(--bg);
+      color: var(--text)
+    }
+
+    /* ---- MODAL ---- */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, .5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center
+    }
+
+    .modal.show {
+      display: flex
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg)
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px
+    }
+
+    .modal-close:hover {
+      background: var(--bg)
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1
+    }
+
+    .form-group {
+      margin-bottom: 20px
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border .2s, box-shadow .2s
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: 0;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-light)
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 100px
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end
+    }
+
+    /* ---- TOAST ---- */
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 2000;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all .3s
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    #toast.error {
+      background: var(--danger)
+    }
+
+    /* ---- PAGINATION ---- */
+    .pagination-container {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px
+    }
+
+    .pagination-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .pagination-select {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      cursor: pointer;
+      background: #fff;
+      font-family: inherit
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .pagination-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background: var(--bg);
+      color: var(--text)
+    }
+
+    .pagination-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed
+    }
+
+    .pagination-numbers {
+      display: flex;
+      gap: 4px
+    }
+
+    .pagination-number {
+      min-width: 36px;
+      height: 36px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all .2s;
+      font-family: inherit
+    }
+
+    .pagination-number.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      font-weight: 600
+    }
+
+    /* ---- TRACK VIEW ---- */
+    .track-view,
+    .documents-view {
+      display: none
+    }
+
+    .track-view.active,
+    .documents-view.active {
+      display: block
+    }
+
+    .track-search-container {
+      max-width: 600px;
+      margin: 0 auto 32px
+    }
+
+    .track-search-box {
+      position: relative
+    }
+
+    .track-search-box input {
+      width: 100%;
+      padding: 16px 56px 16px 20px;
+      font-size: 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      transition: all .2s;
+      font-family: inherit
+    }
+
+    .track-search-box input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px var(--blue-light);
+      outline: 0
+    }
+
+    .track-search-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: inherit
+    }
+
+    .doc-info-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px
+    }
+
+    .doc-info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border)
+    }
+
+    .doc-info-title {
+      font-size: 20px;
+      font-weight: 700
+    }
+
+    .doc-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px
+    }
+
+    .doc-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .doc-info-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .doc-info-value {
+      font-size: 14px;
+      font-weight: 500
+    }
+
+    .timeline-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px
+    }
+
+    .timeline-header {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 40px
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border)
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-bottom: 32px
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -33px;
+      top: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: 4px solid var(--card);
+      box-shadow: 0 0 0 2px var(--blue);
+      z-index: 1
+    }
+
+    .timeline-dot.created {
+      background: var(--success);
+      box-shadow: 0 0 0 2px var(--success)
+    }
+
+    .timeline-dot.deleted {
+      background: var(--danger);
+      box-shadow: 0 0 0 2px var(--danger)
+    }
+
+    .timeline-content {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 3px solid var(--blue)
+    }
+
+    .timeline-action {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px
+    }
+
+    .timeline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .timeline-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .timeline-remarks {
+      font-size: 13px;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-top: 8px
+    }
+
+    /* ---- FILE UPLOAD ---- */
+    .file-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--bg)
+    }
+
+    .file-upload-area:hover,
+    .file-upload-area.has-file {
+      border-color: var(--blue);
+      background: var(--blue-light)
+    }
+
+    .file-upload-area.has-file {
+      border-color: var(--success);
+      background: #f0fdf4
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      margin-top: 8px
+    }
+
+    .file-remove {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit
+    }
+
+    /* ---- LOGS VIEW ---- */
+    .logs-view {
+      display: none;
+      padding: 32px
+    }
+
+    .logs-view.active {
+      display: block
+    }
+
+    .logs-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden
+    }
+
+    .logs-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px
+    }
+
+    .logs-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .logs-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center
+    }
+
+    .logs-filters input,
+    .logs-filters select {
+      font-family: inherit;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #fff
+    }
+
+    .logs-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    /* ---- PRINT REPORT VIEW ---- */
+    .print-view {
+      display: none;
+      padding: 20px
+    }
+
+    .print-view.active {
+      display: block
+    }
+
+    .print-container {
+      max-width: 1200px;
+      margin: 0 auto
+    }
+
+    .print-header-bar {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow)
+    }
+
+    .print-header-bar h1 {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .config-panel {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow)
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px
+    }
+
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 20px;
+      background: var(--bg);
+      border-radius: 8px
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      cursor: pointer
+    }
+
+    .print-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px
+    }
+
+    #reportPreview {
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      display: none
+    }
+
+    #reportPreview.show {
+      display: block
+    }
+
+    .print-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0
+    }
+
+    .print-table th,
+    .print-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 11px
+    }
+
+    .print-table th {
+      background: #f3f4f6;
+      font-weight: 600
+    }
+
+    /* ---- MOBILE ---- */
+    .mobile-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      color: var(--text)
+    }
+
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, .5);
+      z-index: 99
+    }
+
+    .mobile-overlay.show {
+      display: block
+    }
+
+    .dashboard-footer {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: var(--sidebar-width);
+      transition: margin-left .3s
+    }
+
+    .dashboard-footer.sidebar-collapsed {
+      margin-left: var(--sidebar-collapsed)
+    }
+
+    .dashboard-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted)
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: #94a3b8;
+      font-size: 15px
+    }
+
+    .track-empty-state {
+      text-align: center;
+      padding: 100px 20px;
+      color: var(--muted)
+    }
+
+    .track-empty-state .material-symbols-outlined {
+      font-size: 80px;
+      opacity: .2;
+      margin-bottom: 20px;
+      display: block
+    }
+
+    .admin-btn {
+      background: var(--warning);
+      color: #fff
+    }
+
+    .admin-btn:hover {
+      background: #d97706
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #fff
+      }
+
+      .sidebar,
+      .topbar,
+      .print-header-bar,
+      .config-panel,
+      .dashboard-footer,
+      .logs-header,
+      .logs-filters,
+      .logs-actions {
+        display: none !important
+      }
+
+      #reportPreview {
+        box-shadow: none;
+        padding: 20px
+      }
+
+      .print-table {
+        page-break-inside: avoid
+      }
+    }
+
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.mobile-open {
+        transform: translateX(0)
+      }
+
+      .main-content {
+        margin-left: 0
+      }
+
+      .dashboard-footer {
+        margin-left: 0;
+        text-align: center
+      }
+
+      .hide-mobile {
+        display: none
+      }
+
+      .mobile-menu-toggle {
+        display: flex
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="toast"></div>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+
+  <!-- ========== LOGIN VIEW ========== -->
+  <div class="auth-view active" id="view-login">
+    <div class="brand-header">
+      <span class="material-symbols-outlined">flutter</span>
+      <span>DocuTracker</span>
+    </div>
+    <div class="auth-card">
+      <h2>Welcome back</h2>
+      <p class="subtitle">Login to your DocuTracker account</p>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="m@example.com">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="loginPassword" placeholder="••••••••">
+          <button type="button" class="eye-icon" id="toggleLoginPwd" aria-label="Toggle">
+            <svg id="eyeLogin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn-dark" id="loginBtn">Sign in</button>
+      <div style="text-align:center;margin-top:10px"><a href="#" id="forgotLink"
+          style="color:#0f172a;font-size:13px;font-weight:500">Forgot password?</a></div>
+      <div id="loginNotif" class="notification"></div>
+      <div class="auth-footer">Copyright &copy; 2025 | <a href="https://www.facebook.com/aljuneq"
+          target="_blank">ALJUNEQ</a></div>
+    </div>
+    <div class="auth-modal" id="resetModal">
+      <div class="auth-modal-content">
+        <h3>Reset Password</h3>
+        <p>Enter your registered email to receive a reset link.</p>
+        <input type="email" id="resetEmail" placeholder="you@example.com">
+        <button class="btn-dark" id="sendResetBtn">Send Reset Email</button>
+        <button class="btn-outline-auth" id="closeResetModal">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== RESET PASSWORD VIEW ========== -->
+  <div class="auth-view" id="view-reset">
+    <div class="brand-header">
+      <span class="material-symbols-outlined">flutter</span>
+      <span>DocuTracker</span>
+    </div>
+    <div class="auth-card" id="resetCard">
+      <h2>Reset Password</h2>
+      <p class="subtitle">Enter your new password</p>
+      <div class="input-group">
+        <label>New Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="newPassword" placeholder="••••••••">
+          <button type="button" class="eye-icon" id="togglePwd1">
+            <svg id="eyeReset1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Confirm Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="confirmPassword" placeholder="••••••••">
+          <button type="button" class="eye-icon" id="togglePwd2">
+            <svg id="eyeReset2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn-dark" id="resetBtn">Reset Password</button>
+      <div id="resetNotif" class="notification"></div>
+      <div class="auth-footer"><a href="#" id="backToLogin">Back to login</a></div>
+    </div>
+    <div class="auth-card" id="invalidTokenCard" style="display:none;text-align:center">
+      <h2 style="color:#dc2626">Invalid Token</h2>
+      <p class="subtitle">This reset link is invalid or has expired.</p>
+      <button class="btn-dark" style="margin-top:16px" onclick="showView('login')">Back to Login</button>
+    </div>
+  </div>
+
+  <!-- ========== DASHBOARD VIEW ========== -->
+  <div id="view-dashboard" style="display:none">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon"><span class="material-symbols-outlined">flutter</span></div><span
+            class="brand-name">DocuTracker</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle"><span
+            class="material-symbols-outlined">chevron_left</span></button>
+      </div>
+      <div class="sidebar-content">
+        <div class="nav-section">
+          <div class="nav-section-title">Navigate</div>
+          <ul class="nav-menu">
+            <li><a class="nav-link active" onclick="filterDocs('all',event)"><span
+                  class="material-symbols-outlined">dashboard</span><span class="nav-label">All Documents</span><span
+                  class="nav-badge" id="badge-total">0</span></a></li>
+            <li><a class="nav-link" onclick="filterDocs('incoming',event)"><span
+                  class="material-symbols-outlined">inbox</span><span class="nav-label">Incoming</span><span
+                  class="nav-badge" id="badge-incoming">0</span></a></li>
+            <li><a class="nav-link" onclick="filterDocs('received',event)"><span
+                  class="material-symbols-outlined">mail</span><span class="nav-label">Received</span><span
+                  class="nav-badge" id="badge-received">0</span></a></li>
+            <li><a class="nav-link" onclick="filterDocs('outgoing',event)"><span
+                  class="material-symbols-outlined">send</span><span class="nav-label">Outgoing</span><span
+                  class="nav-badge" id="badge-outgoing">0</span></a></li>
+            <li><a class="nav-link" onclick="filterDocs('hold',event)"><span
+                  class="material-symbols-outlined">pause_circle</span><span class="nav-label">Hold</span><span
+                  class="nav-badge" id="badge-hold">0</span></a></li>
+            <li><a class="nav-link" onclick="filterDocs('complete',event)"><span
+                  class="material-symbols-outlined">check_circle</span><span class="nav-label">Complete</span><span
+                  class="nav-badge" id="badge-complete">0</span></a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Tools</div>
+          <ul class="nav-menu">
+            <li><a class="nav-link" onclick="showTrack(event)"><span
+                  class="material-symbols-outlined">history</span><span class="nav-label">Track Document</span></a></li>
+            <li><a class="nav-link" onclick="showPrintView(event)"><span
+                  class="material-symbols-outlined">print</span><span class="nav-label">Print Report</span></a></li>
+            <li id="logsMenuLink" style="display:none"><a class="nav-link" onclick="showLogsView(event)"><span
+                  class="material-symbols-outlined">list_alt</span><span class="nav-label">Activity Logs</span></a></li>
+            <li id="adminMenuLink" style="display:none"><a class="nav-link" onclick="openAdminSettings()"><span
+                  class="material-symbols-outlined">admin_panel_settings</span><span class="nav-label">Admin
+                  Settings</span></a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar" id="userAvatar">AD</div>
+          <div class="user-info"><span class="user-name" id="userName">Admin User</span><span class="user-role"
+              id="userRole">Administrator</span></div>
+          <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserMenu(event)"><span
+              class="material-symbols-outlined" style="font-size:20px">more_vert</span></button>
+          <div class="user-dropdown" id="userDropdown">
+            <button class="user-dropdown-item" onclick="openProfileSettings()"><span
+                class="material-symbols-outlined">person</span><span>Profile Settings</span></button>
+            <div class="user-dropdown-divider"></div>
+            <button class="user-dropdown-item" onclick="handleLogout()"><span
+                class="material-symbols-outlined">logout</span><span>Logout</span></button>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="main-content" id="mainContent">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle"><span
+              class="material-symbols-outlined">menu</span></button>
+          <h1 class="page-title-top" id="pageTitle">All Documents</h1>
+        </div>
+        <div class="topbar-right"><button class="notification-btn"><span
+              class="material-symbols-outlined">notifications</span></button></div>
+      </div>
+      <div class="content-area">
+
+        <!-- Documents View -->
+        <div class="documents-view active" id="documentsView">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Total Documents</div>
+                  <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-icon"><span class="material-symbols-outlined">description</span></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Incoming</div>
+                  <div class="stat-value" id="stat-incoming">0</div>
+                </div>
+                <div class="stat-icon" style="background:#eff6ff;color:#3b82f6"><span
+                    class="material-symbols-outlined">inbox</span></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Outgoing</div>
+                  <div class="stat-value" id="stat-outgoing">0</div>
+                </div>
+                <div class="stat-icon" style="background:#fef3c7;color:#f59e0b"><span
+                    class="material-symbols-outlined">send</span></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Completed</div>
+                  <div class="stat-value" id="stat-complete">0</div>
+                </div>
+                <div class="stat-icon" style="background:#f0fdf4;color:#10b981"><span
+                    class="material-symbols-outlined">check_circle</span></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Overdue</div>
+                  <div class="stat-value" id="stat-overdue">0</div>
+                </div>
+                <div class="stat-icon" style="background:#fef2f2;color:#ef4444"><span
+                    class="material-symbols-outlined">schedule</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title-main" id="sectionTitle">Recent Documents</h2>
+              <div class="section-actions">
+                <div class="search-input-wrapper"><span
+                    class="material-symbols-outlined search-icon">search</span><input type="text" class="search-input"
+                    id="searchInput" placeholder="Search documents..."></div>
+                <div class="dropdown"><button class="btn btn-outline" id="exportBtn"
+                    onclick="toggleExportDropdown(event)"><span
+                      class="material-symbols-outlined">download</span><span>Export</span><span
+                      class="material-symbols-outlined" style="font-size:16px">arrow_drop_down</span></button>
+                  <div class="dropdown-menu" id="exportDropdown">
+                    <div class="dropdown-item" onclick="exportToCSV()"><span class="material-symbols-outlined"
+                        style="font-size:18px">table_chart</span><span>Export as CSV</span></div>
+                    <div class="dropdown-item" onclick="exportToExcel()"><span class="material-symbols-outlined"
+                        style="font-size:18px">description</span><span>Export as Excel</span></div>
+                  </div>
+                </div>
+                <div class="dropdown"><button class="btn btn-outline" onclick="toggleColumnsDropdown()"><span
+                      class="material-symbols-outlined">view_column</span><span>Columns</span></button>
+                  <div class="dropdown-menu" id="columnsDropdown">
+                    <div class="dropdown-item"><input type="checkbox" id="col-id" checked
+                        onchange="toggleColumn('id')"><label for="col-id">ID/Barcode</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-type" checked
+                        onchange="toggleColumn('type')"><label for="col-type">Doc Type</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-no" checked
+                        onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-desc" checked
+                        onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-amount" checked
+                        onchange="toggleColumn('amount')"><label for="col-amount">Amount</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked
+                        onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-req" checked
+                        onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-office" checked
+                        onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-status" checked
+                        onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-date" checked
+                        onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-overdue" checked
+                        onchange="toggleColumn('overdue')"><label for="col-overdue">Overdue</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-notes" checked
+                        onchange="toggleColumn('notes')"><label for="col-notes">Notes</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked
+                        onchange="toggleColumn('attachment')"><label for="col-attachment">Attachment</label></div>
+                  </div>
+                </div>
+                <button class="btn btn-outline" onclick="loadDocs()"><span
+                    class="material-symbols-outlined">refresh</span><span>Refresh</span></button>
+                <button class="btn btn-primary" onclick="openAddModal()"><span
+                    class="material-symbols-outlined">add</span><span>Add Document</span></button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="sortable col-id" data-column="id" onclick="sortTable('id')">ID/Barcode</th>
+                    <th class="sortable col-type" data-column="type" onclick="sortTable('type')">Doc Type</th>
+                    <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
+                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
+                    </th>
+                    <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
+                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
+                    </th>
+                    <th class="sortable col-req" data-column="req" onclick="sortTable('req')">Requisitioner</th>
+                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
+                      Endorsed To</th>
+                    <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
+                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date
+                      Received</th>
+                    <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
+                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes
+                    </th>
+                    <th class="col-attachment">Attachment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="docTable">
+                  <tr>
+                    <td colspan="14" class="loading">Loading documents...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination-container">
+              <div class="pagination-info"><span id="pageInfo">Showing 0 to 0 of 0 entries</span>
+                <select class="pagination-select" id="perPage" onchange="changePerPage()">
+                  <option value="10">10 per page</option>
+                  <option value="25" selected>25 per page</option>
+                  <option value="50">50 per page</option>
+                  <option value="100">100 per page</option>
+                  <option value="all">Show all</option>
+                </select>
+              </div>
+              <div class="pagination-controls">
+                <button class="pagination-btn" onclick="goFirst()"><span
+                    class="material-symbols-outlined">first_page</span></button>
+                <button class="pagination-btn" onclick="goPrev()"><span
+                    class="material-symbols-outlined">chevron_left</span></button>
+                <div class="pagination-numbers" id="pageNums"></div>
+                <button class="pagination-btn" onclick="goNext()"><span
+                    class="material-symbols-outlined">chevron_right</span></button>
+                <button class="pagination-btn" onclick="goLast()"><span
+                    class="material-symbols-outlined">last_page</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Track View -->
+        <div class="track-view" id="trackView">
+          <div class="track-search-container">
+            <h2 style="text-align:center;margin-bottom:16px;font-size:24px;font-weight:700">Track Document History</h2>
+            <p style="text-align:center;color:var(--muted);margin-bottom:24px">Enter a Document ID to view its complete
+              history</p>
+            <div class="track-search-box">
+              <input type="text" id="trackInput" placeholder="Enter Document ID (e.g., DOC-20251017115247-2127)"
+                onkeypress="if(event.key==='Enter')searchTrack()">
+              <button class="track-search-btn" onclick="searchTrack()">Search</button>
+            </div>
+          </div>
+          <div id="trackResults">
+            <div class="track-empty-state"><span class="material-symbols-outlined">search</span>
+              <h3>Search for a Document</h3>
+              <p>Enter a Document ID above to view its complete tracking history</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs View -->
+        <div class="logs-view" id="logsView">
+          <div class="logs-container">
+            <div class="logs-header">
+              <h2><span class="material-symbols-outlined" style="font-size:22px">list_alt</span>Activity Logs</h2>
+              <div class="logs-filters">
+                <input type="search" id="logsSearch" placeholder="Search logs...">
+                <input type="date" id="logsFrom"><input type="date" id="logsTo">
+                <select id="logsType">
+                  <option value="">All Types</option>
+                  <option value="create">Creating Document</option>
+                  <option value="update">Updating Document</option>
+                  <option value="delete">Deleting Document</option>
+                  <option value="login">User Login</option>
+                  <option value="logout">User Logout</option>
+                </select>
+                <div class="logs-actions">
+                  <button class="btn btn-outline" onclick="clearLogFilters()">Clear</button>
+                  <button class="btn btn-outline" onclick="loadLogs()">Refresh</button>
+                  <button class="btn btn-outline" onclick="exportLogsCSV()">Export CSV</button>
+                  <button class="btn btn-primary" onclick="window.print()">Print</button>
+                </div>
+              </div>
+            </div>
+            <table id="logsTable">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>User</th>
+                  <th>Document ID</th>
+                  <th>Details</th>
+                  <th>IP Address</th>
+                </tr>
+              </thead>
+              <tbody id="logsBody">
+                <tr>
+                  <td colspan="6" class="empty-state">Load logs from Activity Logs menu.</td>
+                </tr>
+              </tbody>
+            </table>
+            <footer
+              style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;font-size:12px;color:#94a3b8">
+              &copy; 2025 DocuTracker | Activity Log System</footer>
+          </div>
+        </div>
+
+        <!-- Print Report View -->
+        <div class="print-view" id="printView">
+          <div class="print-container">
+            <div class="print-header-bar">
+              <h1><span class="material-symbols-outlined">print</span>Print Report</h1>
+              <button class="btn btn-outline" onclick="showDocsView()"><span
+                  class="material-symbols-outlined">arrow_back</span>Back to Dashboard</button>
+            </div>
+            <div class="config-panel">
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Report Type</label>
+                  <select class="form-select" id="reportType" onchange="updatePrintOptions()">
+                    <option value="summary">Summary Report</option>
+                    <option value="detailed">Detailed Document List</option>
+                    <option value="overdue">Overdue Documents Report</option>
+                    <option value="office">Office/Department Report</option>
+                    <option value="custom">Custom Report</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Date From</label><input type="date" class="form-input"
+                    id="printDateFrom"></div>
+                <div class="form-group"><label class="form-label">Date To</label><input type="date" class="form-input"
+                    id="printDateTo"></div>
+                <div class="form-group"><label class="form-label">Status Filter</label>
+                  <select class="form-select" id="printStatusFilter">
+                    <option value="all">All Statuses</option>
+                    <option value="incoming">Incoming</option>
+                    <option value="received">Received</option>
+                    <option value="outgoing">Outgoing</option>
+                    <option value="hold">Hold</option>
+                    <option value="complete">Complete</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Office Filter</label><select class="form-select"
+                    id="printOfficeFilter">
+                    <option value="all">All Offices</option>
+                  </select></div>
+                <div class="form-group"><label class="form-label">Document Type Filter</label><select
+                    class="form-select" id="printDocTypeFilter">
+                    <option value="all">All Types</option>
+                  </select></div>
+              </div>
+              <div id="printColumnsSection" style="display:none">
+                <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
+                <div class="columns-grid">
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-id"> ID/Barcode</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-type"> Doc Type</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-no"> Doc No</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-desc"> Description</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-amount"> Amount</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-req"> Requisitioner</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-date"> Date Received</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-overdue"> Overdue</label>
+                  <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
+                </div>
+              </div>
+              <div class="print-actions">
+                <button class="btn btn-outline" onclick="generatePreview()"><span
+                    class="material-symbols-outlined">visibility</span>Generate Preview</button>
+                <button class="btn btn-primary" onclick="printReport()"><span
+                    class="material-symbols-outlined">print</span>Print Report</button>
+              </div>
+            </div>
+            <div id="reportPreview"></div>
+          </div>
+        </div>
+
+      </div><!-- end content-area -->
+    </div><!-- end main-content -->
+    <footer class="dashboard-footer" id="dashboardFooter">Copyright &copy; 2025 | <a
+        href="https://www.facebook.com/junax1919" target="_blank">ALJUNEQ</a></footer>
+  </div><!-- end view-dashboard -->
+
+  <!-- ===== MODALS ===== -->
+  <!-- Add/Edit Document Modal -->
+  <div class="modal" id="docModal" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Add New Document</h3><button class="modal-close"
+          onclick="closeModal()"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="form-group"><label class="form-label">Document Type *</label><select class="form-select"
+            id="docType"></select></div>
+        <div class="form-group"><label class="form-label">Document Number *</label><input type="text" class="form-input"
+            id="docNo" placeholder="e.g., PR-2025-001"><span id="docNoError"
+            style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span></div>
+        <div class="form-group"><label class="form-label">Description *</label><input type="text" class="form-input"
+            id="desc" placeholder="Brief description"></div>
+        <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="amt"
+            placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)"></div>
+        <div class="form-group"><label class="form-label">Supplier</label><select class="form-select" id="supp">
+            <option value="">Select supplier...</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Requisitioner *</label><input type="text" class="form-input"
+            id="req" placeholder="Enter name"></div>
+        <div class="form-group"><label class="form-label">Office/Department (Endorsed To) *</label><select
+            class="form-select" id="office"></select></div>
+        <div class="form-group"><label class="form-label">Status *</label><select class="form-select"
+            id="stat"></select></div>
+        <div class="form-group"><label class="form-label">Attach PDF (Optional)</label>
+          <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('pdfInput').click()">
+            <span class="material-symbols-outlined" style="font-size:48px;color:var(--muted)">upload_file</span>
+            <p style="margin-top:8px;color:var(--muted)">Click to upload PDF file</p>
+            <p style="font-size:12px;color:var(--muted)">Max size: 10MB</p>
+          </div>
+          <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
+            onchange="handleFileSelect(event)">
+          <div id="fileInfo" style="display:none" class="file-info"><span id="fileName"></span><button type="button"
+              class="file-remove" onclick="removeFile()">Remove</button></div>
+        </div>
+        <div class="form-group"><label class="form-label">Notes (Optional)</label><textarea class="form-textarea"
+            id="note" placeholder="Add any additional notes..."></textarea></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button><button
+          class="btn btn-primary" onclick="saveDoc()"><span class="material-symbols-outlined">save</span><span>Save
+            Document</span></button></div>
+    </div>
+  </div>
+
+  <!-- Profile Settings Modal -->
+  <div class="modal" id="profileModal" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Profile Settings</h3><button class="modal-close" onclick="closeProfileModal()"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input"
+            id="profileName"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input"
+            id="profileEmail" readonly style="background:#f9fafb;cursor:not-allowed"></div>
+        <div class="form-group"><label class="form-label">Role</label><input type="text" class="form-input"
+            id="profileRole" readonly style="background:#f9fafb;cursor:not-allowed"></div>
+        <div class="form-group"><label class="form-label">Change Password</label><input type="password"
+            class="form-input" id="profilePassword" placeholder="Leave blank to keep current"></div>
+        <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password"
+            class="form-input" id="profilePasswordConfirm" placeholder="Confirm new password"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline" onclick="closeProfileModal()">Cancel</button><button
+          class="btn btn-primary" onclick="saveProfile()"><span class="material-symbols-outlined">save</span><span>Save
+            Changes</span></button></div>
+    </div>
+  </div>
+
+  <!-- Admin Settings Modal -->
+  <div class="modal" id="adminModal" style="display:none">
+    <div class="modal-content" style="max-width:800px">
+      <div class="modal-header">
+        <h3 class="modal-title">Admin Settings - Manage Dropdown Options</h3><button class="modal-close"
+          onclick="closeAdminModal()"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Document Types</label><textarea class="form-textarea"
+            id="adminDocTypes" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">Suppliers</label><textarea class="form-textarea"
+            id="adminSuppliers" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">Offices/Departments</label><textarea class="form-textarea"
+            id="adminOffices" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">Status Options</label><textarea class="form-textarea"
+            id="adminStatuses" placeholder="One per line..." style="min-height:120px"></textarea></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline" onclick="closeAdminModal()">Cancel</button><button
+          class="btn admin-btn" onclick="saveAdminSettings()"><span
+            class="material-symbols-outlined">save</span><span>Save All Settings</span></button></div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== GAS BRIDGE =====================
+    // Connects the frontend to the real Google Apps Script backend.
+    //
+    //  • When served via GAS (doGet): google.script.run is native → no shim needed.
+    //  • When opened as a standalone HTML file (localhost / file://): the shim below
+    //    replaces google.script.run with a fetch()-based bridge that talks directly
+    //    to the deployed GAS Web App, so ALL data comes from the real Google Sheet.
+    //
+    // GAS Web App URL — update this if you redeploy:
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzjK1PhWhLiCB0KqWjdjYlRmjwVjgPoUz4aZ4kNNoHVN2gpkXGDnOVhSnPAROW75_8c/exec';
+
+    (function () {
+      if (typeof google !== 'undefined' && google.script) return; // real GAS env → skip
+
+      // Session persistence: store the logged-in user's email in localStorage
+      // so it survives page reloads. Every API call includes it so the backend
+      // can restore PropertiesService.getUserProperties() correctly.
+      const SESSION_KEY = 'docutracker_session_email';
+
+      function getSessionEmail() {
+        try { return localStorage.getItem(SESSION_KEY) || ''; } catch (e) { return ''; }
+      }
+      function setSessionEmail(email) {
+        try { if (email) localStorage.setItem(SESSION_KEY, email); else localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      }
+
+      // Core fetch wrapper — calls the GAS Web App via POST
+      async function callGAS(method, args) {
+        const body = { method, args: args || [], sessionEmail: getSessionEmail() };
+        const resp = await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const json = await resp.json();
+        if (json.error) throw new Error(json.error);
+        return json.result;
+      }
+
+      // After a successful login we capture the email so subsequent calls carry the session
+      const _origCallGAS = callGAS;
+      async function callGASWithSessionCapture(method, args) {
+        const result = await _origCallGAS(method, args);
+        if (method === 'checkLogin' && result && result.status === 'success') {
+          // The email is the first argument
+          setSessionEmail((args[0] || '').toLowerCase().trim());
+        }
+        if (method === 'logout') {
+          setSessionEmail('');
+        }
+        return result;
+      }
+
+      // Build google.script.run proxy — mirrors the real GAS API
+      function makeRunner() {
+        const state = { _success: null, _failure: null };
+        const proxy = new Proxy({}, {
+          get(_, prop) {
+            if (prop === 'withSuccessHandler') return fn => { state._success = fn; return proxy; };
+            if (prop === 'withFailureHandler') return fn => { state._failure = fn; return proxy; };
+            // Any other property is treated as a backend method call
+            return (...args) => {
+              callGASWithSessionCapture(prop, args)
+                .then(result => { if (state._success) state._success(result); })
+                .catch(err  => {
+                  console.error('[DocuTracker] GAS call failed:', prop, err);
+                  if (state._failure) state._failure(err);
+                });
+            };
+          }
+        });
+        return proxy;
+      }
+
+      // Attach shim to window.google
+      window.google = {
+        script: {
+          get run() { return makeRunner(); },
+          history: { replace() {} },
+          host: { close() {}, editor: {} },
+          url: { getLocation(cb) { cb({ parameter: {}, hash: '' }); } }
+        }
+      };
+
+      // Inform the user that they are in Live GAS mode (not demo)
+      window.addEventListener('DOMContentLoaded', () => {
+        const banner = document.createElement('div');
+        banner.id = 'gasBanner';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0f3460;color:#94a3b8;font-size:12px;text-align:center;padding:5px 8px;z-index:9999;font-family:Inter,sans-serif';
+        banner.innerHTML = '🔗 <strong style="color:#e2e8f0">Live Mode</strong> — Connected to Google Sheets backend. Use your real account credentials to log in.';
+        document.body.appendChild(banner);
+        // Auto-hide banner after 8 seconds
+        setTimeout(() => { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 8000);
+      });
+    })();
+    // ===================== END GAS BRIDGE =====================
+
+    // ===================== STATE =====================
+    let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
+    let sortColumn = null, sortDirection = 'asc';
+    let visibleColumns = { id: true, type: true, no: true, desc: true, amount: true, supplier: true, req: true, office: true, status: true, date: true, overdue: true, notes: true, attachment: true };
+    let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
+    let allLogs = [];
+
+    // ===================== VIEW ROUTER =====================
+    function showView(name) {
+      ['login', 'reset', 'dashboard'].forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (el) { el.style.display = 'none'; }
+      });
+      const target = document.getElementById('view-' + name);
+      if (target) { target.style.display = (name === 'dashboard') ? 'block' : 'flex'; }
+    }
+
+    function showDocsView() {
+      document.querySelectorAll('.documents-view,.track-view,.logs-view,.print-view').forEach(v => v.classList.remove('active'));
+      document.getElementById('documentsView').classList.add('active');
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      document.getElementById('pageTitle').textContent = 'All Documents';
+    }
+
+    // ===================== TOAST =====================
+    function toast(m, t = 'success') { const e = document.getElementById('toast'); e.textContent = m; e.className = 'show' + (t === 'error' ? ' error' : ''); setTimeout(() => e.className = '', 3000); }
+
+    // ===================== AUTH =====================
+    function setupPwdToggle(btnId, inputId, svgId) {
+      const btn = document.getElementById(btnId), inp = document.getElementById(inputId), svg = document.getElementById(svgId);
+      if (!btn) return;
+      const open = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle>';
+      const closed = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7.5 0-11-7-11-7a17.2 17.2 0 0 1 3.09-3.84"></path><path d="M1 1l22 22"></path>';
+      let vis = false;
+      btn.addEventListener('click', () => { vis = !vis; inp.type = vis ? 'text' : 'password'; svg.style.opacity = '0'; setTimeout(() => { svg.innerHTML = vis ? closed : open; svg.style.opacity = '1'; }, 150); });
+    }
+
+    function showNotif(id, msg, type = 'success') {
+      const el = document.getElementById(id); el.textContent = msg; el.className = 'notification show ' + type;
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    // Login
+    document.getElementById('loginBtn').addEventListener('click', function () {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pwd = document.getElementById('loginPassword').value.trim();
+      if (!email || !pwd) { showNotif('loginNotif', 'Please enter email and password', 'error'); return; }
+      this.disabled = true; this.textContent = 'Signing in...';
+      google.script.run.withSuccessHandler(r => {
+        if (r.status === 'success') { showNotif('loginNotif', 'Login successful!', 'success'); setTimeout(() => { showView('dashboard'); initDashboard(); }, 800); }
+        else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
+      }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
+    });
+    ['loginEmail', 'loginPassword'].forEach(id => document.getElementById(id).addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); }));
+
+    // Forgot password
+    document.getElementById('forgotLink').addEventListener('click', e => { e.preventDefault(); document.getElementById('resetModal').classList.add('show'); });
+    document.getElementById('closeResetModal').addEventListener('click', () => document.getElementById('resetModal').classList.remove('show'));
+    document.getElementById('sendResetBtn').addEventListener('click', () => {
+      const em = document.getElementById('resetEmail').value.trim();
+      if (!em) { showNotif('loginNotif', 'Please enter your email', 'error'); return; }
+      google.script.run.withSuccessHandler(res => {
+        if (res === 'sent') { toast('Reset email sent!'); document.getElementById('resetModal').classList.remove('show'); }
+        else { toast('Email not found', 'error'); }
+      }).sendResetEmail(em);
+    });
+
+    // Reset password view — check token on load
+    (function checkResetToken() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (!token) return;
+      showView('reset');
+      google.script.run.withSuccessHandler(valid => {
+        if (!valid) { document.getElementById('resetCard').style.display = 'none'; document.getElementById('invalidTokenCard').style.display = 'block'; }
+      }).withFailureHandler(() => { document.getElementById('resetCard').style.display = 'none'; document.getElementById('invalidTokenCard').style.display = 'block'; }).validateResetToken(token);
+
+      document.getElementById('resetBtn').addEventListener('click', function () {
+        const np = document.getElementById('newPassword').value.trim();
+        const cp = document.getElementById('confirmPassword').value.trim();
+        if (!np || !cp) { showNotif('resetNotif', 'Please fill in all fields', 'error'); return; }
+        if (np.length < 6) { showNotif('resetNotif', 'Password must be at least 6 characters', 'error'); return; }
+        if (np !== cp) { showNotif('resetNotif', 'Passwords do not match', 'error'); return; }
+        this.disabled = true; this.textContent = 'Resetting...';
+        google.script.run.withSuccessHandler(r => {
+          if (r === 'success') { showNotif('resetNotif', 'Password reset successful!', 'success'); setTimeout(() => showView('login'), 1500); }
+          else { showNotif('resetNotif', 'Failed to reset password', 'error'); this.disabled = false; this.textContent = 'Reset Password'; }
+        }).withFailureHandler(() => { showNotif('resetNotif', 'An error occurred', 'error'); this.disabled = false; this.textContent = 'Reset Password'; }).setNewPassword(token, np);
+      });
+    })();
+
+    document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
+
+    // ===================== DASHBOARD INIT =====================
+    function initDashboard() {
+      loadUserProfile(); loadDropdownOptions(); loadDocs();
+      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch(e) {}
+    }
+
+    function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
+
+    function loadUserProfile() {
+      google.script.run.withSuccessHandler(user => {
+        if (!user) return;
+        currentUser = user;
+        document.getElementById('userName').textContent = user.name || 'User';
+        document.getElementById('userRole').textContent = user.role || 'User';
+        document.getElementById('userAvatar').textContent = getInitials(user.name);
+        document.getElementById('profileName').value = user.name || '';
+        document.getElementById('profileEmail').value = user.email || '';
+        document.getElementById('profileRole').value = user.role || '';
+        if ((user.role || '').toLowerCase() === 'admin') { document.getElementById('adminMenuLink').style.display = 'block'; document.getElementById('logsMenuLink').style.display = 'block'; }
+      }).getCurrentUser();
+    }
+
+    function loadDropdownOptions() {
+      google.script.run.withSuccessHandler(opts => { dropdownOptions = opts; populateDropdowns(); populatePrintFilters(); }).getDropdownOptions();
+    }
+
+    function populateDropdowns() {
+      document.getElementById('docType').innerHTML = '<option value="">Select document type...</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+      document.getElementById('supp').innerHTML = '<option value="">Select supplier...</option>' + dropdownOptions.suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
+      document.getElementById('office').innerHTML = '<option value="">Select office...</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join('');
+      document.getElementById('stat').innerHTML = dropdownOptions.statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    // ===================== DOCUMENTS =====================
+    function loadDocs() {
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="14" class="loading">Loading...</td></tr>';
+      google.script.run.withSuccessHandler(d => { allDocs = d || []; applyFilter(currentFilter); updateStats(); updateBadges(); }).withFailureHandler(() => toast('Failed to load', 'error')).getAllDocuments();
+    }
+
+    function updateStats() {
+      google.script.run.withSuccessHandler(s => {
+        document.getElementById('stat-total').textContent = s.total || 0;
+        document.getElementById('stat-incoming').textContent = s.incoming || 0;
+        document.getElementById('stat-outgoing').textContent = s.outgoing || 0;
+        document.getElementById('stat-complete').textContent = s.complete || 0;
+        document.getElementById('stat-overdue').textContent = s.overdue || 0;
+      }).getDocumentStats();
+    }
+
+    function updateBadges() {
+      google.script.run.withSuccessHandler(s => {
+        ['total', 'incoming', 'received', 'outgoing', 'hold', 'complete'].forEach(k => { document.getElementById('badge-' + k).textContent = s[k] || 0; });
+      }).getDocumentStats();
+    }
+
+    function applyFilter(f) {
+      currentFilter = f; const s = document.getElementById('searchInput').value.toLowerCase();
+      if (f === 'all') filteredDocs = [...allDocs];
+      else filteredDocs = allDocs.filter(d => { const st = (d.Status || '').toLowerCase(); switch (f) { case 'incoming': return st === 'incoming'; case 'received': return st === 'received'; case 'outgoing': return st === 'outgoing' || st === 'forwarded'; case 'hold': return st === 'hold'; case 'complete': return st === 'complete' || st === 'completed'; default: return true; } });
+      if (s) filteredDocs = filteredDocs.filter(d => Object.values(d).join(' ').toLowerCase().includes(s));
+      applySorting(); currentPage = 1; renderTable(); updatePageTitle();
+    }
+
+    function filterDocs(f, evt) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt) evt.target.closest('.nav-link').classList.add('active');
+      document.getElementById('documentsView').classList.add('active');
+      document.getElementById('trackView').classList.remove('active');
+      document.getElementById('logsView').classList.remove('active');
+      document.getElementById('printView').classList.remove('active');
+      applyFilter(f);
+    }
+
+    function updatePageTitle() { const t = { all: 'All Documents', incoming: 'Incoming Documents', received: 'Received Documents', outgoing: 'Outgoing Documents', hold: 'Documents on Hold', complete: 'Completed Documents', track: 'Track Document History', logs: 'Activity Logs', print: 'Print Report' }; document.getElementById('pageTitle').textContent = t[currentFilter] || 'Dashboard'; if (!['track', 'logs', 'print'].includes(currentFilter)) document.getElementById('sectionTitle').textContent = t[currentFilter] || 'Recent Documents'; }
+
+    function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${col}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); applySorting(); renderTable(); }
+
+    function applySorting() { if (!sortColumn) return; const map = { id: 'ID/Barcode', type: 'Doc Type', no: 'Doc No', desc: 'Description', amount: 'Amount', supplier: 'Supplier', req: 'Requisitioner', office: 'Endorsed To', status: 'Status', date: 'Date Received', overdue: 'Overdue', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+
+    function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
+    function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
+    function toggleExportDropdown(e) { e.stopPropagation(); document.getElementById('exportDropdown').classList.toggle('show'); }
+
+    function formatAmountInput(inp) { let v = inp.value.replace(/[^\d.]/g, ''); const p = v.split('.'); if (p.length > 2) v = p[0] + '.' + p.slice(1).join(''); if (p[0]) { const int = parseInt(p[0]).toLocaleString('en-US'); inp.value = p.length > 1 ? int + '.' + p[1].substring(0, 2) : int; } else { inp.value = v; } }
+    function formatAmountDisplay(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+    function renderTable() {
+      const tb = document.getElementById('docTable');
+      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="14" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
+      const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
+      tb.innerHTML = pd.map(d => {
+        const id = d['ID/Barcode'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), sp = d.Supplier || '-', rq = d.Requisitioner || '', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', ov = d.Overdue || 'On time', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
+        const att = pdf ? `<a href="${pdf}" target="_blank" style="color:var(--blue);text-decoration:none"><span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>` : '-';
+        const disp = k => visibleColumns[k] ? '' : 'none';
+        return `<tr>
+<td class="col-id" style="display:${disp('id')}"><span class="doc-id">${id}</span></td>
+<td class="col-type" style="display:${disp('type')}"><strong>${ty}</strong></td>
+<td class="col-no" style="display:${disp('no')}">${no}</td>
+<td class="hide-mobile col-desc" style="display:${disp('desc')}">${ds}</td>
+<td class="col-amount" style="display:${disp('amount')}">${am}</td>
+<td class="col-supplier" style="display:${disp('supplier')}">${sp}</td>
+<td class="col-req" style="display:${disp('req')}">${rq}</td>
+<td class="hide-mobile col-office" style="display:${disp('office')}">${of}</td>
+<td class="col-status" style="display:${disp('status')}"><span class="status-badge status-${sc}">${sta}</span></td>
+<td class="hide-mobile col-date" style="display:${disp('date')}">${dt}</td>
+<td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
+<td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
+<td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
+<td><div class="table-actions">
+<button class="action-btn" onclick='editDoc(\`${id}\`)'><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+<button class="action-btn" onclick='deleteDoc(\`${id}\`)'><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+</div></td></tr>`;
+      }).join('');
+      updatePageInfo(st + 1, en, tot); renderPageNums(tpg);
+    }
+
+    function updatePageInfo(s, e, t) { document.getElementById('pageInfo').textContent = `Showing ${s} to ${e} of ${t} entries`; }
+    function renderPageNums(tp) { const c = document.getElementById('pageNums'); c.innerHTML = ''; if (tp <= 1) return; const pg = [], mx = 5; if (tp <= mx + 2) { for (let i = 1; i <= tp; i++)pg.push(i); } else if (currentPage <= 3) { for (let i = 1; i <= mx; i++)pg.push(i); pg.push('...', tp); } else if (currentPage >= tp - 2) { pg.push(1, '...'); for (let i = tp - mx + 1; i <= tp; i++)pg.push(i); } else { pg.push(1, '...'); for (let i = currentPage - 1; i <= currentPage + 1; i++)pg.push(i); pg.push('...', tp); } pg.forEach(p => { if (p === '...') { const el = document.createElement('div'); el.className = 'pagination-number'; el.textContent = '...'; el.style.cursor = 'default'; c.appendChild(el); } else { const btn = document.createElement('button'); btn.className = 'pagination-number' + (p === currentPage ? ' active' : ''); btn.textContent = p; btn.onclick = () => { currentPage = p; renderTable(); }; c.appendChild(btn); } }); }
+    function changePerPage() { perPage = document.getElementById('perPage').value === 'all' ? 'all' : parseInt(document.getElementById('perPage').value); currentPage = 1; renderTable(); }
+    function goFirst() { if (currentPage === 1) return; currentPage = 1; renderTable(); }
+    function goPrev() { if (currentPage > 1) { currentPage--; renderTable(); } }
+    function goNext() { const pp = perPage === 'all' ? filteredDocs.length : parseInt(perPage); const tp = Math.ceil(filteredDocs.length / pp); if (currentPage < tp) { currentPage++; renderTable(); } }
+    function goLast() { const pp = perPage === 'all' ? filteredDocs.length : parseInt(perPage); const tp = Math.ceil(filteredDocs.length / pp); if (currentPage !== tp) { currentPage = tp; renderTable(); } }
+  </script>
+  <script>
+    // ===================== CRUD MODALS =====================
+    function openAddModal() { isEdit = false; selectedFile = null; document.getElementById('modalTitle').textContent = 'Add New Document';['editId', 'docNo', 'desc', 'amt', 'req', 'note'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const docTypeEl = document.getElementById('docType'); if (docTypeEl) docTypeEl.value = ''; const suppEl = document.getElementById('supp'); if (suppEl) suppEl.value = ''; const officeEl = document.getElementById('office'); if (officeEl) officeEl.value = ''; const statEl = document.getElementById('stat'); if (statEl) statEl.value = dropdownOptions.statuses[0] || 'Received'; const errEl = document.getElementById('docNoError'); if (errEl) errEl.style.display = 'none'; removeFile(); showModal('docModal'); }
+    function closeModal() { hideModal('docModal'); }
+    function editDoc(id) { const doc = allDocs.find(d => d['ID/Barcode'] === id); if (!doc) { toast('Document not found', 'error'); return; } isEdit = true; selectedFile = null; document.getElementById('modalTitle').textContent = 'Edit Document'; document.getElementById('editId').value = id; document.getElementById('docType').value = doc['Doc Type'] || ''; document.getElementById('docNo').value = doc['Doc No'] || ''; document.getElementById('desc').value = doc.Description || ''; const av = doc.Amount ? doc.Amount.replace(/[₱,]/g, '') : ''; document.getElementById('amt').value = av; if (av) formatAmountInput(document.getElementById('amt')); document.getElementById('supp').value = doc.Supplier || ''; document.getElementById('req').value = doc.Requisitioner || ''; document.getElementById('office').value = doc['Endorsed To'] || ''; document.getElementById('stat').value = doc.Status || ''; document.getElementById('note').value = doc.Notes || ''; document.getElementById('docNoError').style.display = 'none'; removeFile(); showModal('docModal'); }
+    function saveDoc() {
+      const docNo = document.getElementById('docNo').value.trim();
+      const data = { docType: document.getElementById('docType').value, docNo, description: document.getElementById('desc').value, amount: document.getElementById('amt').value.replace(/,/g, ''), supplier: document.getElementById('supp').value, requisitioner: document.getElementById('req').value, office: document.getElementById('office').value, status: document.getElementById('stat').value, notes: document.getElementById('note').value, dateReceived: new Date().toISOString() };
+      if (!data.docType || !data.docNo || !data.description || !data.requisitioner || !data.office) { toast('Fill required fields', 'error'); return; }
+      if (selectedFile) { const reader = new FileReader(); reader.onload = e => { const b64 = e.target.result.split(',')[1]; toast('Uploading PDF...'); google.script.run.withSuccessHandler(r => { if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); } else toast('PDF upload failed', 'error'); }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp'); }; reader.readAsDataURL(selectedFile); } else saveDocumentData(data);
+    }
+    function saveDocumentData(data) {
+      if (isEdit) { const id = document.getElementById('editId').value; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Updated!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Update failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).updateDocument(id, data); }
+      else { google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Added!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Add failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).addDocument(data); }
+    }
+    function deleteDoc(id) { if (!confirm('Delete this document?')) return; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Deleted!'); loadDocs(); } else toast('Delete failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).deleteDocument(id); }
+    function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
+    function removeFile() { selectedFile = null; document.getElementById('pdfInput').value = ''; document.getElementById('fileUploadArea').classList.remove('has-file'); document.getElementById('fileInfo').style.display = 'none'; }
+
+    // ===================== USER PROFILE =====================
+    function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); }
+    function openProfileSettings() { document.getElementById('userDropdown').classList.remove('show'); showModal('profileModal'); }
+    function closeProfileModal() { hideModal('profileModal'); document.getElementById('profilePassword').value = ''; document.getElementById('profilePasswordConfirm').value = ''; }
+    function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(updates); }
+    function handleLogout() {
+      if (!confirm('Are you sure you want to logout?')) return;
+      google.script.run.withSuccessHandler(function(url) {
+        currentUser = null;
+        if (url && url.startsWith('http')) { window.location.href = url; }
+        else { showView('login'); document.getElementById('loginEmail').value = ''; document.getElementById('loginPassword').value = ''; }
+      }).logout();
+    }
+
+    // ===================== ADMIN =====================
+    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
+    function closeAdminModal() { hideModal('adminModal'); }
+    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses'], keys = ['docTypes', 'suppliers', 'offices', 'statuses']; let done = 0; types.forEach((t, i) => { const vals = document.getElementById(ids[i]).value.split('\n').filter(l => l.trim()); google.script.run.withSuccessHandler(() => { if (++done === 4) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
+
+    // ===================== TRACK =====================
+    function showTrack(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('trackView').classList.add('active'); currentFilter = 'track'; updatePageTitle(); document.getElementById('trackInput').focus(); }
+    function searchTrack() { const id = document.getElementById('trackInput').value.trim(); if (!id) { toast('Enter Document ID', 'error'); return; } const r = document.getElementById('trackResults'); r.innerHTML = '<div class="loading">Loading...</div>'; google.script.run.withSuccessHandler(doc => { if (!doc) { r.innerHTML = `<div class="empty-state"><p>No document with ID: <strong>${id}</strong></p></div>`; return; } google.script.run.withSuccessHandler(hist => displayHistory(doc, hist)).withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history</p></div>'; }).getDocumentHistory(id); }).withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error</p></div>'; }).getDocumentById(id); }
+    function displayHistory(doc, hist) {
+      const r = document.getElementById('trackResults'); const sc = (doc.Status || '').toLowerCase().replace(/\s+/g, '-'); let h = `<div class="doc-info-card"><div class="doc-info-header"><div><div class="doc-info-title">${doc['Doc Type'] || 'Document'}</div><div style="margin-top:4px;color:var(--muted)">${doc['Doc No'] || ''}</div></div><div style="font-family:monospace;font-size:14px;color:var(--muted);background:var(--bg);padding:6px 12px;border-radius:6px">${doc['ID/Barcode'] || ''}</div></div><div class="doc-info-grid"><div class="doc-info-item"><span class="doc-info-label">Description</span><span class="doc-info-value">${doc.Description || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Amount</span><span class="doc-info-value">${formatAmountDisplay(doc.Amount)}</span></div><div class="doc-info-item"><span class="doc-info-label">Requisitioner</span><span class="doc-info-value">${doc.Requisitioner || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Status</span><span class="doc-info-value"><span class="status-badge status-${sc}">${doc.Status || '-'}</span></span></div><div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div></div></div><div class="timeline-container"><div class="timeline-header"><span class="material-symbols-outlined">history</span>Document Activity Timeline</div>`;
+      if (!hist || hist.length === 0) { h += `<div class="empty-state"><p>No history recorded.</p></div>`; }
+      else { h += '<div class="timeline">'; hist.forEach(e => { const dc = e.action.toLowerCase().includes('created') ? 'created' : e.action.toLowerCase().includes('deleted') ? 'deleted' : 'updated'; h += `<div class="timeline-item"><div class="timeline-dot ${dc}"></div><div class="timeline-content"><div class="timeline-action">${e.action}</div><div class="timeline-meta"><div class="timeline-meta-item"><span class="material-symbols-outlined">person</span><span>${e.user}</span></div><div class="timeline-meta-item"><span class="material-symbols-outlined">schedule</span><span>${e.timestamp}</span></div>${e.status ? `<div class="timeline-meta-item"><span class="material-symbols-outlined">label</span><span>Status: <strong>${e.status}</strong></span></div>` : ''}</div>${e.remarks ? `<div class="timeline-remarks"><strong>Remarks:</strong> ${e.remarks}</div>` : ''}</div></div>`; }); h += '</div>'; }
+      h += '</div>'; r.innerHTML = h;
+    }
+
+    // ===================== LOGS =====================
+    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
+    function loadLogs() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>'; google.script.run.withSuccessHandler(renderLogs).getAllActivityLogs(); }
+    function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
+    function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
+    function renderLogsTable(logs) { const tbody = document.getElementById('logsBody'); if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No logs found.</td></tr>'; return; } tbody.innerHTML = logs.map(log => `<tr><td>${log.Timestamp}</td><td>${log.Action}</td><td>${log.User}</td><td>${log.DocumentID || '-'}</td><td>${log.Details}</td><td>${log.IPAddress}</td></tr>`).join(''); }
+    function clearLogFilters() { ['logsSearch', 'logsFrom', 'logsTo'].forEach(id => document.getElementById(id).value = ''); document.getElementById('logsType').value = ''; applyLogFilters(); }
+    function exportLogsCSV() { const rows = [['Timestamp', 'Action', 'User', 'Document ID', 'Details', 'IP Address']]; allLogs.forEach(l => rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', l.Details.replace(/(\r\n|\n|\r)/gm, ' '), l.IPAddress])); const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`; a.click(); }
+    ['logsFrom', 'logsTo', 'logsType'].forEach(id => document.getElementById(id).addEventListener('change', applyLogFilters));
+    document.getElementById('logsSearch').addEventListener('input', applyLogFilters);
+  </script>
+  <script>
+    // ===================== PRINT REPORT =====================
+    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
+    function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
+    function populatePrintFilters() { const of = document.getElementById('printOfficeFilter'), dt = document.getElementById('printDocTypeFilter'); of.innerHTML = '<option value="all">All Offices</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join(''); dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
+    function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, of = document.getElementById('printOfficeFilter').value, tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (of !== 'all') d = d.filter(x => x['Endorsed To'] === of); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
+    function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 style="margin:0;font-size:28px;font-weight:700;color:#0f172a">&#128196; DocuTracker</h1><h2 style="margin:8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h2><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
+    function fmtAmt(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '&#8369;' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function generateSummaryReport(data) { const s = { total: data.length, incoming: data.filter(d => (d.Status || '').toLowerCase() === 'incoming').length, received: data.filter(d => (d.Status || '').toLowerCase() === 'received').length, outgoing: data.filter(d => { const x = (d.Status || '').toLowerCase(); return x === 'outgoing' || x === 'forwarded'; }).length, hold: data.filter(d => (d.Status || '').toLowerCase() === 'hold').length, complete: data.filter(d => { const x = (d.Status || '').toLowerCase(); return x === 'complete' || x === 'completed'; }).length, overdue: data.filter(d => d.Overdue && d.Overdue !== 'On time').length }; const total$ = data.reduce((sum, d) => { const n = parseFloat((d.Amount || '').replace(/[^0-9.-]/g, '')); return sum + (isNaN(n) ? 0 : n); }, 0); let h = getReportHeader('Summary Report'); h += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:30px"><div style="background:#eff6ff;padding:20px;border-radius:8px;border-left:4px solid #3b82f6"><div style="font-size:12px;color:#1e40af;margin-bottom:8px">Total Documents</div><div style="font-size:32px;font-weight:700">${s.total}</div></div><div style="background:#f0fdf4;padding:20px;border-radius:8px;border-left:4px solid #10b981"><div style="font-size:12px;color:#047857;margin-bottom:8px">Received</div><div style="font-size:32px;font-weight:700">${s.received}</div></div><div style="background:#fef3c7;padding:20px;border-radius:8px;border-left:4px solid #f59e0b"><div style="font-size:12px;color:#b45309;margin-bottom:8px">Outgoing</div><div style="font-size:32px;font-weight:700">${s.outgoing}</div></div><div style="background:#f0fdf4;padding:20px;border-radius:8px;border-left:4px solid #10b981"><div style="font-size:12px;color:#047857;margin-bottom:8px">Completed</div><div style="font-size:32px;font-weight:700">${s.complete}</div></div><div style="background:#fef2f2;padding:20px;border-radius:8px;border-left:4px solid #ef4444"><div style="font-size:12px;color:#b91c1c;margin-bottom:8px">Overdue</div><div style="font-size:32px;font-weight:700;color:#ef4444">${s.overdue}</div></div><div style="background:#ecfdf5;padding:20px;border-radius:8px;border-left:4px solid #059669"><div style="font-size:12px;color:#047857;margin-bottom:8px">Total Amount</div><div style="font-size:24px;font-weight:700">&#8369;${total$.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div></div></div>`; if (s.overdue > 0) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); h += `<div style="background:#fef2f2;padding:20px;border-radius:8px;border-left:4px solid #ef4444;margin-top:20px"><h3 style="margin:0 0 16px 0;color:#991b1b">&#9888; Overdue Documents (${od.length})</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Office</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td style="color:#dc2626;font-weight:600">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table></div>`; } return h; }
+    function generateDetailedReport(data) { let h = getReportHeader('Detailed Document List'); h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Amount</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${data.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table>`; return h; }
+    function generateOverdueReport(data) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); let h = getReportHeader('Overdue Documents Report'); h += `<p style="margin-bottom:20px;color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>`; if (od.length === 0) return h + `<p style="text-align:center;padding:60px;color:#6b7280">&#10003; No overdue documents found!</p>`; h += `<table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table>`; return h; }
+    function generateOfficeReport(data) { const groups = {}; data.forEach(d => { const o = d['Endorsed To'] || 'Unassigned'; if (!groups[o]) groups[o] = []; groups[o].push(d); }); let h = getReportHeader('Office/Department Report'); h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`; Object.keys(groups).sort().forEach(o => { const docs = groups[o]; h += `<div style="margin-bottom:30px;page-break-inside:avoid"><h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Requisitioner</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${docs.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table></div>`; }); return h; }
+    function generateCustomReport(data) { const cols = { id: document.getElementById('pcol-id').checked, type: document.getElementById('pcol-type').checked, no: document.getElementById('pcol-no').checked, desc: document.getElementById('pcol-desc').checked, amount: document.getElementById('pcol-amount').checked, supplier: document.getElementById('pcol-supplier').checked, req: document.getElementById('pcol-req').checked, office: document.getElementById('pcol-office').checked, status: document.getElementById('pcol-status').checked, date: document.getElementById('pcol-date').checked, overdue: document.getElementById('pcol-overdue').checked, notes: document.getElementById('pcol-notes').checked }; let h = getReportHeader('Custom Report'); h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`; if (cols.id) h += `<th>ID</th>`; if (cols.type) h += `<th>Type</th>`; if (cols.no) h += `<th>Doc No</th>`; if (cols.desc) h += `<th>Description</th>`; if (cols.amount) h += `<th>Amount</th>`; if (cols.supplier) h += `<th>Supplier</th>`; if (cols.req) h += `<th>Requisitioner</th>`; if (cols.office) h += `<th>Office</th>`; if (cols.status) h += `<th>Status</th>`; if (cols.date) h += `<th>Date</th>`; if (cols.overdue) h += `<th>Overdue</th>`; if (cols.notes) h += `<th>Notes</th>`; h += `</tr></thead><tbody>`; data.forEach(d => { h += `<tr>`; if (cols.id) h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`; if (cols.type) h += `<td>${d['Doc Type'] || '-'}</td>`; if (cols.no) h += `<td>${d['Doc No'] || '-'}</td>`; if (cols.desc) h += `<td>${d.Description || '-'}</td>`; if (cols.amount) h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`; if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`; if (cols.req) h += `<td>${d.Requisitioner || '-'}</td>`; if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`; if (cols.status) h += `<td>${d.Status || '-'}</td>`; if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`; if (cols.overdue) h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td>`; if (cols.notes) h += `<td>${d.Notes || '-'}</td>`; h += `</tr>`; }); h += `</tbody></table>`; return h; }
+    function generatePreview() { const type = document.getElementById('reportType').value, data = getPrintFilteredData(); let h = ''; switch (type) { case 'summary': h = generateSummaryReport(data); break; case 'detailed': h = generateDetailedReport(data); break; case 'overdue': h = generateOverdueReport(data); break; case 'office': h = generateOfficeReport(data); break; case 'custom': h = generateCustomReport(data); break; }const prev = document.getElementById('reportPreview'); prev.innerHTML = h; prev.classList.add('show'); prev.scrollIntoView({ behavior: 'smooth' }); }
+    function printReport() { generatePreview(); setTimeout(() => window.print(), 500); }
+
+    // ===================== EXPORT =====================
+    function getExportFilename(ext) { const n = new Date(); return `DocuTracker_Export_${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, '0')}${String(n.getDate()).padStart(2, '0')}_${String(n.getHours()).padStart(2, '0')}${String(n.getMinutes()).padStart(2, '0')}.${ext}`; }
+    function getExportData() { const cols = [], hdrs = []; if (visibleColumns.id) { cols.push('ID/Barcode'); hdrs.push('ID/Barcode'); } if (visibleColumns.type) { cols.push('Doc Type'); hdrs.push('Doc Type'); } if (visibleColumns.no) { cols.push('Doc No'); hdrs.push('Doc No'); } if (visibleColumns.desc) { cols.push('Description'); hdrs.push('Description'); } if (visibleColumns.amount) { cols.push('Amount'); hdrs.push('Amount'); } if (visibleColumns.supplier) { cols.push('Supplier'); hdrs.push('Supplier'); } if (visibleColumns.req) { cols.push('Requisitioner'); hdrs.push('Requisitioner'); } if (visibleColumns.office) { cols.push('Endorsed To'); hdrs.push('Endorsed To'); } if (visibleColumns.status) { cols.push('Status'); hdrs.push('Status'); } if (visibleColumns.date) { cols.push('Date Received'); hdrs.push('Date Received'); } if (visibleColumns.overdue) { cols.push('Overdue'); hdrs.push('Overdue'); } if (visibleColumns.notes) { cols.push('Notes'); hdrs.push('Notes'); } if (visibleColumns.attachment) { cols.push('PDF Link'); hdrs.push('Attachment Link'); } const rows = [hdrs]; filteredDocs.forEach(doc => { const row = []; cols.forEach(col => { let v = doc[col]; if (v === null || v === undefined) v = ''; else v = String(v); if (col === 'Amount' && v) v = v.replace(/[₱,]/g, ''); row.push(v); }); rows.push(row); }); return rows; }
+    function exportToCSV() {
+      try {
+        const data = getExportData();
+        if (data.length <= 1) { toast('No data to export', 'error'); return; }
+        let csv = '';
+        data.forEach(row => {
+          csv += row.map(c => {
+            const s = String(c);
+            return (s.includes(',') || s.includes('\n') || s.includes('"'))
+              ? '"' + s.replace(/"/g, '""') + '"'
+              : s;
+          }).join(',') + '\n';
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.setAttribute('href', URL.createObjectURL(blob));
+        a.setAttribute('download', getExportFilename('csv'));
+        a.style.visibility = 'hidden';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast('CSV exported!');
+        document.getElementById('exportDropdown').classList.remove('show');
+        try { google.script.run.logActivity('Exported Data', '', 'Exported documents to CSV'); } catch(e) {}
+      } catch (e) { toast('Export failed: ' + e.message, 'error'); }
+    }
+    function exportToExcel() {
+      try {
+        const data = getExportData();
+        if (data.length <= 1) { toast('No data to export', 'error'); return; }
+        let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office"'
+          + ' xmlns:x="urn:schemas-microsoft-com:office:excel"'
+          + ' xmlns="http://www.w3.org/TR/REC-html40">'
+          + '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'
+          + '<x:ExcelWorksheet><x:Name>DocuTracker</x:Name><x:WorksheetOptions>'
+          + '<x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>'
+          + '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+          + '<meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>'
+          + '</head><body><table border="1">'
+          + '<thead><tr style="background-color:#f3f4f6;font-weight:bold;">';
+        data[0].forEach(h => {
+          html += '<th style="padding:8px;border:1px solid #ddd;">' + h + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+        for (let i = 1; i < data.length; i++) {
+          html += '<tr>';
+          data[i].forEach(c => {
+            html += '<td style="padding:8px;border:1px solid #ddd;">' + (c || '') + '</td>';
+          });
+          html += '</tr>';
+        }
+        html += '</tbody></table></body></html>';
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        const a = document.createElement('a');
+        a.setAttribute('href', URL.createObjectURL(blob));
+        a.setAttribute('download', getExportFilename('xls'));
+        a.style.visibility = 'hidden';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast('Excel exported!');
+        document.getElementById('exportDropdown').classList.remove('show');
+        try { google.script.run.logActivity('Exported Data', '', 'Exported to Excel'); } catch(e) {}
+      } catch (e) { toast('Export failed: ' + e.message, 'error'); }
+    }
+
+    // ===================== EVENT LISTENERS =====================
+    // ===================== MODAL HELPERS =====================
+    function showModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = 'flex';
+      // Force a reflow so the transition/display change registers immediately
+      void el.offsetHeight;
+      el.classList.add('show');
+    }
+    function hideModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('show');
+      el.style.display = 'none';
+    }
+
+    document.getElementById('searchInput').addEventListener('input', () => applyFilter(currentFilter));
+    document.getElementById('docNo').addEventListener('input', () => document.getElementById('docNoError').style.display = 'none');
+    document.getElementById('sidebarToggle').addEventListener('click', () => { const s = document.getElementById('sidebar'), m = document.getElementById('mainContent'), f = document.getElementById('dashboardFooter'); s.classList.toggle('collapsed'); m.classList.toggle('sidebar-collapsed'); f.classList.toggle('sidebar-collapsed'); document.getElementById('sidebarToggle').querySelector('.material-symbols-outlined').textContent = s.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left'; });
+    document.getElementById('mobileMenuToggle').addEventListener('click', () => { document.getElementById('sidebar').classList.add('mobile-open'); document.getElementById('mobileOverlay').classList.add('show'); });
+    document.getElementById('mobileOverlay').addEventListener('click', () => { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('mobileOverlay').classList.remove('show'); });
+    ['docModal', 'profileModal', 'adminModal'].forEach(id => { const el = document.getElementById(id); el.addEventListener('click', e => { if (e.target === el) { id === 'docModal' ? closeModal() : id === 'profileModal' ? closeProfileModal() : closeAdminModal(); } }); });
+    document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); });
+
+    // ===================== INIT =====================
+    setupPwdToggle('toggleLoginPwd', 'loginPassword', 'eyeLogin');
+    setupPwdToggle('togglePwd1', 'newPassword', 'eyeReset1');
+    setupPwdToggle('togglePwd2', 'confirmPassword', 'eyeReset2');
+
+    // Init print date defaults when print view shown
+    window.addEventListener('load', () => { const now = new Date(); document.getElementById('printDateTo').value = now.toISOString().split('T')[0]; const first = new Date(now.getFullYear(), now.getMonth(), 1); document.getElementById('printDateFrom').value = first.toISOString().split('T')[0]; });
+
+    // Check session on load — if logged in go to dashboard
+    (function checkSession() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('token')) return; // password reset flow handled separately
+      google.script.run.withSuccessHandler(function(user) {
+        if (user) { showView('dashboard'); initDashboard(); }
+        else { showView('login'); }
+      }).withFailureHandler(function() {
+        showView('login');
+      }).getCurrentUser();
+    })();
+  </script>
+</body>
+
+</html>
