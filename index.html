@@ -2044,32 +2044,25 @@
                 <div class="dropdown"><button class="btn btn-outline" onclick="toggleColumnsDropdown()"><span
                       class="material-symbols-outlined">view_column</span><span>Columns</span></button>
                   <div class="dropdown-menu" id="columnsDropdown">
-                    <div class="dropdown-item"><input type="checkbox" id="col-id" checked
-                        onchange="toggleColumn('id')"><label for="col-id">ID/Barcode</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-type" checked
-                        onchange="toggleColumn('type')"><label for="col-type">Doc Type</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-no" checked
-                        onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-desc" checked
-                        onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-amount" checked
-                        onchange="toggleColumn('amount')"><label for="col-amount">Amount</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked
-                        onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-req" checked
-                        onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-office" checked
-                        onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-status" checked
-                        onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-date" checked
-                        onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-overdue" checked
-                        onchange="toggleColumn('overdue')"><label for="col-overdue">Overdue</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-notes" checked
-                        onchange="toggleColumn('notes')"><label for="col-notes">Notes</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked
-                        onchange="toggleColumn('attachment')"><label for="col-attachment">Attachment</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-overdue" checked onchange="toggleColumn('overdue')"><label for="col-overdue">Overdue</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-id" checked onchange="toggleColumn('id')"><label for="col-id">ID/Barcode</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-docTs" checked onchange="toggleColumn('docTs')"><label for="col-docTs">Doc Time Stamp</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-type" checked onchange="toggleColumn('type')"><label for="col-type">Doc Type</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-no" checked onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-prDate" checked onchange="toggleColumn('prDate')"><label for="col-prDate">PR Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-desc" checked onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-amount" checked onchange="toggleColumn('amount')"><label for="col-amount">Amount</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-endUser" checked onchange="toggleColumn('endUser')"><label for="col-endUser">EndUser</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-req" checked onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poTs" checked onchange="toggleColumn('poTs')"><label for="col-poTs">PO Time Stamp</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poNo" checked onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked onchange="toggleColumn('poDate')"><label for="col-poDate">PO Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-office" checked onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-status" checked onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-date" checked onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-notes" checked onchange="toggleColumn('notes')"><label for="col-notes">Notes</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
                   </div>
                 </div>
                 <button class="btn btn-outline" onclick="loadDocs()"><span
@@ -2082,30 +2075,31 @@
               <table>
                 <thead>
                   <tr>
+                    <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
                     <th class="sortable col-id" data-column="id" onclick="sortTable('id')">ID/Barcode</th>
+                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time Stamp</th>
                     <th class="sortable col-type" data-column="type" onclick="sortTable('type')">Doc Type</th>
                     <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
-                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
-                    </th>
+                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR Date</th>
+                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description</th>
                     <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
-                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
-                    </th>
+                    <th class="sortable col-endUser" data-column="endUser" onclick="sortTable('endUser')">EndUser</th>
                     <th class="sortable col-req" data-column="req" onclick="sortTable('req')">Requisitioner</th>
-                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
-                      Endorsed To</th>
+                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time Stamp</th>
+                    <th class="sortable col-poNo" data-column="poNo" onclick="sortTable('poNo')">PO No</th>
+                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO Date</th>
+                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier</th>
+                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">Endorsed To</th>
                     <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
-                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date
-                      Received</th>
-                    <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
-                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes
-                    </th>
-                    <th class="col-attachment">Attachment</th>
+                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date Received</th>
+                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes</th>
+                    <th class="col-attachment">PDF Link</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="docTable">
                   <tr>
-                    <td colspan="14" class="loading">Loading documents...</td>
+                    <td colspan="20" class="loading">Loading documents...</td>
                   </tr>
                 </tbody>
               </table>
@@ -2247,17 +2241,23 @@
               <div id="printColumnsSection" style="display:none">
                 <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
                 <div class="columns-grid">
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-overdue"> Overdue</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-id"> ID/Barcode</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-docTs"> Doc Time Stamp</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-type"> Doc Type</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-no"> Doc No</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-prDate"> PR Date</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-desc"> Description</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-amount"> Amount</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-endUser"> EndUser</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-req"> Requisitioner</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poTs"> PO Time Stamp</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poNo"> PO No</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poDate"> PO Date</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-date"> Date Received</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-overdue"> Overdue</label>
                   <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
                 </div>
               </div>
@@ -2288,6 +2288,19 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="editId">
+
+        <!-- Doc Time Stamp (auto, view-only) -->
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">schedule</span>
+            Doc Time Stamp
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
+          </label>
+          <input type="text" class="form-input" id="docTimeStamp" readonly
+            style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
+            placeholder="Auto-generated on save">
+        </div>
+
         <div class="form-group"><label class="form-label">Document Type *</label><select class="form-select"
             id="docType"></select></div>
         <div class="form-group"><label class="form-label">Document Number *</label><input type="text" class="form-input"
@@ -2295,13 +2308,55 @@
             style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span></div>
         <div class="form-group"><label class="form-label">Description *</label><input type="text" class="form-input"
             id="desc" placeholder="Brief description"></div>
+
+        <!-- PR Date (required) -->
+        <div class="form-group">
+          <label class="form-label">PR Date *</label>
+          <input type="date" class="form-input" id="prDate">
+        </div>
+
         <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="amt"
             placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)"></div>
+
+        <!-- EndUser dropdown (required) -->
+        <div class="form-group">
+          <label class="form-label">End User *</label>
+          <select class="form-select" id="endUser">
+            <option value="">Select end user...</option>
+          </select>
+        </div>
+
+        <!-- Requisitioner (optional — moved below EndUser) -->
+        <div class="form-group"><label class="form-label">Requisitioner</label><input type="text" class="form-input"
+            id="req" placeholder="Enter name (optional)"></div>
+
+        <!-- PO Time Stamp (auto, view-only) -->
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:6px">
+            <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">update</span>
+            PO Time Stamp
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
+          </label>
+          <input type="text" class="form-input" id="poTimeStamp" readonly
+            style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
+            placeholder="Auto-generated on save">
+        </div>
+
+        <!-- PO No -->
+        <div class="form-group">
+          <label class="form-label">PO No</label>
+          <input type="text" class="form-input" id="poNo" placeholder="e.g., PO-2025-001">
+        </div>
+
+        <!-- PO Date -->
+        <div class="form-group">
+          <label class="form-label">PO Date</label>
+          <input type="date" class="form-input" id="poDate">
+        </div>
+
         <div class="form-group"><label class="form-label">Supplier</label><select class="form-select" id="supp">
             <option value="">Select supplier...</option>
           </select></div>
-        <div class="form-group"><label class="form-label">Requisitioner *</label><input type="text" class="form-input"
-            id="req" placeholder="Enter name"></div>
         <div class="form-group"><label class="form-label">Office/Department (Endorsed To) *</label><select
             class="form-select" id="office"></select></div>
         <div class="form-group"><label class="form-label">Status *</label><select class="form-select"
@@ -2367,6 +2422,8 @@
             id="adminOffices" placeholder="One per line..." style="min-height:120px"></textarea></div>
         <div class="form-group"><label class="form-label">Status Options</label><textarea class="form-textarea"
             id="adminStatuses" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">End Users</label><textarea class="form-textarea"
+            id="adminEndUsers" placeholder="One per line..." style="min-height:120px"></textarea></div>
       </div>
       <div class="modal-footer"><button class="btn btn-outline" onclick="closeAdminModal()">Cancel</button><button
           class="btn admin-btn" onclick="saveAdminSettings()"><span
@@ -2398,7 +2455,7 @@
         try { return localStorage.getItem(SESSION_KEY) || ''; } catch (e) { return ''; }
       }
       function setSessionEmail(email) {
-        try { if (email) localStorage.setItem(SESSION_KEY, email); else localStorage.removeItem(SESSION_KEY); } catch (e) {}
+        try { if (email) localStorage.setItem(SESSION_KEY, email); else localStorage.removeItem(SESSION_KEY); } catch (e) { }
       }
 
       // Core fetch wrapper — calls the GAS Web App via POST
@@ -2441,7 +2498,7 @@
             return (...args) => {
               callGASWithSessionCapture(prop, args)
                 .then(result => { if (state._success) state._success(result); })
-                .catch(err  => {
+                .catch(err => {
                   console.error('[DocuTracker] GAS call failed:', prop, err);
                   if (state._failure) state._failure(err);
                 });
@@ -2455,8 +2512,8 @@
       window.google = {
         script: {
           get run() { return makeRunner(); },
-          history: { replace() {} },
-          host: { close() {}, editor: {} },
+          history: { replace() { } },
+          host: { close() { }, editor: {} },
           url: { getLocation(cb) { cb({ parameter: {}, hash: '' }); } }
         }
       };
@@ -2477,7 +2534,7 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = null, sortDirection = 'asc';
-    let visibleColumns = { id: true, type: true, no: true, desc: true, amount: true, supplier: true, req: true, office: true, status: true, date: true, overdue: true, notes: true, attachment: true };
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
 
@@ -2570,7 +2627,7 @@
     // ===================== DASHBOARD INIT =====================
     function initDashboard() {
       loadUserProfile(); loadDropdownOptions(); loadDocs();
-      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch(e) {}
+      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
     }
 
     function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
@@ -2598,11 +2655,13 @@
       document.getElementById('supp').innerHTML = '<option value="">Select supplier...</option>' + dropdownOptions.suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
       document.getElementById('office').innerHTML = '<option value="">Select office...</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join('');
       document.getElementById('stat').innerHTML = dropdownOptions.statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+      const eu = document.getElementById('endUser');
+      if (eu) eu.innerHTML = '<option value="">Select end user...</option>' + (dropdownOptions.endUsers || []).map(u => `<option value="${u}">${u}</option>`).join('');
     }
 
     // ===================== DOCUMENTS =====================
     function loadDocs() {
-      document.getElementById('docTable').innerHTML = '<tr><td colspan="14" class="loading">Loading...</td></tr>';
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="20" class="loading">Loading...</td></tr>';
       google.script.run.withSuccessHandler(d => { allDocs = d || []; applyFilter(currentFilter); updateStats(); updateBadges(); }).withFailureHandler(() => toast('Failed to load', 'error')).getAllDocuments();
     }
 
@@ -2644,7 +2703,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${col}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; const map = { id: 'ID/Barcode', type: 'Doc Type', no: 'Doc No', desc: 'Description', amount: 'Amount', supplier: 'Supplier', req: 'Requisitioner', office: 'Endorsed To', status: 'Status', date: 'Date Received', overdue: 'Overdue', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', status: 'Status', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -2652,28 +2711,35 @@
 
     function formatAmountInput(inp) { let v = inp.value.replace(/[^\d.]/g, ''); const p = v.split('.'); if (p.length > 2) v = p[0] + '.' + p.slice(1).join(''); if (p[0]) { const int = parseInt(p[0]).toLocaleString('en-US'); inp.value = p.length > 1 ? int + '.' + p[1].substring(0, 2) : int; } else { inp.value = v; } }
     function formatAmountDisplay(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function formatTimestampDisplay(d) { if (!d) return ''; const dt = (d instanceof Date) ? d : new Date(d); if (isNaN(dt)) return String(d); const pad = n => String(n).padStart(2, '0'); return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`; }
 
     function renderTable() {
       const tb = document.getElementById('docTable');
-      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="14" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
+      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="20" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const id = d['ID/Barcode'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), sp = d.Supplier || '-', rq = d.Requisitioner || '', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', ov = d.Overdue || 'On time', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf ? `<a href="${pdf}" target="_blank" style="color:var(--blue);text-decoration:none"><span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>` : '-';
-        const disp = k => visibleColumns[k] ? '' : 'none';
+        const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
         return `<tr>
+<td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
 <td class="col-id" style="display:${disp('id')}"><span class="doc-id">${id}</span></td>
+<td class="hide-mobile col-docTs" style="display:${disp('docTs')};font-family:monospace;font-size:12px;color:var(--muted)">${docTs}</td>
 <td class="col-type" style="display:${disp('type')}"><strong>${ty}</strong></td>
 <td class="col-no" style="display:${disp('no')}">${no}</td>
+<td class="hide-mobile col-prDate" style="display:${disp('prDate')}">${prDate}</td>
 <td class="hide-mobile col-desc" style="display:${disp('desc')}">${ds}</td>
 <td class="col-amount" style="display:${disp('amount')}">${am}</td>
-<td class="col-supplier" style="display:${disp('supplier')}">${sp}</td>
+<td class="col-endUser" style="display:${disp('endUser')}">${eu}</td>
 <td class="col-req" style="display:${disp('req')}">${rq}</td>
+<td class="hide-mobile col-poTs" style="display:${disp('poTs')};font-family:monospace;font-size:12px;color:var(--muted)">${poTs}</td>
+<td class="col-poNo" style="display:${disp('poNo')}">${poNo}</td>
+<td class="hide-mobile col-poDate" style="display:${disp('poDate')}">${poDate}</td>
+<td class="col-supplier" style="display:${disp('supplier')}">${sp}</td>
 <td class="hide-mobile col-office" style="display:${disp('office')}">${of}</td>
 <td class="col-status" style="display:${disp('status')}"><span class="status-badge status-${sc}">${sta}</span></td>
 <td class="hide-mobile col-date" style="display:${disp('date')}">${dt}</td>
-<td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
 <td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
 <td><div class="table-actions">
@@ -2694,14 +2760,96 @@
   </script>
   <script>
     // ===================== CRUD MODALS =====================
-    function openAddModal() { isEdit = false; selectedFile = null; document.getElementById('modalTitle').textContent = 'Add New Document';['editId', 'docNo', 'desc', 'amt', 'req', 'note'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); const docTypeEl = document.getElementById('docType'); if (docTypeEl) docTypeEl.value = ''; const suppEl = document.getElementById('supp'); if (suppEl) suppEl.value = ''; const officeEl = document.getElementById('office'); if (officeEl) officeEl.value = ''; const statEl = document.getElementById('stat'); if (statEl) statEl.value = dropdownOptions.statuses[0] || 'Received'; const errEl = document.getElementById('docNoError'); if (errEl) errEl.style.display = 'none'; removeFile(); showModal('docModal'); }
+    function openAddModal() {
+      isEdit = false; selectedFile = null;
+      document.getElementById('modalTitle').textContent = 'Add New Document';
+      ['editId', 'docNo', 'desc', 'amt', 'req', 'note', 'poNo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['prDate', 'poDate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const docTypeEl = document.getElementById('docType'); if (docTypeEl) docTypeEl.value = '';
+      const suppEl = document.getElementById('supp'); if (suppEl) suppEl.value = '';
+      const officeEl = document.getElementById('office'); if (officeEl) officeEl.value = '';
+      const euEl = document.getElementById('endUser'); if (euEl) euEl.value = '';
+      const statEl = document.getElementById('stat'); if (statEl) statEl.value = dropdownOptions.statuses[0] || 'Received';
+      const errEl = document.getElementById('docNoError'); if (errEl) errEl.style.display = 'none';
+      // Set auto-generated timestamps for display
+      const now = new Date();
+      const tsStr = formatTimestampDisplay(now);
+      const dtsEl = document.getElementById('docTimeStamp'); if (dtsEl) dtsEl.value = tsStr;
+      const ptsEl = document.getElementById('poTimeStamp'); if (ptsEl) ptsEl.value = tsStr;
+      removeFile();
+      showModal('docModal');
+    }
     function closeModal() { hideModal('docModal'); }
-    function editDoc(id) { const doc = allDocs.find(d => d['ID/Barcode'] === id); if (!doc) { toast('Document not found', 'error'); return; } isEdit = true; selectedFile = null; document.getElementById('modalTitle').textContent = 'Edit Document'; document.getElementById('editId').value = id; document.getElementById('docType').value = doc['Doc Type'] || ''; document.getElementById('docNo').value = doc['Doc No'] || ''; document.getElementById('desc').value = doc.Description || ''; const av = doc.Amount ? doc.Amount.replace(/[₱,]/g, '') : ''; document.getElementById('amt').value = av; if (av) formatAmountInput(document.getElementById('amt')); document.getElementById('supp').value = doc.Supplier || ''; document.getElementById('req').value = doc.Requisitioner || ''; document.getElementById('office').value = doc['Endorsed To'] || ''; document.getElementById('stat').value = doc.Status || ''; document.getElementById('note').value = doc.Notes || ''; document.getElementById('docNoError').style.display = 'none'; removeFile(); showModal('docModal'); }
+    function editDoc(id) {
+      const doc = allDocs.find(d => d['ID/Barcode'] === id);
+      if (!doc) { toast('Document not found', 'error'); return; }
+      isEdit = true; selectedFile = null;
+      document.getElementById('modalTitle').textContent = 'Edit Document';
+      document.getElementById('editId').value = id;
+      document.getElementById('docType').value = doc['Doc Type'] || '';
+      document.getElementById('docNo').value = doc['Doc No'] || '';
+      document.getElementById('desc').value = doc.Description || '';
+      const av = doc.Amount ? doc.Amount.replace(/[₱,]/g, '') : '';
+      document.getElementById('amt').value = av;
+      if (av) formatAmountInput(document.getElementById('amt'));
+      document.getElementById('supp').value = doc.Supplier || '';
+      document.getElementById('req').value = doc.Requisitioner || '';
+      document.getElementById('office').value = doc['Endorsed To'] || '';
+      document.getElementById('stat').value = doc.Status || '';
+      document.getElementById('note').value = doc.Notes || '';
+      // New fields
+      const prEl = document.getElementById('prDate'); if (prEl) prEl.value = doc['PR Date'] || '';
+      const euEl = document.getElementById('endUser'); if (euEl) euEl.value = doc['EndUser'] || '';
+      const poNoEl = document.getElementById('poNo'); if (poNoEl) poNoEl.value = doc['PO No'] || '';
+      const poDtEl = document.getElementById('poDate'); if (poDtEl) poDtEl.value = doc['PO Date'] || '';
+      // Timestamps: show existing (read-only); PO Time Stamp will refresh on save
+      const now = new Date();
+      const dtsEl = document.getElementById('docTimeStamp');
+      if (dtsEl) dtsEl.value = doc['Doc Time Stamp'] || formatTimestampDisplay(now);
+      const ptsEl = document.getElementById('poTimeStamp');
+      if (ptsEl) ptsEl.value = formatTimestampDisplay(now) + '  (updates on save)';
+      document.getElementById('docNoError').style.display = 'none';
+      removeFile();
+      showModal('docModal');
+    }
     function saveDoc() {
       const docNo = document.getElementById('docNo').value.trim();
-      const data = { docType: document.getElementById('docType').value, docNo, description: document.getElementById('desc').value, amount: document.getElementById('amt').value.replace(/,/g, ''), supplier: document.getElementById('supp').value, requisitioner: document.getElementById('req').value, office: document.getElementById('office').value, status: document.getElementById('stat').value, notes: document.getElementById('note').value, dateReceived: new Date().toISOString() };
-      if (!data.docType || !data.docNo || !data.description || !data.requisitioner || !data.office) { toast('Fill required fields', 'error'); return; }
-      if (selectedFile) { const reader = new FileReader(); reader.onload = e => { const b64 = e.target.result.split(',')[1]; toast('Uploading PDF...'); google.script.run.withSuccessHandler(r => { if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); } else toast('PDF upload failed', 'error'); }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp'); }; reader.readAsDataURL(selectedFile); } else saveDocumentData(data);
+      const prDate = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
+      const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
+      const poNo = document.getElementById('poNo') ? document.getElementById('poNo').value : '';
+      const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
+      const data = {
+        docType: document.getElementById('docType').value,
+        docNo,
+        description: document.getElementById('desc').value,
+        amount: document.getElementById('amt').value.replace(/,/g, ''),
+        prDate,
+        endUser,
+        poNo,
+        poDate,
+        supplier: document.getElementById('supp').value,
+        requisitioner: document.getElementById('req').value,
+        office: document.getElementById('office').value,
+        status: document.getElementById('stat').value,
+        notes: document.getElementById('note').value,
+        dateReceived: new Date().toISOString()
+      };
+      if (!data.docType || !data.docNo || !data.description || !data.prDate || !data.endUser || !data.office) {
+        toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
+        return;
+      }
+      if (selectedFile) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const b64 = e.target.result.split(',')[1];
+          toast('Uploading PDF...');
+          google.script.run.withSuccessHandler(r => {
+            if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
+            else toast('PDF upload failed', 'error');
+          }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
+        };
+        reader.readAsDataURL(selectedFile);
+      } else saveDocumentData(data);
     }
     function saveDocumentData(data) {
       if (isEdit) { const id = document.getElementById('editId').value; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Updated!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Update failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).updateDocument(id, data); }
@@ -2718,7 +2866,7 @@
     function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(updates); }
     function handleLogout() {
       if (!confirm('Are you sure you want to logout?')) return;
-      google.script.run.withSuccessHandler(function(url) {
+      google.script.run.withSuccessHandler(function (url) {
         currentUser = null;
         if (url && url.startsWith('http')) { window.location.href = url; }
         else { showView('login'); document.getElementById('loginEmail').value = ''; document.getElementById('loginPassword').value = ''; }
@@ -2726,18 +2874,137 @@
     }
 
     // ===================== ADMIN =====================
-    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
+    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
     function closeAdminModal() { hideModal('adminModal'); }
-    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses'], keys = ['docTypes', 'suppliers', 'offices', 'statuses']; let done = 0; types.forEach((t, i) => { const vals = document.getElementById(ids[i]).value.split('\n').filter(l => l.trim()); google.script.run.withSuccessHandler(() => { if (++done === 4) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
+    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'], keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers']; let done = 0; types.forEach((t, i) => { const el = document.getElementById(ids[i]); const vals = el ? el.value.split('\n').filter(l => l.trim()) : []; google.script.run.withSuccessHandler(() => { if (++done === 5) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
 
     // ===================== TRACK =====================
-    function showTrack(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('trackView').classList.add('active'); currentFilter = 'track'; updatePageTitle(); document.getElementById('trackInput').focus(); }
-    function searchTrack() { const id = document.getElementById('trackInput').value.trim(); if (!id) { toast('Enter Document ID', 'error'); return; } const r = document.getElementById('trackResults'); r.innerHTML = '<div class="loading">Loading...</div>'; google.script.run.withSuccessHandler(doc => { if (!doc) { r.innerHTML = `<div class="empty-state"><p>No document with ID: <strong>${id}</strong></p></div>`; return; } google.script.run.withSuccessHandler(hist => displayHistory(doc, hist)).withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history</p></div>'; }).getDocumentHistory(id); }).withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error</p></div>'; }).getDocumentById(id); }
+    function showTrack(evt) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt) evt.target.closest('.nav-link').classList.add('active');
+      ['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active'));
+      document.getElementById('trackView').classList.add('active');
+      currentFilter = 'track'; updatePageTitle();
+      document.getElementById('trackInput').focus();
+    }
+
+    function searchTrack() {
+      const query = document.getElementById('trackInput').value.trim();
+      if (!query) { toast('Enter a Document ID or Doc No', 'error'); return; }
+      const r = document.getElementById('trackResults');
+      r.innerHTML = '<div class="loading">Searching...</div>';
+
+      // Try by ID/Barcode first (backend), then fallback to Doc No in allDocs
+      google.script.run
+        .withSuccessHandler(doc => {
+          if (doc) {
+            // Found by ID/Barcode
+            google.script.run
+              .withSuccessHandler(hist => displayHistory(doc, hist))
+              .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history.</p></div>'; })
+              .getDocumentHistory(doc['ID/Barcode'] || query);
+          } else {
+            // Fallback: search by Doc No in already-loaded allDocs
+            const byDocNo = allDocs.find(d => (d['Doc No'] || '').toLowerCase() === query.toLowerCase());
+            if (byDocNo) {
+              const docId = byDocNo['ID/Barcode'];
+              google.script.run
+                .withSuccessHandler(hist => displayHistory(byDocNo, hist))
+                .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history.</p></div>'; })
+                .getDocumentHistory(docId);
+            } else {
+              r.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined" style="font-size:60px;opacity:.2;display:block;margin-bottom:16px">search_off</span><p>No document found for: <strong>${query}</strong></p><p style="font-size:13px;margin-top:8px;color:var(--muted)">Try searching by Document ID (e.g. DOC-20251017-1234) or Doc No.</p></div>`;
+            }
+          }
+        })
+        .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Connection error. Please try again.</p></div>'; })
+        .getDocumentById(query);
+    }
+
     function displayHistory(doc, hist) {
-      const r = document.getElementById('trackResults'); const sc = (doc.Status || '').toLowerCase().replace(/\s+/g, '-'); let h = `<div class="doc-info-card"><div class="doc-info-header"><div><div class="doc-info-title">${doc['Doc Type'] || 'Document'}</div><div style="margin-top:4px;color:var(--muted)">${doc['Doc No'] || ''}</div></div><div style="font-family:monospace;font-size:14px;color:var(--muted);background:var(--bg);padding:6px 12px;border-radius:6px">${doc['ID/Barcode'] || ''}</div></div><div class="doc-info-grid"><div class="doc-info-item"><span class="doc-info-label">Description</span><span class="doc-info-value">${doc.Description || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Amount</span><span class="doc-info-value">${formatAmountDisplay(doc.Amount)}</span></div><div class="doc-info-item"><span class="doc-info-label">Requisitioner</span><span class="doc-info-value">${doc.Requisitioner || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div><div class="doc-info-item"><span class="doc-info-label">Status</span><span class="doc-info-value"><span class="status-badge status-${sc}">${doc.Status || '-'}</span></span></div><div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div></div></div><div class="timeline-container"><div class="timeline-header"><span class="material-symbols-outlined">history</span>Document Activity Timeline</div>`;
-      if (!hist || hist.length === 0) { h += `<div class="empty-state"><p>No history recorded.</p></div>`; }
-      else { h += '<div class="timeline">'; hist.forEach(e => { const dc = e.action.toLowerCase().includes('created') ? 'created' : e.action.toLowerCase().includes('deleted') ? 'deleted' : 'updated'; h += `<div class="timeline-item"><div class="timeline-dot ${dc}"></div><div class="timeline-content"><div class="timeline-action">${e.action}</div><div class="timeline-meta"><div class="timeline-meta-item"><span class="material-symbols-outlined">person</span><span>${e.user}</span></div><div class="timeline-meta-item"><span class="material-symbols-outlined">schedule</span><span>${e.timestamp}</span></div>${e.status ? `<div class="timeline-meta-item"><span class="material-symbols-outlined">label</span><span>Status: <strong>${e.status}</strong></span></div>` : ''}</div>${e.remarks ? `<div class="timeline-remarks"><strong>Remarks:</strong> ${e.remarks}</div>` : ''}</div></div>`; }); h += '</div>'; }
-      h += '</div>'; r.innerHTML = h;
+      const r = document.getElementById('trackResults');
+      const sc = (doc.Status || '').toLowerCase().replace(/\s+/g, '-');
+      const ov = doc.Overdue || 'On time';
+      const ovColor = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
+
+      let h = `
+        <div class="doc-info-card">
+          <div class="doc-info-header">
+            <div>
+              <div class="doc-info-title">${doc['Doc Type'] || 'Document'}</div>
+              <div style="margin-top:4px;color:var(--muted);font-size:14px">${doc['Doc No'] || ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span style="font-family:monospace;font-size:13px;color:var(--muted);background:var(--bg);padding:6px 12px;border-radius:6px">${doc['ID/Barcode'] || ''}</span>
+              <span class="status-badge status-${sc}">${doc.Status || '-'}</span>
+              <span style="color:${ovColor};font-weight:700;font-size:13px">${ov !== 'On time' ? '⚠️ ' + ov + ' overdue' : '✅ On time'}</span>
+            </div>
+          </div>
+          <div class="doc-info-grid">
+            <div class="doc-info-item"><span class="doc-info-label">Doc Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['Doc Time Stamp'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PR Date</span><span class="doc-info-value">${doc['PR Date'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Description</span><span class="doc-info-value">${doc.Description || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Amount</span><span class="doc-info-value">${formatAmountDisplay(doc.Amount)}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">End User</span><span class="doc-info-value">${doc['EndUser'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Requisitioner</span><span class="doc-info-value">${doc.Requisitioner || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PO Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['PO Time Stamp'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PO No</span><span class="doc-info-value">${doc['PO No'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PO Date</span><span class="doc-info-value">${doc['PO Date'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Supplier</span><span class="doc-info-value">${doc.Supplier || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div>
+          </div>
+        </div>
+        <div class="timeline-container">
+          <div class="timeline-header"><span class="material-symbols-outlined">history</span>Document Activity Timeline</div>`;
+
+      if (!hist || hist.length === 0) {
+        h += `<div class="empty-state"><p>No activity history recorded for this document.</p><p style="font-size:13px;margin-top:8px;color:var(--muted)">History is logged automatically on every Create or Update action.</p></div>`;
+      } else {
+        // Status-to-icon mapping
+        const iconMap = {
+          'created':   { icon: 'add_circle',    cls: 'created' },
+          'incoming':  { icon: 'inbox',          cls: 'updated' },
+          'received':  { icon: 'mail',           cls: 'created' },
+          'in review': { icon: 'rate_review',    cls: 'updated' },
+          'in process':{ icon: 'pending',        cls: 'updated' },
+          'approved':  { icon: 'check_circle',   cls: 'created' },
+          'forwarded': { icon: 'send',           cls: 'updated' },
+          'hold':      { icon: 'pause_circle',   cls: 'updated' },
+          'completed': { icon: 'task_alt',       cls: 'created' },
+          'complete':  { icon: 'task_alt',       cls: 'created' },
+          'deleted':   { icon: 'delete',         cls: 'deleted' }
+        };
+        function getIcon(action, status) {
+          const al = (action || '').toLowerCase();
+          const sl = (status || '').toLowerCase().trim();
+          if (al.includes('created')) return iconMap['created'];
+          if (al.includes('deleted')) return iconMap['deleted'];
+          return iconMap[sl] || { icon: 'update', cls: 'updated' };
+        }
+        h += '<div class="timeline">';
+        hist.forEach(e => {
+          const { icon, cls } = getIcon(e.action, e.status);
+          h += `
+            <div class="timeline-item">
+              <div class="timeline-dot ${cls}"></div>
+              <div class="timeline-content">
+                <div class="timeline-action">
+                  <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:6px">${icon}</span>${e.action}
+                </div>
+                <div class="timeline-meta">
+                  <div class="timeline-meta-item"><span class="material-symbols-outlined">person</span><span>${e.user || 'System'}</span></div>
+                  <div class="timeline-meta-item"><span class="material-symbols-outlined">schedule</span><span>${e.timestamp}</span></div>
+                  ${e.status ? `<div class="timeline-meta-item"><span class="material-symbols-outlined">label</span><span>Status: <strong>${e.status}</strong></span></div>` : ''}
+                </div>
+                ${e.remarks ? `<div class="timeline-remarks"><strong>Details:</strong> ${e.remarks}</div>` : ''}
+              </div>
+            </div>`;
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+      r.innerHTML = h;
     }
 
     // ===================== LOGS =====================
@@ -2763,13 +3030,113 @@
     function generateDetailedReport(data) { let h = getReportHeader('Detailed Document List'); h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Amount</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${data.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table>`; return h; }
     function generateOverdueReport(data) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); let h = getReportHeader('Overdue Documents Report'); h += `<p style="margin-bottom:20px;color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>`; if (od.length === 0) return h + `<p style="text-align:center;padding:60px;color:#6b7280">&#10003; No overdue documents found!</p>`; h += `<table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table>`; return h; }
     function generateOfficeReport(data) { const groups = {}; data.forEach(d => { const o = d['Endorsed To'] || 'Unassigned'; if (!groups[o]) groups[o] = []; groups[o].push(d); }); let h = getReportHeader('Office/Department Report'); h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`; Object.keys(groups).sort().forEach(o => { const docs = groups[o]; h += `<div style="margin-bottom:30px;page-break-inside:avoid"><h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Requisitioner</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${docs.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table></div>`; }); return h; }
-    function generateCustomReport(data) { const cols = { id: document.getElementById('pcol-id').checked, type: document.getElementById('pcol-type').checked, no: document.getElementById('pcol-no').checked, desc: document.getElementById('pcol-desc').checked, amount: document.getElementById('pcol-amount').checked, supplier: document.getElementById('pcol-supplier').checked, req: document.getElementById('pcol-req').checked, office: document.getElementById('pcol-office').checked, status: document.getElementById('pcol-status').checked, date: document.getElementById('pcol-date').checked, overdue: document.getElementById('pcol-overdue').checked, notes: document.getElementById('pcol-notes').checked }; let h = getReportHeader('Custom Report'); h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`; if (cols.id) h += `<th>ID</th>`; if (cols.type) h += `<th>Type</th>`; if (cols.no) h += `<th>Doc No</th>`; if (cols.desc) h += `<th>Description</th>`; if (cols.amount) h += `<th>Amount</th>`; if (cols.supplier) h += `<th>Supplier</th>`; if (cols.req) h += `<th>Requisitioner</th>`; if (cols.office) h += `<th>Office</th>`; if (cols.status) h += `<th>Status</th>`; if (cols.date) h += `<th>Date</th>`; if (cols.overdue) h += `<th>Overdue</th>`; if (cols.notes) h += `<th>Notes</th>`; h += `</tr></thead><tbody>`; data.forEach(d => { h += `<tr>`; if (cols.id) h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`; if (cols.type) h += `<td>${d['Doc Type'] || '-'}</td>`; if (cols.no) h += `<td>${d['Doc No'] || '-'}</td>`; if (cols.desc) h += `<td>${d.Description || '-'}</td>`; if (cols.amount) h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`; if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`; if (cols.req) h += `<td>${d.Requisitioner || '-'}</td>`; if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`; if (cols.status) h += `<td>${d.Status || '-'}</td>`; if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`; if (cols.overdue) h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td>`; if (cols.notes) h += `<td>${d.Notes || '-'}</td>`; h += `</tr>`; }); h += `</tbody></table>`; return h; }
+    function generateCustomReport(data) {
+      const cols = {
+        overdue:  document.getElementById('pcol-overdue').checked,
+        id:       document.getElementById('pcol-id').checked,
+        docTs:    document.getElementById('pcol-docTs').checked,
+        type:     document.getElementById('pcol-type').checked,
+        no:       document.getElementById('pcol-no').checked,
+        prDate:   document.getElementById('pcol-prDate').checked,
+        desc:     document.getElementById('pcol-desc').checked,
+        amount:   document.getElementById('pcol-amount').checked,
+        endUser:  document.getElementById('pcol-endUser').checked,
+        req:      document.getElementById('pcol-req').checked,
+        poTs:     document.getElementById('pcol-poTs').checked,
+        poNo:     document.getElementById('pcol-poNo').checked,
+        poDate:   document.getElementById('pcol-poDate').checked,
+        supplier: document.getElementById('pcol-supplier').checked,
+        office:   document.getElementById('pcol-office').checked,
+        status:   document.getElementById('pcol-status').checked,
+        date:     document.getElementById('pcol-date').checked,
+        notes:    document.getElementById('pcol-notes').checked
+      };
+      let h = getReportHeader('Custom Report');
+      h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`;
+      if (cols.overdue)  h += `<th>Overdue</th>`;
+      if (cols.id)       h += `<th>ID/Barcode</th>`;
+      if (cols.docTs)    h += `<th>Doc Time Stamp</th>`;
+      if (cols.type)     h += `<th>Doc Type</th>`;
+      if (cols.no)       h += `<th>Doc No</th>`;
+      if (cols.prDate)   h += `<th>PR Date</th>`;
+      if (cols.desc)     h += `<th>Description</th>`;
+      if (cols.amount)   h += `<th>Amount</th>`;
+      if (cols.endUser)  h += `<th>EndUser</th>`;
+      if (cols.req)      h += `<th>Requisitioner</th>`;
+      if (cols.poTs)     h += `<th>PO Time Stamp</th>`;
+      if (cols.poNo)     h += `<th>PO No</th>`;
+      if (cols.poDate)   h += `<th>PO Date</th>`;
+      if (cols.supplier) h += `<th>Supplier</th>`;
+      if (cols.office)   h += `<th>Endorsed To</th>`;
+      if (cols.status)   h += `<th>Status</th>`;
+      if (cols.date)     h += `<th>Date Received</th>`;
+      if (cols.notes)    h += `<th>Notes</th>`;
+      h += `</tr></thead><tbody>`;
+      data.forEach(d => {
+        h += `<tr>`;
+        if (cols.overdue)  h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td>`;
+        if (cols.id)       h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`;
+        if (cols.docTs)    h += `<td style="font-family:monospace;font-size:11px">${d['Doc Time Stamp'] || '-'}</td>`;
+        if (cols.type)     h += `<td>${d['Doc Type'] || '-'}</td>`;
+        if (cols.no)       h += `<td>${d['Doc No'] || '-'}</td>`;
+        if (cols.prDate)   h += `<td>${d['PR Date'] || '-'}</td>`;
+        if (cols.desc)     h += `<td>${d.Description || '-'}</td>`;
+        if (cols.amount)   h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`;
+        if (cols.endUser)  h += `<td>${d['EndUser'] || '-'}</td>`;
+        if (cols.req)      h += `<td>${d.Requisitioner || '-'}</td>`;
+        if (cols.poTs)     h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
+        if (cols.poNo)     h += `<td>${d['PO No'] || '-'}</td>`;
+        if (cols.poDate)   h += `<td>${d['PO Date'] || '-'}</td>`;
+        if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`;
+        if (cols.office)   h += `<td>${d['Endorsed To'] || '-'}</td>`;
+        if (cols.status)   h += `<td>${d.Status || '-'}</td>`;
+        if (cols.date)     h += `<td>${d['Date Received'] || '-'}</td>`;
+        if (cols.notes)    h += `<td>${d.Notes || '-'}</td>`;
+        h += `</tr>`;
+      });
+      h += `</tbody></table>`;
+      return h;
+    }
     function generatePreview() { const type = document.getElementById('reportType').value, data = getPrintFilteredData(); let h = ''; switch (type) { case 'summary': h = generateSummaryReport(data); break; case 'detailed': h = generateDetailedReport(data); break; case 'overdue': h = generateOverdueReport(data); break; case 'office': h = generateOfficeReport(data); break; case 'custom': h = generateCustomReport(data); break; }const prev = document.getElementById('reportPreview'); prev.innerHTML = h; prev.classList.add('show'); prev.scrollIntoView({ behavior: 'smooth' }); }
     function printReport() { generatePreview(); setTimeout(() => window.print(), 500); }
 
     // ===================== EXPORT =====================
     function getExportFilename(ext) { const n = new Date(); return `DocuTracker_Export_${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, '0')}${String(n.getDate()).padStart(2, '0')}_${String(n.getHours()).padStart(2, '0')}${String(n.getMinutes()).padStart(2, '0')}.${ext}`; }
-    function getExportData() { const cols = [], hdrs = []; if (visibleColumns.id) { cols.push('ID/Barcode'); hdrs.push('ID/Barcode'); } if (visibleColumns.type) { cols.push('Doc Type'); hdrs.push('Doc Type'); } if (visibleColumns.no) { cols.push('Doc No'); hdrs.push('Doc No'); } if (visibleColumns.desc) { cols.push('Description'); hdrs.push('Description'); } if (visibleColumns.amount) { cols.push('Amount'); hdrs.push('Amount'); } if (visibleColumns.supplier) { cols.push('Supplier'); hdrs.push('Supplier'); } if (visibleColumns.req) { cols.push('Requisitioner'); hdrs.push('Requisitioner'); } if (visibleColumns.office) { cols.push('Endorsed To'); hdrs.push('Endorsed To'); } if (visibleColumns.status) { cols.push('Status'); hdrs.push('Status'); } if (visibleColumns.date) { cols.push('Date Received'); hdrs.push('Date Received'); } if (visibleColumns.overdue) { cols.push('Overdue'); hdrs.push('Overdue'); } if (visibleColumns.notes) { cols.push('Notes'); hdrs.push('Notes'); } if (visibleColumns.attachment) { cols.push('PDF Link'); hdrs.push('Attachment Link'); } const rows = [hdrs]; filteredDocs.forEach(doc => { const row = []; cols.forEach(col => { let v = doc[col]; if (v === null || v === undefined) v = ''; else v = String(v); if (col === 'Amount' && v) v = v.replace(/[₱,]/g, ''); row.push(v); }); rows.push(row); }); return rows; }
+    function getExportData() {
+      const cols = [], hdrs = [];
+      if (visibleColumns.overdue)   { cols.push('Overdue');         hdrs.push('Overdue'); }
+      if (visibleColumns.id)        { cols.push('ID/Barcode');      hdrs.push('ID/Barcode'); }
+      if (visibleColumns.docTs)     { cols.push('Doc Time Stamp');  hdrs.push('Doc Time Stamp'); }
+      if (visibleColumns.type)      { cols.push('Doc Type');        hdrs.push('Doc Type'); }
+      if (visibleColumns.no)        { cols.push('Doc No');          hdrs.push('Doc No'); }
+      if (visibleColumns.prDate)    { cols.push('PR Date');         hdrs.push('PR Date'); }
+      if (visibleColumns.desc)      { cols.push('Description');     hdrs.push('Description'); }
+      if (visibleColumns.amount)    { cols.push('Amount');          hdrs.push('Amount'); }
+      if (visibleColumns.endUser)   { cols.push('EndUser');         hdrs.push('EndUser'); }
+      if (visibleColumns.req)       { cols.push('Requisitioner');   hdrs.push('Requisitioner'); }
+      if (visibleColumns.poTs)      { cols.push('PO Time Stamp');   hdrs.push('PO Time Stamp'); }
+      if (visibleColumns.poNo)      { cols.push('PO No');           hdrs.push('PO No'); }
+      if (visibleColumns.poDate)    { cols.push('PO Date');         hdrs.push('PO Date'); }
+      if (visibleColumns.supplier)  { cols.push('Supplier');        hdrs.push('Supplier'); }
+      if (visibleColumns.office)    { cols.push('Endorsed To');     hdrs.push('Endorsed To'); }
+      if (visibleColumns.status)    { cols.push('Status');          hdrs.push('Status'); }
+      if (visibleColumns.date)      { cols.push('Date Received');   hdrs.push('Date Received'); }
+      if (visibleColumns.notes)     { cols.push('Notes');           hdrs.push('Notes'); }
+      if (visibleColumns.attachment){ cols.push('PDF Link');        hdrs.push('PDF Link'); }
+      const rows = [hdrs];
+      filteredDocs.forEach(doc => {
+        const row = [];
+        cols.forEach(col => {
+          let v = doc[col];
+          if (v === null || v === undefined) v = '';
+          else v = String(v);
+          if (col === 'Amount' && v) v = v.replace(/[₱,]/g, '');
+          row.push(v);
+        });
+        rows.push(row);
+      });
+      return rows;
+    }
     function exportToCSV() {
       try {
         const data = getExportData();
@@ -2793,7 +3160,7 @@
         document.body.removeChild(a);
         toast('CSV exported!');
         document.getElementById('exportDropdown').classList.remove('show');
-        try { google.script.run.logActivity('Exported Data', '', 'Exported documents to CSV'); } catch(e) {}
+        try { google.script.run.logActivity('Exported Data', '', 'Exported documents to CSV'); } catch (e) { }
       } catch (e) { toast('Export failed: ' + e.message, 'error'); }
     }
     function exportToExcel() {
@@ -2832,7 +3199,7 @@
         document.body.removeChild(a);
         toast('Excel exported!');
         document.getElementById('exportDropdown').classList.remove('show');
-        try { google.script.run.logActivity('Exported Data', '', 'Exported to Excel'); } catch(e) {}
+        try { google.script.run.logActivity('Exported Data', '', 'Exported to Excel'); } catch (e) { }
       } catch (e) { toast('Export failed: ' + e.message, 'error'); }
     }
 
@@ -2873,10 +3240,10 @@
     (function checkSession() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('token')) return; // password reset flow handled separately
-      google.script.run.withSuccessHandler(function(user) {
+      google.script.run.withSuccessHandler(function (user) {
         if (user) { showView('dashboard'); initDashboard(); }
         else { showView('login'); }
-      }).withFailureHandler(function() {
+      }).withFailureHandler(function () {
         showView('login');
       }).getCurrentUser();
     })();
