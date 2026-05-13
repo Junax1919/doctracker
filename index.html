@@ -34,7 +34,8 @@
       --success: #10b981;
       --warning: #f59e0b;
       --danger: #ef4444;
-      --sidebar-width: 230px;      /* fixed — sidebar does not change with zoom */
+      --sidebar-width: 230px;
+      /* fixed — sidebar does not change with zoom */
       --sidebar-collapsed: 68px;
       --topbar-h: 64px;
       --radius: 8px;
@@ -2598,6 +2599,9 @@
             <li id="adminMenuLink" style="display:none"><a class="nav-link" onclick="openAdminSettings()"><span
                   class="material-symbols-outlined">admin_panel_settings</span><span class="nav-label">Admin
                   Settings</span></a></li>
+            <li id="usersMenuLink" style="display:none"><a class="nav-link" onclick="showUsersView(event)"><span
+                  class="material-symbols-outlined">manage_accounts</span><span class="nav-label">User
+                  Management</span></a></li>
           </ul>
         </div>
       </div>
@@ -2696,8 +2700,7 @@
                   onchange="applyTableFilters()">
                   <option value="">All Types</option>
                 </select>
-                <select id="filterStatus" class="filter-select" title="Filter by Status"
-                  onchange="applyTableFilters()">
+                <select id="filterStatus" class="filter-select" title="Filter by Status" onchange="applyTableFilters()">
                   <option value="">All Statuses</option>
                 </select>
                 <select id="filterEndUser" class="filter-select" title="Filter by End User"
@@ -2760,10 +2763,10 @@
                         onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
                   </div>
                 </div>
-                <button class="btn btn-outline" onclick="printTableView()" title="Print current view">
+                <button id="printBtn" class="btn btn-outline" onclick="printTableView()" title="Print current view">
                   <span class="material-symbols-outlined">print</span><span class="btn-label">Print</span>
                 </button>
-                <button class="btn btn-primary" onclick="openAddModal()"><span
+                <button id="addDocBtn" class="btn btn-primary" onclick="openAddModal()"><span
                     class="material-symbols-outlined">add</span><span class="btn-label">Add Document</span></button>
               </div>
             </div>
@@ -2898,6 +2901,43 @@
             <footer
               style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;font-size:12px;color:#94a3b8">
               &copy; 2025 DocuTracker | Activity Log System</footer>
+          </div>
+        </div>
+
+        <!-- User Management View -->
+        <div id="usersView" style="display:none">
+          <div class="table-section">
+            <div class="table-header">
+              <div>
+                <div class="section-title">User Management</div>
+                <div class="section-subtitle">Manage system users, roles and access permissions</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-primary" onclick="openAddUserModal()">
+                  <span class="material-symbols-outlined">person_add</span>
+                  <span class="btn-label">Add User</span>
+                </button>
+                <button class="btn btn-outline" onclick="loadUsers()" title="Refresh users">
+                  <span class="material-symbols-outlined">refresh</span>
+                </button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th style="width:110px">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                  <tr><td colspan="5" class="empty-state">Click User Management to load users.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -3167,6 +3207,58 @@
     </div>
   </div>
 
+  <!-- ========== ADD / EDIT USER MODAL ========== -->
+  <div class="modal" id="userModal" style="display:none">
+    <div class="modal-content" style="max-width:480px">
+      <div class="modal-header">
+        <h3 class="modal-title" id="userModalTitle">Add User</h3>
+        <button class="modal-close" onclick="closeUserModal()"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="modal-body" style="display:grid;gap:16px">
+        <input type="hidden" id="editUserEmail">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" class="form-input" id="uFullName" placeholder="Enter full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address *</label>
+          <input type="email" class="form-input" id="uEmail" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span id="uPwdHint" style="font-weight:400;color:var(--muted)"></span></label>
+          <input type="password" class="form-input" id="uPassword" placeholder="Min 6 characters">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Role *</label>
+            <select class="form-select" id="uRole" onchange="_showRolePerms(this.value)">
+              <option value="Staff">Staff</option>
+              <option value="Manager">Manager</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="uStatus">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Role Permissions</div>
+          <div id="uRolePermsInfo" style="font-size:13px;color:var(--text-secondary);line-height:1.6">Select a role to see default permissions.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeUserModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveUser()">
+          <span class="material-symbols-outlined">save</span>Save User
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===================== GAS BRIDGE =====================
     // Connects the frontend to the real Google Apps Script backend.
@@ -3185,18 +3277,18 @@
       // Session persistence: store the logged-in user's email in localStorage
       // so it survives page reloads. Every API call includes it so the backend
       // can restore PropertiesService.getUserProperties() correctly.
-      const SESSION_KEY = 'docutracker_session_email';
+      const SESSION_KEY = 'docutracker_session_token';
 
-      function getSessionEmail() {
+      function getSessionToken() {
         try { return localStorage.getItem(SESSION_KEY) || ''; } catch (e) { return ''; }
       }
-      function setSessionEmail(email) {
-        try { if (email) localStorage.setItem(SESSION_KEY, email); else localStorage.removeItem(SESSION_KEY); } catch (e) { }
+      function setSessionToken(t) {
+        try { if (t) localStorage.setItem(SESSION_KEY, t); else localStorage.removeItem(SESSION_KEY); } catch (e) { }
       }
 
       // Core fetch wrapper — calls the GAS Web App via POST
       async function callGAS(method, args) {
-        const body = { method, args: args || [], sessionEmail: getSessionEmail() };
+        const body = { method, args: args || [], sessionToken: getSessionToken() };
         const resp = await fetch(GAS_URL, {
           method: 'POST',
           mode: 'cors',
@@ -3209,16 +3301,16 @@
         return json.result;
       }
 
-      // After a successful login we capture the email so subsequent calls carry the session
+      // After a successful login store the returned session token.
+      // On logout, clear it. This is per-browser and never shared.
       const _origCallGAS = callGAS;
       async function callGASWithSessionCapture(method, args) {
         const result = await _origCallGAS(method, args);
         if (method === 'checkLogin' && result && result.status === 'success') {
-          // The email is the first argument
-          setSessionEmail((args[0] || '').toLowerCase().trim());
+          setSessionToken(result.token || '');
         }
         if (method === 'logout') {
-          setSessionEmail('');
+          setSessionToken('');
         }
         return result;
       }
@@ -3273,6 +3365,11 @@
     let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
+    // Per-browser session token (UUID issued by the backend on login).
+    // Stored in localStorage so it persists across refreshes but is NEVER
+    // shared between browsers/devices — each gets its own unique token.
+    let _sessionToken = '';
+    try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
     // Active toolbar filter values
     let activeFilters = { docType: '', status: '', endUser: '' };
 
@@ -3318,7 +3415,13 @@
       if (!email || !pwd) { showNotif('loginNotif', 'Please enter email and password', 'error'); return; }
       this.disabled = true; this.textContent = 'Signing in...';
       google.script.run.withSuccessHandler(r => {
-        if (r.status === 'success') { showNotif('loginNotif', 'Login successful!', 'success'); setTimeout(() => { showView('dashboard'); initDashboard(); }, 800); }
+        if (r.status === 'success') {
+          // Store the server-issued token for this browser session
+          _sessionToken = r.token || '';
+          try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch(e) {}
+          showNotif('loginNotif', 'Login successful!', 'success');
+          setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
+        }
         else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
       }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
     });
@@ -3415,8 +3518,29 @@
         document.getElementById('profileName').value = user.name || '';
         document.getElementById('profileEmail').value = user.email || '';
         document.getElementById('profileRole').value = user.role || '';
-        if ((user.role || '').toLowerCase() === 'admin') { document.getElementById('adminMenuLink').style.display = 'block'; document.getElementById('logsMenuLink').style.display = 'block'; }
-      }).getCurrentUser();
+        applyPermissions(user.permissions || {}, user.role || 'Staff');
+      }).getCurrentUser(_sessionToken);
+    }
+
+    // Apply role-based permissions — hide/show UI elements based on what the
+    // logged-in user is allowed to do.
+    function applyPermissions(p, role) {
+      const isAdmin = (role || '').toLowerCase() === 'admin';
+      // Sidebar nav visibility
+      document.getElementById('logsMenuLink').style.display  = (isAdmin || p.viewAnalytics)  ? 'block' : 'none';
+      document.getElementById('adminMenuLink').style.display = (isAdmin || p.manageSettings) ? 'block' : 'none';
+      const ul = document.getElementById('usersMenuLink');
+      if (ul) ul.style.display = p.manageUsers ? 'block' : 'none';
+      // Toolbar buttons
+      const addBtn = document.getElementById('addDocBtn');
+      if (addBtn) addBtn.style.display = p.addDoc !== false ? '' : 'none';
+      const prtBtn = document.getElementById('printBtn');
+      if (prtBtn) prtBtn.style.display = p.printExport !== false ? '' : 'none';
+      const expBtn = document.getElementById('exportBtn');
+      if (expBtn) expBtn.style.display = p.printExport !== false ? '' : 'none';
+      // Stats grid (analytics)
+      const sg = document.querySelector('.stats-grid');
+      if (sg) sg.style.display = (isAdmin || p.viewAnalytics) ? '' : 'none';
     }
 
     function loadDropdownOptions() {
@@ -3465,9 +3589,9 @@
         sel.classList.toggle('filter-active', !!sel.value);
       };
 
-      fill('filterDocType',  unique('Doc Type'), 'All Types');
-      fill('filterStatus',   unique('Status'),   'All Statuses');
-      fill('filterEndUser',  unique('EndUser'),   'All End Users');
+      fill('filterDocType', unique('Doc Type'), 'All Types');
+      fill('filterStatus', unique('Status'), 'All Statuses');
+      fill('filterEndUser', unique('EndUser'), 'All End Users');
     }
 
     function updateStats() {
@@ -3491,7 +3615,7 @@
     // the full filter pipeline (sidebar status + toolbar dropdowns + search text).
     function applyTableFilters() {
       activeFilters.docType = document.getElementById('filterDocType').value;
-      activeFilters.status  = document.getElementById('filterStatus').value;
+      activeFilters.status = document.getElementById('filterStatus').value;
       activeFilters.endUser = document.getElementById('filterEndUser').value;
       // Visual highlight when a filter is active
       ['filterDocType', 'filterStatus', 'filterEndUser'].forEach(id => {
@@ -3516,7 +3640,7 @@
             case 'incoming': return st === 'incoming';
             case 'received': return st === 'received';
             case 'outgoing': return st === 'outgoing' || st === 'forwarded';
-            case 'hold':     return st === 'hold';
+            case 'hold': return st === 'hold';
             case 'complete': return st === 'complete' || st === 'completed';
             default: return true;
           }
@@ -3556,6 +3680,7 @@
       document.getElementById('trackView').classList.remove('active');
       document.getElementById('logsView').classList.remove('active');
       document.getElementById('printView').classList.remove('active');
+      const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
       applyFilter(f);
     }
 
@@ -3631,16 +3756,16 @@
       viewingDocId = id;
 
       const fmtDate = v => v || '—';
-      const fmtAmt  = v => {
+      const fmtAmt = v => {
         if (!v || v === '') return '—';
         const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
         return isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       };
-      const fmtTs   = v => v ? String(v) : '—';
+      const fmtTs = v => v ? String(v) : '—';
       const ov = doc.Overdue || 'On time';
       const ovColor = ov !== 'On time' ? '#dc2626' : '#059669';
       const sta = doc.Status || '';
-      const sc  = sta.toLowerCase().replace(/\s+/g, '-');
+      const sc = sta.toLowerCase().replace(/\s+/g, '-');
       const pdf = doc['PDF Link'] || '';
 
       const field = (label, value, icon = '') => `
@@ -3664,34 +3789,34 @@
 
         <!-- Grid of fields -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 24px;padding:20px;background:var(--bg);border-radius:10px;margin-bottom:16px">
-          ${field('ID / Barcode',         `<span style="font-family:monospace;font-size:13px">${doc['ID/Barcode'] || '—'}</span>`, 'qr_code')}
-          ${field('Document Type',         doc['Doc Type']     || '—', 'description')}
-          ${field('Document Number',        doc['Doc No']       || '—', 'tag')}
-          ${field('Description',            doc.Description     || '—', 'notes')}
-          ${field('Amount',                 fmtAmt(doc.Amount),         'payments')}
-          ${field('Status',                 sta                 || '—', 'info')}
-          ${field('Overdue',               `<span style="color:${ovColor};font-weight:600">${ov}</span>`, 'schedule')}
-          ${field('Date Received',          fmtDate(doc['Date Received']), 'event')}
+          ${field('ID / Barcode', `<span style="font-family:monospace;font-size:13px">${doc['ID/Barcode'] || '—'}</span>`, 'qr_code')}
+          ${field('Document Type', doc['Doc Type'] || '—', 'description')}
+          ${field('Document Number', doc['Doc No'] || '—', 'tag')}
+          ${field('Description', doc.Description || '—', 'notes')}
+          ${field('Amount', fmtAmt(doc.Amount), 'payments')}
+          ${field('Status', sta || '—', 'info')}
+          ${field('Overdue', `<span style="color:${ovColor};font-weight:600">${ov}</span>`, 'schedule')}
+          ${field('Date Received', fmtDate(doc['Date Received']), 'event')}
         </div>
 
         <!-- Procurement section -->
         <div style="padding:16px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
           <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:14px">📋 Procurement Details</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 24px">
-            ${field('PR Date',             fmtDate(doc['PR Date']),       'calendar_today')}
-            ${field('End User',             doc['EndUser']       || '—',  'person')}
-            ${field('Requisitioner',        doc.Requisitioner   || '—',   'badge')}
-            ${field('Supplier',             doc.Supplier        || '—',   'storefront')}
-            ${field('Endorsed To (Office)', doc['Endorsed To']  || '—',   'apartment')}
-            ${field('PO Number',            doc['PO No']        || '—',   'receipt_long')}
-            ${field('PO Date',             fmtDate(doc['PO Date']),       'event_note')}
+            ${field('PR Date', fmtDate(doc['PR Date']), 'calendar_today')}
+            ${field('End User', doc['EndUser'] || '—', 'person')}
+            ${field('Requisitioner', doc.Requisitioner || '—', 'badge')}
+            ${field('Supplier', doc.Supplier || '—', 'storefront')}
+            ${field('Endorsed To (Office)', doc['Endorsed To'] || '—', 'apartment')}
+            ${field('PO Number', doc['PO No'] || '—', 'receipt_long')}
+            ${field('PO Date', fmtDate(doc['PO Date']), 'event_note')}
           </div>
         </div>
 
         <!-- Timestamps -->
         <div style="padding:14px 16px;background:#f8fafc;border-radius:10px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 24px">
-          ${field('Doc Time Stamp',  `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`, 'schedule')}
-          ${field('PO Time Stamp',   `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`,  'update')}
+          ${field('Doc Time Stamp', `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`, 'schedule')}
+          ${field('PO Time Stamp', `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`, 'update')}
         </div>
 
         <!-- Notes -->
@@ -3726,35 +3851,35 @@
       const si = document.getElementById('searchInput').value.trim();
       if (si) filterInfo.push(`Search: "${si}"`);
       if (activeFilters.docType) filterInfo.push(`Type: ${activeFilters.docType}`);
-      if (activeFilters.status)  filterInfo.push(`Status: ${activeFilters.status}`);
+      if (activeFilters.status) filterInfo.push(`Status: ${activeFilters.status}`);
       if (activeFilters.endUser) filterInfo.push(`End User: ${activeFilters.endUser}`);
       if (currentFilter !== 'all') filterInfo.push(`View: ${currentFilter}`);
 
       // Collect visible column keys and their header labels
       const colMap = [
-        { key: 'overdue',    label: 'Overdue',        field: 'Overdue' },
-        { key: 'id',         label: 'ID/Barcode',     field: 'ID/Barcode' },
-        { key: 'type',       label: 'Doc Type',       field: 'Doc Type' },
-        { key: 'no',         label: 'Doc No',         field: 'Doc No' },
-        { key: 'prDate',     label: 'PR Date',        field: 'PR Date' },
-        { key: 'desc',       label: 'Description',    field: 'Description' },
-        { key: 'amount',     label: 'Amount',         field: 'Amount' },
-        { key: 'endUser',    label: 'End User',       field: 'EndUser' },
-        { key: 'req',        label: 'Requisitioner',  field: 'Requisitioner' },
-        { key: 'poNo',       label: 'PO No',          field: 'PO No' },
-        { key: 'poDate',     label: 'PO Date',        field: 'PO Date' },
-        { key: 'supplier',   label: 'Supplier',       field: 'Supplier' },
-        { key: 'office',     label: 'Endorsed To',    field: 'Endorsed To' },
-        { key: 'status',     label: 'Status',         field: 'Status' },
-        { key: 'date',       label: 'Date Received',  field: 'Date Received' },
-        { key: 'notes',      label: 'Notes',          field: 'Notes' },
+        { key: 'overdue', label: 'Overdue', field: 'Overdue' },
+        { key: 'id', label: 'ID/Barcode', field: 'ID/Barcode' },
+        { key: 'type', label: 'Doc Type', field: 'Doc Type' },
+        { key: 'no', label: 'Doc No', field: 'Doc No' },
+        { key: 'prDate', label: 'PR Date', field: 'PR Date' },
+        { key: 'desc', label: 'Description', field: 'Description' },
+        { key: 'amount', label: 'Amount', field: 'Amount' },
+        { key: 'endUser', label: 'End User', field: 'EndUser' },
+        { key: 'req', label: 'Requisitioner', field: 'Requisitioner' },
+        { key: 'poNo', label: 'PO No', field: 'PO No' },
+        { key: 'poDate', label: 'PO Date', field: 'PO Date' },
+        { key: 'supplier', label: 'Supplier', field: 'Supplier' },
+        { key: 'office', label: 'Endorsed To', field: 'Endorsed To' },
+        { key: 'status', label: 'Status', field: 'Status' },
+        { key: 'date', label: 'Date Received', field: 'Date Received' },
+        { key: 'notes', label: 'Notes', field: 'Notes' },
       ].filter(c => visibleColumns[c.key]);
 
       const thead = `<tr>${colMap.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
       const tbody = filteredDocs.map(d => {
         const cells = colMap.map(c => {
           let v = d[c.field] || '';
-          if (c.key === 'amount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g,'')); v = isNaN(n) ? v : '₱'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+          if (c.key === 'amount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g, '')); v = isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
           return `<td>${v}</td>`;
         }).join('');
         return `<tr>${cells}</tr>`;
@@ -3906,7 +4031,7 @@
     function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); }
     function openProfileSettings() { document.getElementById('userDropdown').classList.remove('show'); showModal('profileModal'); }
     function closeProfileModal() { hideModal('profileModal'); document.getElementById('profilePassword').value = ''; document.getElementById('profilePasswordConfirm').value = ''; }
-    function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(updates); }
+    function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(_sessionToken, updates); }
     function handleLogout() {
       if (!confirm('Are you sure you want to logout?')) return;
 
@@ -3920,9 +4045,11 @@
       // is browsing from — no hardcoded URLs, no backend value needed.
       const currentOrigin = window.location.origin + window.location.pathname;
 
-      // Clear local UI state immediately (before the async call) for snappy UX
+      // Clear local session token immediately before the async call
+      const _logoutToken = _sessionToken;
       currentUser = null;
-      try { localStorage.removeItem('docutracker_session_email'); } catch (e) { }
+      _sessionToken = '';
+      try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
 
       // Tell the backend to clear the server-side session (PropertiesService).
       // We no longer use the returned URL for navigation — we already have the
@@ -3940,7 +4067,7 @@
           document.getElementById('loginPassword').value = '';
           showView('login');
         })
-        .logout();
+        .logout(_logoutToken);
     }
 
     // ===================== ADMIN =====================
@@ -3953,6 +4080,7 @@
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active'));
+      const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
       document.getElementById('trackView').classList.add('active');
       currentFilter = 'track'; updatePageTitle();
       document.getElementById('trackInput').focus();
@@ -4078,7 +4206,7 @@
     }
 
     // ===================== LOGS =====================
-    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
+    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv=document.getElementById('usersView'); if(uv) uv.style.display='none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
     function loadLogs() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>'; google.script.run.withSuccessHandler(renderLogs).getAllActivityLogs(); }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
     function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
@@ -4090,7 +4218,7 @@
   </script>
   <script>
     // ===================== PRINT REPORT =====================
-    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
+    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv=document.getElementById('usersView'); if(uv) uv.style.display='none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
     function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
     function populatePrintFilters() { const of = document.getElementById('printOfficeFilter'), dt = document.getElementById('printDocTypeFilter'); of.innerHTML = '<option value="all">All Offices</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join(''); dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
     function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, of = document.getElementById('printOfficeFilter').value, tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (of !== 'all') d = d.filter(x => x['Endorsed To'] === of); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
@@ -4298,7 +4426,7 @@
     document.getElementById('mobileOverlay').addEventListener('click', closeMobileSidebar);
     // Auto-close sidebar on mobile when any nav item is tapped
     document.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => { if (window.innerWidth < 768) closeMobileSidebar(); }));
-    ['docModal', 'profileModal', 'adminModal', 'viewModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); } }); });
+    ['docModal', 'profileModal', 'adminModal', 'viewModal', 'userModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); else if (id === 'userModal') closeUserModal(); } }); });
     document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); });
 
     // ===================== INIT =====================
@@ -4325,17 +4453,150 @@
       // If the user just logged out, skip session check and show login immediately
       if (isLogout) { showView('login'); return; }
 
-      // Normal session check
+      // Restore this browser's session token from localStorage
+      try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
+
+      // Normal session check — pass THIS browser's token (never shared with other browsers)
       google.script.run
         .withSuccessHandler(function (user) {
           if (user) { showView('dashboard'); initDashboard(); }
-          else { showView('login'); }
+          else { _sessionToken = ''; showView('login'); }
         })
         .withFailureHandler(function () {
           showView('login');
         })
-        .getCurrentUser();
+        .getCurrentUser(_sessionToken);
     })();
+  </script>
+
+  <script>
+    // ===================== USER MANAGEMENT =====================
+    let _isEditUser = false, _allUsers = [];
+
+    function showUsersView(evt) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt) evt.target.closest('.nav-link').classList.add('active');
+      ['documentsView','trackView','logsView','printView'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+      const uv = document.getElementById('usersView');
+      if (uv) uv.style.display = 'block';
+      currentFilter = 'users';
+      document.getElementById('pageTitle').textContent = 'User Management';
+      if (window.innerWidth < 768) closeMobileSidebar();
+      loadUsers();
+    }
+
+    function loadUsers() {
+      const tb = document.getElementById('usersTableBody');
+      if (tb) tb.innerHTML = '<tr><td colspan="5" class="loading">Loading users...</td></tr>';
+      google.script.run
+        .withSuccessHandler(r => {
+          if (r && r.status === 'success') { _allUsers = r.users || []; renderUsersTable(_allUsers); }
+          else if (tb) tb.innerHTML = `<tr><td colspan="5" class="empty-state">${(r&&r.message)||'Access denied'}</td></tr>`;
+        })
+        .withFailureHandler(() => { if (tb) tb.innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load users.</td></tr>'; })
+        .getUsers(_sessionToken);
+    }
+
+    function renderUsersTable(users) {
+      const tb = document.getElementById('usersTableBody');
+      if (!users || !users.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">No users found.</td></tr>'; return; }
+      const roleCol = { Admin: '#6366f1', Manager: '#3b82f6', Staff: '#64748b' };
+      tb.innerHTML = users.map((u, idx) => {
+        const active = (u.status || 'Active').toLowerCase() === 'active';
+        const nm = u.name || u.email || 'User';
+        const init = nm.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+        const rc = roleCol[u.role] || '#64748b';
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:50%;background:${rc};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${init}</div>
+            <span style="font-weight:600">${u.name || '—'}</span>
+          </div></td>
+          <td style="color:var(--muted);font-size:13px">${u.email}</td>
+          <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role||'Staff'}</span></td>
+          <td><span class="status-badge ${active?'status-received':'status-hold'}">${u.status||'Active'}</span></td>
+          <td><div class="table-actions">
+            <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+            <button class="action-btn" title="${active?'Deactivate':'Activate'}" style="color:${active?'var(--danger)':'var(--success)'}" onclick='toggleUser(\`${u.email}\`)'><span class="material-symbols-outlined" style="font-size:18px">${active?'person_off':'person'}</span></button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function editUserByIdx(idx) { const u = _allUsers[idx]; if (u) openEditUserModal(u); }
+
+    function _showRolePerms(role) {
+      const map = {
+        Admin:   '✅ Full access — all features including user management, settings, delete, and analytics.',
+        Manager: '✅ Add/Edit docs, view analytics, export reports. ❌ Cannot delete docs, manage users or settings.',
+        Staff:   '✅ Add/Edit docs and track document history. ❌ No delete, no export, no admin access.'
+      };
+      const el = document.getElementById('uRolePermsInfo');
+      if (el) el.textContent = map[role] || 'Standard access.';
+    }
+
+    function openAddUserModal() {
+      _isEditUser = false;
+      document.getElementById('userModalTitle').textContent = 'Add New User';
+      document.getElementById('editUserEmail').value = '';
+      ['uFullName','uEmail','uPassword'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('uEmail').readOnly = false;
+      document.getElementById('uRole').value = 'Staff';
+      document.getElementById('uStatus').value = 'Active';
+      document.getElementById('uPwdHint').textContent = '(required)';
+      _showRolePerms('Staff');
+      showModal('userModal');
+    }
+
+    function openEditUserModal(u) {
+      _isEditUser = true;
+      document.getElementById('userModalTitle').textContent = 'Edit User';
+      document.getElementById('editUserEmail').value = u.email;
+      document.getElementById('uFullName').value  = u.name   || '';
+      document.getElementById('uEmail').value      = u.email  || '';
+      document.getElementById('uEmail').readOnly   = true;
+      document.getElementById('uPassword').value   = '';
+      document.getElementById('uRole').value       = u.role   || 'Staff';
+      document.getElementById('uStatus').value     = u.status || 'Active';
+      document.getElementById('uPwdHint').textContent = '(leave blank to keep current)';
+      _showRolePerms(u.role || 'Staff');
+      showModal('userModal');
+    }
+
+    function closeUserModal() { hideModal('userModal'); }
+
+    function saveUser() {
+      const name   = document.getElementById('uFullName').value.trim();
+      const email  = document.getElementById('uEmail').value.trim();
+      const pwd    = document.getElementById('uPassword').value;
+      const role   = document.getElementById('uRole').value;
+      const status = document.getElementById('uStatus').value;
+      if (!name || !email) { toast('Name and Email are required', 'error'); return; }
+      if (!_isEditUser && !pwd) { toast('Password is required for new users', 'error'); return; }
+      if (pwd && pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+      const ud = { name, email, role, status };
+      if (pwd) ud.password = pwd;
+      if (_isEditUser) {
+        google.script.run
+          .withSuccessHandler(r => { if (r.status==='success') { toast('User updated!'); closeUserModal(); loadUsers(); } else toast(r.message||'Failed','error'); })
+          .withFailureHandler(() => toast('Error updating user','error'))
+          .updateUser(_sessionToken, document.getElementById('editUserEmail').value, ud);
+      } else {
+        google.script.run
+          .withSuccessHandler(r => { if (r.status==='success') { toast('User added!'); closeUserModal(); loadUsers(); } else toast(r.message||'Failed','error'); })
+          .withFailureHandler(() => toast('Error adding user','error'))
+          .addUser(_sessionToken, ud);
+      }
+    }
+
+    function toggleUser(email) {
+      if (!confirm(`Change status for ${email}?`)) return;
+      google.script.run
+        .withSuccessHandler(r => { if (r.status==='success') { toast(`User ${r.newStatus.toLowerCase()}d`); loadUsers(); } else toast(r.message||'Failed','error'); })
+        .withFailureHandler(() => toast('Error','error'))
+        .toggleUserStatus(_sessionToken, email);
+    }
   </script>
 </body>
 

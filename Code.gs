@@ -16,6 +16,12 @@ const CONFIG_SHEET        = 'Config';
 const ACTIVITY_LOG_SHEET  = 'ActivityLog';
 const OVERDUE_THRESHOLD   = 5;
 
+// Per-request session token — set by doPost so internal helper functions
+// (logActivity, logDocumentHistory, etc.) can call getCurrentUser() without
+// an explicit token param. In native google.script.run calls the token is
+// passed explicitly as a function argument.
+let _doPostToken = '';
+
 // =====================================================================
 //  MAIN ENTRY POINT  –  All pages served from one index.html (SPA)
 // =====================================================================
@@ -62,6 +68,10 @@ function doPost(e) {
     const method = body.method;
     const args   = body.args || [];
 
+    // Set the module-level token so internal helpers (getCurrentUser, logActivity, etc.)
+    // work without needing an explicit token argument during this execution.
+    _doPostToken = body.sessionToken || body.sessionEmail || '';
+
     const allowedMethods = [
       'checkLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
       'sendResetEmail', 'validateResetToken', 'setNewPassword',
@@ -70,7 +80,8 @@ function doPost(e) {
       'addDocument', 'updateDocument', 'deleteDocument',
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
-      'uploadPDFToGoogleDrive', 'getScriptUrl'
+      'uploadPDFToGoogleDrive', 'getScriptUrl',
+      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus'
     ];
 
     if (!allowedMethods.includes(method)) {
@@ -82,11 +93,6 @@ function doPost(e) {
     if (typeof fn !== 'function') {
       output.setContent(JSON.stringify({ error: 'Unknown method: ' + method }));
       return output;
-    }
-
-    // For methods that need a session, we pass the email token from the request
-    if (body.sessionEmail) {
-      PropertiesService.getUserProperties().setProperty('currentUserEmail', body.sessionEmail);
     }
 
     const result = fn.apply(null, args);
@@ -180,61 +186,119 @@ function updateDropdownOptions(type, values) {
 }
 
 // =====================================================================
-//  USER SESSION MANAGEMENT
+//  SESSION HELPERS  (token-based, per-browser, multi-user safe)
+//  Each browser stores its own UUID in localStorage.
+//  ScriptProperties key: 'sess_<UUID>' → JSON { email, expires }
 // =====================================================================
-function getCurrentUser() {
-  try {
-    const userProperties = PropertiesService.getUserProperties();
-    const userEmail = userProperties.getProperty('currentUserEmail');
-    if (!userEmail) return null;
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(USERS_SHEET);
-    if (!sheet) return null;
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === userEmail.toLowerCase()) {
-        return { email: data[i][0], name: data[i][3] || 'User', role: data[i][2] || 'User' };
-      }
-    }
-    return null;
-  } catch (error) {
-    Logger.log('getCurrentUser error: ' + error);
-    return null;
-  }
+function _createSession(email) {
+  const token   = Utilities.getUuid();
+  const expires = Date.now() + 24 * 60 * 60 * 1000; // 24-hour TTL
+  PropertiesService.getScriptProperties().setProperty(
+    'sess_' + token, JSON.stringify({ email: email.toLowerCase().trim(), expires: expires })
+  );
+  return token;
 }
 
-function logout() {
+function _validateSession(token) {
+  if (!token) return null;
   try {
-    const cu = getCurrentUser();
-    if (cu) logActivity('Logout', '', `User logged out: ${cu.email}`);
-    PropertiesService.getUserProperties().deleteProperty('currentUserEmail');
-  } catch (error) {
-    Logger.log('logout error: ' + error);
-  }
-  // Always return the canonical Web App URL so the frontend can redirect cleanly
+    const raw = PropertiesService.getScriptProperties().getProperty('sess_' + token);
+    if (!raw) return null;
+    const sess = JSON.parse(raw);
+    if (sess.expires < Date.now()) {
+      PropertiesService.getScriptProperties().deleteProperty('sess_' + token);
+      return null;
+    }
+    return sess.email;
+  } catch (e) { return null; }
+}
+
+function _destroySession(token) {
+  if (!token) return;
+  try { PropertiesService.getScriptProperties().deleteProperty('sess_' + token); } catch (e) {}
+}
+
+function _getDefaultPermissions(role) {
+  const r = (role || 'Staff').toLowerCase();
+  if (r === 'admin')   return { addDoc: true,  editDoc: true,  deleteDoc: true,  viewDoc: true, printExport: true,  manageSettings: true,  manageUsers: true,  viewAnalytics: true,  trackHistory: true  };
+  if (r === 'manager') return { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: true,  trackHistory: true  };
+  return                       { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
+}
+
+function _ensureUsersColumns(sheet) {
+  try {
+    const lastCol = sheet.getLastColumn();
+    const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+    const cols = [ { idx: 6, name: 'Status' }, { idx: 7, name: 'Permissions' },
+                   { idx: 8, name: 'CreatedAt' }, { idx: 9, name: 'LastLogin' } ];
+    cols.forEach(c => {
+      if (!headers[c.idx] || headers[c.idx].toString().trim() === '') {
+        sheet.getRange(1, c.idx + 1).setValue(c.name).setFontWeight('bold');
+        if (c.name === 'Status') {
+          const lr = sheet.getLastRow();
+          if (lr > 1) {
+            const rng = sheet.getRange(2, c.idx + 1, lr - 1, 1);
+            rng.setValues(rng.getValues().map(r => [r[0] || 'Active']));
+          }
+        }
+      }
+    });
+  } catch (e) { Logger.log('_ensureUsersColumns: ' + e); }
+}
+
+// =====================================================================
+//  USER SESSION MANAGEMENT
+// =====================================================================
+function getCurrentUser(tokenParam) {
+  try {
+    const token = tokenParam || _doPostToken;
+    const email = _validateSession(token);
+    if (!email) return null;
+    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(USERS_SHEET);
+    if (!sheet) return null;
+    _ensureUsersColumns(sheet);
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() !== email) continue;
+      const role   = String(data[i][2] || 'Staff');
+      const status = String(data[i][6] || 'Active');
+      if (status.toLowerCase() === 'inactive') return null;
+      const perms  = _getDefaultPermissions(role);
+      try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
+      return { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms };
+    }
+    return null;
+  } catch (error) { Logger.log('getCurrentUser error: ' + error); return null; }
+}
+
+function logout(tokenParam) {
+  try {
+    const token = tokenParam || _doPostToken;
+    const email = _validateSession(token);
+    if (email) logActivity('Logout', '', `User logged out: ${email}`);
+    _destroySession(token);
+  } catch (error) { Logger.log('logout error: ' + error); }
   try { return ScriptApp.getService().getUrl(); } catch (e) { return ''; }
 }
 
-function updateUserProfile(updates) {
+function updateUserProfile(tokenParam, updates) {
   try {
-    const userEmail = PropertiesService.getUserProperties().getProperty('currentUserEmail');
-    if (!userEmail) return { status: 'error', message: 'No user session found' };
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const token = tokenParam || _doPostToken;
+    const email = _validateSession(token);
+    if (!email) return { status: 'error', message: 'No user session found' };
+    const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
-    const data = sheet.getDataRange().getValues();
+    const data  = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === userEmail.toLowerCase()) {
-        if (updates.name)     sheet.getRange(i + 1, 4).setValue(updates.name);
-        if (updates.password) sheet.getRange(i + 1, 2).setValue(updates.password);
-        return { status: 'success', message: 'Profile updated successfully' };
-      }
+      if (String(data[i][0]).trim().toLowerCase() !== email.toLowerCase()) continue;
+      if (updates.name)     sheet.getRange(i + 1, 4).setValue(updates.name);
+      if (updates.password) sheet.getRange(i + 1, 2).setValue(updates.password);
+      return { status: 'success', message: 'Profile updated successfully' };
     }
     return { status: 'error', message: 'User not found' };
-  } catch (error) {
-    Logger.log('updateUserProfile error: ' + error);
-    return { status: 'error', message: error.toString() };
-  }
+  } catch (error) { Logger.log('updateUserProfile error: ' + error); return { status: 'error', message: error.toString() }; }
 }
 
 // =====================================================================
@@ -242,18 +306,21 @@ function updateUserProfile(updates) {
 // =====================================================================
 function checkLogin(email, password) {
   if (!email || !password) return { status: 'invalid', message: 'Please enter email and password' };
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(USERS_SHEET);
   if (!sheet) return { status: 'invalid', message: 'System error' };
-  const data = sheet.getDataRange().getValues();
+  _ensureUsersColumns(sheet);
+  const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     const userEmail = String(data[i][0]).trim().toLowerCase();
     const userPass  = String(data[i][1]).trim();
-    if (email.toLowerCase() === userEmail && password === userPass) {
-      PropertiesService.getUserProperties().setProperty('currentUserEmail', userEmail);
-      logActivity('Login', '', `User logged in: ${userEmail}`);
-      return { status: 'success' };
-    }
+    if (email.toLowerCase() !== userEmail || password !== userPass) continue;
+    const status = String(data[i][6] || 'Active');
+    if (status.toLowerCase() === 'inactive')
+      return { status: 'invalid', message: 'Account is deactivated. Contact your administrator.' };
+    const token = _createSession(userEmail);
+    logActivity('Login', '', `User logged in: ${userEmail}`);
+    return { status: 'success', token: token };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
 }
@@ -865,4 +932,99 @@ function uploadPDFToGoogleDrive(base64Data, fileName, docId) {
     Logger.log('uploadPDFToGoogleDrive error: ' + error);
     return { status: 'error', message: error.toString() };
   }
+}
+
+// =====================================================================
+//  USER MANAGEMENT  (Admin only)
+// =====================================================================
+function getUsers(tokenParam) {
+  try {
+    const cu = getCurrentUser(tokenParam || _doPostToken);
+    if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Users sheet not found' };
+    _ensureUsersColumns(sheet);
+    const data  = sheet.getDataRange().getValues();
+    const users = [];
+    for (let i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
+      users.push({
+        email:       data[i][0],
+        role:        data[i][2] || 'Staff',
+        name:        data[i][3] || '',
+        status:      data[i][6] || 'Active',
+        createdAt:   data[i][8] ? String(data[i][8]).split('T')[0] : ''
+      });
+    }
+    return { status: 'success', users: users };
+  } catch (e) { Logger.log('getUsers error: ' + e); return { status: 'error', message: e.toString() }; }
+}
+
+function addUser(tokenParam, userData) {
+  try {
+    const cu = getCurrentUser(tokenParam || _doPostToken);
+    if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Users sheet not found' };
+    _ensureUsersColumns(sheet);
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toLowerCase() === userData.email.toLowerCase())
+        return { status: 'error', message: 'Email already exists' };
+    }
+    sheet.appendRow([
+      userData.email.toLowerCase().trim(),
+      userData.password || 'changeme123',
+      userData.role     || 'Staff',
+      userData.name     || '',
+      '', '',                              // ResetToken, ResetExpiry
+      userData.status   || 'Active',
+      '',                                  // custom permissions (blank = use role defaults)
+      new Date(), ''
+    ]);
+    logActivity('Add User', '', `User added: ${userData.email} (${userData.role})`);
+    return { status: 'success' };
+  } catch (e) { Logger.log('addUser error: ' + e); return { status: 'error', message: e.toString() }; }
+}
+
+function updateUser(tokenParam, targetEmail, userData) {
+  try {
+    const cu = getCurrentUser(tokenParam || _doPostToken);
+    if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Users sheet not found' };
+    _ensureUsersColumns(sheet);
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toLowerCase() !== targetEmail.toLowerCase()) continue;
+      if (userData.name     !== undefined) sheet.getRange(i + 1, 4).setValue(userData.name);
+      if (userData.role     !== undefined) sheet.getRange(i + 1, 3).setValue(userData.role);
+      if (userData.status   !== undefined) sheet.getRange(i + 1, 7).setValue(userData.status);
+      if (userData.password)               sheet.getRange(i + 1, 2).setValue(userData.password);
+      logActivity('Update User', '', `User updated: ${targetEmail}`);
+      return { status: 'success' };
+    }
+    return { status: 'error', message: 'User not found' };
+  } catch (e) { Logger.log('updateUser error: ' + e); return { status: 'error', message: e.toString() }; }
+}
+
+function toggleUserStatus(tokenParam, targetEmail) {
+  try {
+    const cu = getCurrentUser(tokenParam || _doPostToken);
+    if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
+    if (targetEmail.toLowerCase() === cu.email.toLowerCase())
+      return { status: 'error', message: 'Cannot deactivate your own account' };
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Users sheet not found' };
+    _ensureUsersColumns(sheet);
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toLowerCase() !== targetEmail.toLowerCase()) continue;
+      const newStatus = String(data[i][6] || 'Active').toLowerCase() === 'active' ? 'Inactive' : 'Active';
+      sheet.getRange(i + 1, 7).setValue(newStatus);
+      logActivity('Toggle User Status', '', `User ${targetEmail} → ${newStatus}`);
+      return { status: 'success', newStatus: newStatus };
+    }
+    return { status: 'error', message: 'User not found' };
+  } catch (e) { Logger.log('toggleUserStatus error: ' + e); return { status: 'error', message: e.toString() }; }
 }
