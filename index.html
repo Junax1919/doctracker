@@ -861,6 +861,46 @@
       font-family: inherit
     }
 
+    /* ---- Toolbar filter selects ---- */
+    .filter-select {
+      height: 38px;
+      padding: 0 28px 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+      max-width: 140px;
+      min-width: 100px
+    }
+
+    .filter-select:focus {
+      outline: 0;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-light)
+    }
+
+    /* Active filter highlight */
+    .filter-select.filter-active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background-color: var(--blue-light)
+    }
+
+    /* Collapse selects to icon-only on mobile */
+    @media (max-width:767px) {
+      .filter-select {
+        max-width: 80px;
+        font-size: 12px;
+        padding: 0 20px 0 6px
+      }
+    }
+
     .btn-primary {
       background: var(--primary);
       color: #fff
@@ -2650,6 +2690,21 @@
                 <div class="search-input-wrapper"><span
                     class="material-symbols-outlined search-icon">search</span><input type="text" class="search-input"
                     id="searchInput" placeholder="Search documents..."></div>
+
+                <!-- ── Toolbar Filters ── -->
+                <select id="filterDocType" class="filter-select" title="Filter by Document Type"
+                  onchange="applyTableFilters()">
+                  <option value="">All Types</option>
+                </select>
+                <select id="filterStatus" class="filter-select" title="Filter by Status"
+                  onchange="applyTableFilters()">
+                  <option value="">All Statuses</option>
+                </select>
+                <select id="filterEndUser" class="filter-select" title="Filter by End User"
+                  onchange="applyTableFilters()">
+                  <option value="">All End Users</option>
+                </select>
+
                 <div class="dropdown"><button class="btn btn-outline" id="exportBtn"
                     onclick="toggleExportDropdown(event)"><span class="material-symbols-outlined">download</span><span
                       class="btn-label">Export</span><span class="material-symbols-outlined"
@@ -3186,6 +3241,8 @@
     let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
+    // Active toolbar filter values
+    let activeFilters = { docType: '', status: '', endUser: '' };
 
     // ===================== VIEW ROUTER =====================
     function showView(name) {
@@ -3346,7 +3403,39 @@
     // ===================== DOCUMENTS =====================
     function loadDocs() {
       document.getElementById('docTable').innerHTML = '<tr><td colspan="20" class="loading">Loading...</td></tr>';
-      google.script.run.withSuccessHandler(d => { allDocs = d || []; applyFilter(currentFilter); updateStats(); updateBadges(); }).withFailureHandler(() => toast('Failed to load', 'error')).getAllDocuments();
+      google.script.run
+        .withSuccessHandler(d => {
+          allDocs = d || [];
+          populateTableFilters(); // rebuild filter dropdowns from real data
+          applyFilter(currentFilter);
+          updateStats();
+          updateBadges();
+        })
+        .withFailureHandler(() => toast('Failed to load', 'error'))
+        .getAllDocuments();
+    }
+
+    // Populate the three toolbar filter dropdowns from the actual data
+    function populateTableFilters() {
+      const unique = (key) => [...new Set(allDocs.map(d => (d[key] || '').trim()).filter(Boolean))].sort();
+
+      const fill = (id, values, allLabel) => {
+        const sel = document.getElementById(id);
+        const prev = sel.value; // preserve current selection if still valid
+        sel.innerHTML = `<option value="">${allLabel}</option>` +
+          values.map(v => `<option value="${v}">${v}</option>`).join('');
+        // Restore previous selection if the value still exists
+        if (values.includes(prev)) sel.value = prev;
+        // Sync activeFilters
+        const keyMap = { filterDocType: 'docType', filterStatus: 'status', filterEndUser: 'endUser' };
+        if (keyMap[id]) activeFilters[keyMap[id]] = sel.value;
+        // Visual highlight when a filter is active
+        sel.classList.toggle('filter-active', !!sel.value);
+      };
+
+      fill('filterDocType',  unique('Doc Type'), 'All Types');
+      fill('filterStatus',   unique('Status'),   'All Statuses');
+      fill('filterEndUser',  unique('EndUser'),   'All End Users');
     }
 
     function updateStats() {
@@ -3365,12 +3454,67 @@
       }).getDocumentStats();
     }
 
+    // applyTableFilters() — called by the toolbar dropdown onchange events.
+    // Reads the three filter selects, updates activeFilters, then re-runs
+    // the full filter pipeline (sidebar status + toolbar dropdowns + search text).
+    function applyTableFilters() {
+      activeFilters.docType = document.getElementById('filterDocType').value;
+      activeFilters.status  = document.getElementById('filterStatus').value;
+      activeFilters.endUser = document.getElementById('filterEndUser').value;
+      // Visual highlight when a filter is active
+      ['filterDocType', 'filterStatus', 'filterEndUser'].forEach(id => {
+        document.getElementById(id).classList.toggle('filter-active',
+          !!document.getElementById(id).value);
+      });
+      currentPage = 1;
+      applyFilter(currentFilter);
+    }
+
     function applyFilter(f) {
-      currentFilter = f; const s = document.getElementById('searchInput').value.toLowerCase();
-      if (f === 'all') filteredDocs = [...allDocs];
-      else filteredDocs = allDocs.filter(d => { const st = (d.Status || '').toLowerCase(); switch (f) { case 'incoming': return st === 'incoming'; case 'received': return st === 'received'; case 'outgoing': return st === 'outgoing' || st === 'forwarded'; case 'hold': return st === 'hold'; case 'complete': return st === 'complete' || st === 'completed'; default: return true; } });
-      if (s) filteredDocs = filteredDocs.filter(d => Object.values(d).join(' ').toLowerCase().includes(s));
-      applySorting(); currentPage = 1; renderTable(); updatePageTitle();
+      currentFilter = f;
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      // 1. Sidebar status filter (existing behaviour)
+      if (f === 'all') {
+        filteredDocs = [...allDocs];
+      } else {
+        filteredDocs = allDocs.filter(d => {
+          const st = (d.Status || '').toLowerCase();
+          switch (f) {
+            case 'incoming': return st === 'incoming';
+            case 'received': return st === 'received';
+            case 'outgoing': return st === 'outgoing' || st === 'forwarded';
+            case 'hold':     return st === 'hold';
+            case 'complete': return st === 'complete' || st === 'completed';
+            default: return true;
+          }
+        });
+      }
+
+      // 2. Toolbar dropdown filters (Doc Type / Status / End User)
+      if (activeFilters.docType) {
+        filteredDocs = filteredDocs.filter(d =>
+          (d['Doc Type'] || '').toLowerCase() === activeFilters.docType.toLowerCase());
+      }
+      if (activeFilters.status) {
+        filteredDocs = filteredDocs.filter(d =>
+          (d.Status || '').toLowerCase() === activeFilters.status.toLowerCase());
+      }
+      if (activeFilters.endUser) {
+        filteredDocs = filteredDocs.filter(d =>
+          (d['EndUser'] || '').toLowerCase() === activeFilters.endUser.toLowerCase());
+      }
+
+      // 3. Free-text search (across all fields)
+      if (search) {
+        filteredDocs = filteredDocs.filter(d =>
+          Object.values(d).join(' ').toLowerCase().includes(search));
+      }
+
+      applySorting();
+      currentPage = 1;
+      renderTable();
+      updatePageTitle();
     }
 
     function filterDocs(f, evt) {
