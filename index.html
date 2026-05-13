@@ -2749,6 +2749,8 @@
                         onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked
                         onchange="toggleColumn('poDate')"><label for="col-poDate">PO Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poAmount" checked
+                        onchange="toggleColumn('poAmount')"><label for="col-poAmount">PO Amount</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked
                         onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-office" checked
@@ -2792,6 +2794,8 @@
                     <th class="sortable col-poNo" data-column="poNo" onclick="sortTable('poNo')">PO No</th>
                     <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO
                       Date</th>
+                    <th class="sortable hide-mobile col-poAmount" data-column="poAmount" onclick="sortTable('poAmount')">PO
+                      Amount</th>
                     <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
                     </th>
                     <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
@@ -2807,7 +2811,7 @@
                 </thead>
                 <tbody id="docTable">
                   <tr>
-                    <td colspan="20" class="loading">Loading documents...</td>
+                    <td colspan="21" class="loading">Loading documents...</td>
                   </tr>
                 </tbody>
               </table>
@@ -2999,6 +3003,7 @@
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poTs"> PO Time Stamp</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poNo"> PO No</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poDate"> PO Date</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poAmount"> PO Amount</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
@@ -3097,6 +3102,12 @@
         <div class="form-group">
           <label class="form-label">PO Date</label>
           <input type="date" class="form-input" id="poDate">
+        </div>
+
+        <!-- PO Amount -->
+        <div class="form-group">
+          <label class="form-label">PO Amount</label>
+          <input type="text" class="form-input" id="poAmt" placeholder="e.g., 85,000.00" oninput="formatAmountInput(this)">
         </div>
 
         <div class="form-group"><label class="form-label">Supplier</label><select class="form-select" id="supp">
@@ -3302,12 +3313,15 @@
       }
 
       // After a successful login store the returned session token.
-      // On logout, clear it. This is per-browser and never shared.
+      // On logout, clear it. getInitialData also returns user data on session restore.
       const _origCallGAS = callGAS;
       async function callGASWithSessionCapture(method, args) {
         const result = await _origCallGAS(method, args);
         if (method === 'checkLogin' && result && result.status === 'success') {
           setSessionToken(result.token || '');
+        }
+        if (method === 'getInitialData' && result && result.user) {
+          // Session is still valid — token remains the same, nothing to update
         }
         if (method === 'logout') {
           setSessionToken('');
@@ -3362,7 +3376,7 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = null, sortDirection = 'asc';
-    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
     // Per-browser session token (UUID issued by the backend on login).
@@ -3501,44 +3515,65 @@
     document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
 
     // ===================== DASHBOARD INIT =====================
+    // Single batch call replaces 4 separate round-trips (user+opts+docs+stats).
     function initDashboard() {
-      loadUserProfile(); loadDropdownOptions(); loadDocs();
-      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="21" class="loading">Loading...</td></tr>';
+      google.script.run
+        .withSuccessHandler(data => {
+          if (!data) { showView('login'); return; }
+          // 1. User profile
+          const user = data.user;
+          if (user) {
+            currentUser = user;
+            document.getElementById('userName').textContent = user.name || 'User';
+            document.getElementById('userRole').textContent = user.role || 'User';
+            document.getElementById('userAvatar').textContent = getInitials(user.name);
+            document.getElementById('profileName').value = user.name || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            document.getElementById('profileRole').value = user.role || '';
+            applyPermissions(user.permissions || {}, user.role || 'Staff');
+          }
+          // 2. Dropdown options
+          dropdownOptions = data.opts || { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
+          populateDropdowns();
+          populatePrintFilters();
+          // 3. Documents
+          allDocs = data.docs || [];
+          populateTableFilters();
+          applyFilter(currentFilter);
+          // 4. Stats from batch (no extra GAS call)
+          const s = data.stats || {};
+          document.getElementById('stat-total').textContent    = s.total    || 0;
+          document.getElementById('stat-incoming').textContent = s.incoming  || 0;
+          document.getElementById('stat-outgoing').textContent = s.outgoing  || 0;
+          document.getElementById('stat-complete').textContent = s.complete  || 0;
+          document.getElementById('stat-overdue').textContent  = s.overdue   || 0;
+          ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
+            const el = document.getElementById('badge-' + k);
+            if (el) el.textContent = s[k] || 0;
+          });
+          try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch(e) {}
+        })
+        .withFailureHandler(() => { toast('Failed to load dashboard data', 'error'); })
+        .getInitialData(_sessionToken);
     }
 
     function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
-
-    function loadUserProfile() {
-      google.script.run.withSuccessHandler(user => {
-        if (!user) return;
-        currentUser = user;
-        document.getElementById('userName').textContent = user.name || 'User';
-        document.getElementById('userRole').textContent = user.role || 'User';
-        document.getElementById('userAvatar').textContent = getInitials(user.name);
-        document.getElementById('profileName').value = user.name || '';
-        document.getElementById('profileEmail').value = user.email || '';
-        document.getElementById('profileRole').value = user.role || '';
-        applyPermissions(user.permissions || {}, user.role || 'Staff');
-      }).getCurrentUser(_sessionToken);
-    }
 
     // Apply role-based permissions — hide/show UI elements based on what the
     // logged-in user is allowed to do.
     function applyPermissions(p, role) {
       const isAdmin = (role || '').toLowerCase() === 'admin';
-      // Sidebar nav visibility
       document.getElementById('logsMenuLink').style.display  = (isAdmin || p.viewAnalytics)  ? 'block' : 'none';
       document.getElementById('adminMenuLink').style.display = (isAdmin || p.manageSettings) ? 'block' : 'none';
       const ul = document.getElementById('usersMenuLink');
       if (ul) ul.style.display = p.manageUsers ? 'block' : 'none';
-      // Toolbar buttons
       const addBtn = document.getElementById('addDocBtn');
       if (addBtn) addBtn.style.display = p.addDoc !== false ? '' : 'none';
       const prtBtn = document.getElementById('printBtn');
       if (prtBtn) prtBtn.style.display = p.printExport !== false ? '' : 'none';
       const expBtn = document.getElementById('exportBtn');
       if (expBtn) expBtn.style.display = p.printExport !== false ? '' : 'none';
-      // Stats grid (analytics)
       const sg = document.querySelector('.stats-grid');
       if (sg) sg.style.display = (isAdmin || p.viewAnalytics) ? '' : 'none';
     }
@@ -3558,56 +3593,59 @@
 
     // ===================== DOCUMENTS =====================
     function loadDocs() {
-      document.getElementById('docTable').innerHTML = '<tr><td colspan="20" class="loading">Loading...</td></tr>';
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="21" class="loading">Loading...</td></tr>';
       google.script.run
         .withSuccessHandler(d => {
           allDocs = d || [];
-          populateTableFilters(); // rebuild filter dropdowns from real data
+          populateTableFilters();
           applyFilter(currentFilter);
-          updateStats();
-          updateBadges();
+          // Refresh stats from the same loaded data to avoid extra GAS call
+          _refreshStatsFromDocs();
         })
         .withFailureHandler(() => toast('Failed to load', 'error'))
         .getAllDocuments();
     }
 
+    // Compute stats client-side from already-loaded allDocs (no extra GAS call).
+    function _refreshStatsFromDocs() {
+      const docs = allDocs;
+      const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
+      docs.forEach(d => {
+        s.total++;
+        const st = (d.Status || '').toLowerCase().trim();
+        if (st === 'incoming') s.incoming++;
+        if (st === 'received') s.received++;
+        if (st === 'forwarded' || st === 'outgoing') s.outgoing++;
+        if (st === 'hold') s.hold++;
+        if (st === 'complete' || st === 'completed') s.complete++;
+        if (d.Overdue && d.Overdue !== 'On time') s.overdue++;
+      });
+      document.getElementById('stat-total').textContent    = s.total;
+      document.getElementById('stat-incoming').textContent = s.incoming;
+      document.getElementById('stat-outgoing').textContent = s.outgoing;
+      document.getElementById('stat-complete').textContent = s.complete;
+      document.getElementById('stat-overdue').textContent  = s.overdue;
+      ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
+        const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k];
+      });
+    }
+
     // Populate the three toolbar filter dropdowns from the actual data
     function populateTableFilters() {
       const unique = (key) => [...new Set(allDocs.map(d => (d[key] || '').trim()).filter(Boolean))].sort();
-
       const fill = (id, values, allLabel) => {
         const sel = document.getElementById(id);
-        const prev = sel.value; // preserve current selection if still valid
+        const prev = sel.value;
         sel.innerHTML = `<option value="">${allLabel}</option>` +
           values.map(v => `<option value="${v}">${v}</option>`).join('');
-        // Restore previous selection if the value still exists
         if (values.includes(prev)) sel.value = prev;
-        // Sync activeFilters
         const keyMap = { filterDocType: 'docType', filterStatus: 'status', filterEndUser: 'endUser' };
         if (keyMap[id]) activeFilters[keyMap[id]] = sel.value;
-        // Visual highlight when a filter is active
         sel.classList.toggle('filter-active', !!sel.value);
       };
-
       fill('filterDocType', unique('Doc Type'), 'All Types');
       fill('filterStatus', unique('Status'), 'All Statuses');
       fill('filterEndUser', unique('EndUser'), 'All End Users');
-    }
-
-    function updateStats() {
-      google.script.run.withSuccessHandler(s => {
-        document.getElementById('stat-total').textContent = s.total || 0;
-        document.getElementById('stat-incoming').textContent = s.incoming || 0;
-        document.getElementById('stat-outgoing').textContent = s.outgoing || 0;
-        document.getElementById('stat-complete').textContent = s.complete || 0;
-        document.getElementById('stat-overdue').textContent = s.overdue || 0;
-      }).getDocumentStats();
-    }
-
-    function updateBadges() {
-      google.script.run.withSuccessHandler(s => {
-        ['total', 'incoming', 'received', 'outgoing', 'hold', 'complete'].forEach(k => { document.getElementById('badge-' + k).textContent = s[k] || 0; });
-      }).getDocumentStats();
     }
 
     // applyTableFilters() — called by the toolbar dropdown onchange events.
@@ -3688,7 +3726,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${col}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', status: 'Status', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', poNo: 'PO No', poDate: 'PO Date', poAmount: 'PO Amount', supplier: 'Supplier', office: 'Endorsed To', status: 'Status', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount' || sortColumn === 'poAmount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -3700,10 +3738,10 @@
 
     function renderTable() {
       const tb = document.getElementById('docTable');
-      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="20" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
+      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="21" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAmt = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf ? `<a href="${pdf}" target="_blank" style="color:var(--blue);text-decoration:none"><span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>` : '-';
         const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
@@ -3721,6 +3759,7 @@
 <td class="hide-mobile col-poTs" style="display:${disp('poTs')};font-family:monospace;font-size:12px;color:var(--muted)">${poTs}</td>
 <td class="col-poNo" style="display:${disp('poNo')}">${poNo}</td>
 <td class="hide-mobile col-poDate" style="display:${disp('poDate')}">${poDate}</td>
+<td class="hide-mobile col-poAmount" style="display:${disp('poAmount')}">${poAmt}</td>
 <td class="col-supplier" style="display:${disp('supplier')}">${sp}</td>
 <td class="hide-mobile col-office" style="display:${disp('office')}">${of}</td>
 <td class="col-status" style="display:${disp('status')}"><span class="status-badge status-${sc}">${sta}</span></td>
@@ -3810,6 +3849,7 @@
             ${field('Endorsed To (Office)', doc['Endorsed To'] || '—', 'apartment')}
             ${field('PO Number', doc['PO No'] || '—', 'receipt_long')}
             ${field('PO Date', fmtDate(doc['PO Date']), 'event_note')}
+            ${field('PO Amount', fmtAmt(doc['PO Amount']), 'paid')}
           </div>
         </div>
 
@@ -3868,6 +3908,7 @@
         { key: 'req', label: 'Requisitioner', field: 'Requisitioner' },
         { key: 'poNo', label: 'PO No', field: 'PO No' },
         { key: 'poDate', label: 'PO Date', field: 'PO Date' },
+        { key: 'poAmount', label: 'PO Amount', field: 'PO Amount' },
         { key: 'supplier', label: 'Supplier', field: 'Supplier' },
         { key: 'office', label: 'Endorsed To', field: 'Endorsed To' },
         { key: 'status', label: 'Status', field: 'Status' },
@@ -3879,7 +3920,7 @@
       const tbody = filteredDocs.map(d => {
         const cells = colMap.map(c => {
           let v = d[c.field] || '';
-          if (c.key === 'amount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g, '')); v = isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+          if (c.key === 'amount' || c.key === 'poAmount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g, '')); v = isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
           return `<td>${v}</td>`;
         }).join('');
         return `<tr>${cells}</tr>`;
@@ -3931,7 +3972,7 @@
     function openAddModal() {
       isEdit = false; selectedFile = null;
       document.getElementById('modalTitle').textContent = 'Add New Document';
-      ['editId', 'docNo', 'desc', 'amt', 'req', 'note', 'poNo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['editId', 'docNo', 'desc', 'amt', 'req', 'note', 'poNo', 'poAmt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['prDate', 'poDate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       const docTypeEl = document.getElementById('docType'); if (docTypeEl) docTypeEl.value = '';
       const suppEl = document.getElementById('supp'); if (suppEl) suppEl.value = '';
@@ -3970,6 +4011,13 @@
       const euEl = document.getElementById('endUser'); if (euEl) euEl.value = doc['EndUser'] || '';
       const poNoEl = document.getElementById('poNo'); if (poNoEl) poNoEl.value = doc['PO No'] || '';
       const poDtEl = document.getElementById('poDate'); if (poDtEl) poDtEl.value = doc['PO Date'] || '';
+      // PO Amount
+      const poAmtEl = document.getElementById('poAmt');
+      if (poAmtEl) {
+        const pav = doc['PO Amount'] ? String(doc['PO Amount']).replace(/[₱,]/g, '') : '';
+        poAmtEl.value = pav;
+        if (pav) formatAmountInput(poAmtEl);
+      }
       // Timestamps: show existing (read-only); PO Time Stamp will refresh on save
       const now = new Date();
       const dtsEl = document.getElementById('docTimeStamp');
@@ -3986,6 +4034,7 @@
       const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
       const poNo = document.getElementById('poNo') ? document.getElementById('poNo').value : '';
       const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
+      const poAmount = document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g, '') : '';
       const data = {
         docType: document.getElementById('docType').value,
         docNo,
@@ -3995,6 +4044,7 @@
         endUser,
         poNo,
         poDate,
+        poAmount,
         supplier: document.getElementById('supp').value,
         requisitioner: document.getElementById('req').value,
         office: document.getElementById('office').value,
@@ -4071,9 +4121,47 @@
     }
 
     // ===================== ADMIN =====================
-    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
+    function openAdminSettings() {
+      if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; }
+      // Use cached dropdownOptions if available to avoid an extra GAS call
+      const opts = (dropdownOptions && dropdownOptions.docTypes && dropdownOptions.docTypes.length)
+        ? Promise.resolve(dropdownOptions)
+        : new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(() => res(dropdownOptions)).getDropdownOptions());
+      opts.then(o => {
+        document.getElementById('adminDocTypes').value = (o.docTypes || []).join('\n');
+        document.getElementById('adminSuppliers').value = (o.suppliers || []).join('\n');
+        document.getElementById('adminOffices').value = (o.offices || []).join('\n');
+        document.getElementById('adminStatuses').value = (o.statuses || []).join('\n');
+        const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (o.endUsers || []).join('\n');
+        showModal('adminModal');
+      });
+    }
     function closeAdminModal() { hideModal('adminModal'); }
-    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'], keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers']; let done = 0; types.forEach((t, i) => { const el = document.getElementById(ids[i]); const vals = el ? el.value.split('\n').filter(l => l.trim()) : []; google.script.run.withSuccessHandler(() => { if (++done === 5) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
+    function saveAdminSettings() {
+      const ids  = ['adminDocTypes','adminSuppliers','adminOffices','adminStatuses','adminEndUsers'];
+      const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
+      let done = 0;
+      const btn = document.querySelector('#adminModal .admin-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+      keys.forEach((k, i) => {
+        const el = document.getElementById(ids[i]);
+        const vals = el ? el.value.split('\n').filter(l => l.trim()) : [];
+        google.script.run
+          .withSuccessHandler(() => {
+            if (++done === 5) {
+              if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">save</span><span>Save All Settings</span>'; }
+              toast('All settings saved!');
+              closeAdminModal();
+              loadDropdownOptions(); // refresh client-side cache
+            }
+          })
+          .withFailureHandler(() => {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">save</span><span>Save All Settings</span>'; }
+            toast('Failed to save settings', 'error');
+          })
+          .updateDropdownOptions(k, vals);
+      });
+    }
 
     // ===================== TRACK =====================
     function showTrack(evt) {
@@ -4148,6 +4236,7 @@
             <div class="doc-info-item"><span class="doc-info-label">PO Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['PO Time Stamp'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO No</span><span class="doc-info-value">${doc['PO No'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO Date</span><span class="doc-info-value">${doc['PO Date'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PO Amount</span><span class="doc-info-value">${formatAmountDisplay(doc['PO Amount'])}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Supplier</span><span class="doc-info-value">${doc.Supplier || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div>
@@ -4243,6 +4332,7 @@
         poTs: document.getElementById('pcol-poTs').checked,
         poNo: document.getElementById('pcol-poNo').checked,
         poDate: document.getElementById('pcol-poDate').checked,
+        poAmount: document.getElementById('pcol-poAmount') ? document.getElementById('pcol-poAmount').checked : false,
         supplier: document.getElementById('pcol-supplier').checked,
         office: document.getElementById('pcol-office').checked,
         status: document.getElementById('pcol-status').checked,
@@ -4264,6 +4354,7 @@
       if (cols.poTs) h += `<th>PO Time Stamp</th>`;
       if (cols.poNo) h += `<th>PO No</th>`;
       if (cols.poDate) h += `<th>PO Date</th>`;
+      if (cols.poAmount) h += `<th>PO Amount</th>`;
       if (cols.supplier) h += `<th>Supplier</th>`;
       if (cols.office) h += `<th>Endorsed To</th>`;
       if (cols.status) h += `<th>Status</th>`;
@@ -4285,6 +4376,7 @@
         if (cols.poTs) h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
         if (cols.poNo) h += `<td>${d['PO No'] || '-'}</td>`;
         if (cols.poDate) h += `<td>${d['PO Date'] || '-'}</td>`;
+        if (cols.poAmount) h += `<td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>`;
         if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`;
         if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`;
         if (cols.status) h += `<td>${d.Status || '-'}</td>`;
@@ -4315,6 +4407,7 @@
       if (visibleColumns.poTs) { cols.push('PO Time Stamp'); hdrs.push('PO Time Stamp'); }
       if (visibleColumns.poNo) { cols.push('PO No'); hdrs.push('PO No'); }
       if (visibleColumns.poDate) { cols.push('PO Date'); hdrs.push('PO Date'); }
+      if (visibleColumns.poAmount) { cols.push('PO Amount'); hdrs.push('PO Amount'); }
       if (visibleColumns.supplier) { cols.push('Supplier'); hdrs.push('Supplier'); }
       if (visibleColumns.office) { cols.push('Endorsed To'); hdrs.push('Endorsed To'); }
       if (visibleColumns.status) { cols.push('Status'); hdrs.push('Status'); }
@@ -4438,13 +4531,12 @@
     window.addEventListener('load', () => { const now = new Date(); document.getElementById('printDateTo').value = now.toISOString().split('T')[0]; const first = new Date(now.getFullYear(), now.getMonth(), 1); document.getElementById('printDateFrom').value = first.toISOString().split('T')[0]; });
 
     // Check session on load — if logged in go to dashboard
+    // Single getInitialData call: restores session AND loads all dashboard data
+    // in one round-trip, fixing the browser-refresh login-reappear issue.
     (function checkSession() {
-      // Read parameters from the server-injected object first (GAS deployed mode),
-      // then fall back to URL search params (local / shim mode).
       const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
       const urlParams = new URLSearchParams(window.location.search);
       const token = gasParams.token || urlParams.get('token') || '';
-      const page = gasParams.page || urlParams.get('page') || '';
       const isLogout = urlParams.get('logout') === '1';
 
       // If a reset token is present the reset flow (checkResetToken) handles it
@@ -4456,16 +4548,51 @@
       // Restore this browser's session token from localStorage
       try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
 
-      // Normal session check — pass THIS browser's token (never shared with other browsers)
+      // If no stored token, go straight to login — no GAS round-trip needed
+      if (!_sessionToken) { showView('login'); return; }
+
+      // Session exists: load everything in a single batch call
+      // This also pre-loads all documents/stats so the dashboard appears immediately
       google.script.run
-        .withSuccessHandler(function (user) {
-          if (user) { showView('dashboard'); initDashboard(); }
-          else { _sessionToken = ''; showView('login'); }
+        .withSuccessHandler(function (data) {
+          if (data && data.user) {
+            showView('dashboard');
+            // Reuse batch data directly instead of calling initDashboard() which
+            // would fire another getInitialData round-trip
+            const user = data.user;
+            currentUser = user;
+            document.getElementById('userName').textContent = user.name || 'User';
+            document.getElementById('userRole').textContent = user.role || 'User';
+            document.getElementById('userAvatar').textContent = getInitials(user.name);
+            document.getElementById('profileName').value = user.name || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            document.getElementById('profileRole').value = user.role || '';
+            applyPermissions(user.permissions || {}, user.role || 'Staff');
+            dropdownOptions = data.opts || { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
+            populateDropdowns();
+            populatePrintFilters();
+            allDocs = data.docs || [];
+            populateTableFilters();
+            applyFilter(currentFilter);
+            const s = data.stats || {};
+            document.getElementById('stat-total').textContent    = s.total    || 0;
+            document.getElementById('stat-incoming').textContent = s.incoming  || 0;
+            document.getElementById('stat-outgoing').textContent = s.outgoing  || 0;
+            document.getElementById('stat-complete').textContent = s.complete  || 0;
+            document.getElementById('stat-overdue').textContent  = s.overdue   || 0;
+            ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
+              const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k] || 0;
+            });
+          } else {
+            _sessionToken = '';
+            try { localStorage.removeItem('docutracker_session_token'); } catch(e) {}
+            showView('login');
+          }
         })
         .withFailureHandler(function () {
           showView('login');
         })
-        .getCurrentUser(_sessionToken);
+        .getInitialData(_sessionToken);
     })();
   </script>
 
