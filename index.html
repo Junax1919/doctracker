@@ -2044,25 +2044,44 @@
                 <div class="dropdown"><button class="btn btn-outline" onclick="toggleColumnsDropdown()"><span
                       class="material-symbols-outlined">view_column</span><span>Columns</span></button>
                   <div class="dropdown-menu" id="columnsDropdown">
-                    <div class="dropdown-item"><input type="checkbox" id="col-overdue" checked onchange="toggleColumn('overdue')"><label for="col-overdue">Overdue</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-id" checked onchange="toggleColumn('id')"><label for="col-id">ID/Barcode</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-docTs" checked onchange="toggleColumn('docTs')"><label for="col-docTs">Doc Time Stamp</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-type" checked onchange="toggleColumn('type')"><label for="col-type">Doc Type</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-no" checked onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-prDate" checked onchange="toggleColumn('prDate')"><label for="col-prDate">PR Date</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-desc" checked onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-amount" checked onchange="toggleColumn('amount')"><label for="col-amount">Amount</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-endUser" checked onchange="toggleColumn('endUser')"><label for="col-endUser">EndUser</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-req" checked onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-poTs" checked onchange="toggleColumn('poTs')"><label for="col-poTs">PO Time Stamp</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-poNo" checked onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked onchange="toggleColumn('poDate')"><label for="col-poDate">PO Date</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-office" checked onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-status" checked onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-date" checked onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-notes" checked onchange="toggleColumn('notes')"><label for="col-notes">Notes</label></div>
-                    <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-overdue" checked
+                        onchange="toggleColumn('overdue')"><label for="col-overdue">Overdue</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-id" checked
+                        onchange="toggleColumn('id')"><label for="col-id">ID/Barcode</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-docTs" checked
+                        onchange="toggleColumn('docTs')"><label for="col-docTs">Doc Time Stamp</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-type" checked
+                        onchange="toggleColumn('type')"><label for="col-type">Doc Type</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-no" checked
+                        onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-prDate" checked
+                        onchange="toggleColumn('prDate')"><label for="col-prDate">PR Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-desc" checked
+                        onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-amount" checked
+                        onchange="toggleColumn('amount')"><label for="col-amount">Amount</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-endUser" checked
+                        onchange="toggleColumn('endUser')"><label for="col-endUser">EndUser</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-req" checked
+                        onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poTs" checked
+                        onchange="toggleColumn('poTs')"><label for="col-poTs">PO Time Stamp</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poNo" checked
+                        onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked
+                        onchange="toggleColumn('poDate')"><label for="col-poDate">PO Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-supplier" checked
+                        onchange="toggleColumn('supplier')"><label for="col-supplier">Supplier</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-office" checked
+                        onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-status" checked
+                        onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-date" checked
+                        onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-notes" checked
+                        onchange="toggleColumn('notes')"><label for="col-notes">Notes</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked
+                        onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
                   </div>
                 </div>
                 <button class="btn btn-outline" onclick="loadDocs()"><span
@@ -2077,22 +2096,31 @@
                   <tr>
                     <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
                     <th class="sortable col-id" data-column="id" onclick="sortTable('id')">ID/Barcode</th>
-                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time Stamp</th>
+                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time
+                      Stamp</th>
                     <th class="sortable col-type" data-column="type" onclick="sortTable('type')">Doc Type</th>
                     <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
-                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR Date</th>
-                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description</th>
+                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR
+                      Date</th>
+                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
+                    </th>
                     <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
                     <th class="sortable col-endUser" data-column="endUser" onclick="sortTable('endUser')">EndUser</th>
                     <th class="sortable col-req" data-column="req" onclick="sortTable('req')">Requisitioner</th>
-                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time Stamp</th>
+                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time
+                      Stamp</th>
                     <th class="sortable col-poNo" data-column="poNo" onclick="sortTable('poNo')">PO No</th>
-                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO Date</th>
-                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier</th>
-                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">Endorsed To</th>
+                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO
+                      Date</th>
+                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
+                    </th>
+                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
+                      Endorsed To</th>
                     <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
-                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date Received</th>
-                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes</th>
+                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date
+                      Received</th>
+                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes
+                    </th>
                     <th class="col-attachment">PDF Link</th>
                     <th>Actions</th>
                   </tr>
@@ -2523,7 +2551,7 @@
         const banner = document.createElement('div');
         banner.id = 'gasBanner';
         banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0f3460;color:#94a3b8;font-size:12px;text-align:center;padding:5px 8px;z-index:9999;font-family:Inter,sans-serif';
-        banner.innerHTML = '🔗 <strong style="color:#e2e8f0">Live Mode</strong> — Connected to Google Sheets backend. Use your real account credentials to log in.';
+        banner.innerHTML = '🔗 <strong style="color:#e2e8f0">Live Mode</strong> — Connected to the server. Use your real account credentials to log in.';
         document.body.appendChild(banner);
         // Auto-hide banner after 8 seconds
         setTimeout(() => { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 8000);
@@ -2607,7 +2635,7 @@
     (function checkResetToken() {
       const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
       const urlParams = new URLSearchParams(window.location.search);
-      const token     = gasParams.token || urlParams.get('token') || '';
+      const token = gasParams.token || urlParams.get('token') || '';
 
       if (!token) return; // No reset token present — nothing to do
 
@@ -3025,17 +3053,17 @@
       } else {
         // Status-to-icon mapping
         const iconMap = {
-          'created':   { icon: 'add_circle',    cls: 'created' },
-          'incoming':  { icon: 'inbox',          cls: 'updated' },
-          'received':  { icon: 'mail',           cls: 'created' },
-          'in review': { icon: 'rate_review',    cls: 'updated' },
-          'in process':{ icon: 'pending',        cls: 'updated' },
-          'approved':  { icon: 'check_circle',   cls: 'created' },
-          'forwarded': { icon: 'send',           cls: 'updated' },
-          'hold':      { icon: 'pause_circle',   cls: 'updated' },
-          'completed': { icon: 'task_alt',       cls: 'created' },
-          'complete':  { icon: 'task_alt',       cls: 'created' },
-          'deleted':   { icon: 'delete',         cls: 'deleted' }
+          'created': { icon: 'add_circle', cls: 'created' },
+          'incoming': { icon: 'inbox', cls: 'updated' },
+          'received': { icon: 'mail', cls: 'created' },
+          'in review': { icon: 'rate_review', cls: 'updated' },
+          'in process': { icon: 'pending', cls: 'updated' },
+          'approved': { icon: 'check_circle', cls: 'created' },
+          'forwarded': { icon: 'send', cls: 'updated' },
+          'hold': { icon: 'pause_circle', cls: 'updated' },
+          'completed': { icon: 'task_alt', cls: 'created' },
+          'complete': { icon: 'task_alt', cls: 'created' },
+          'deleted': { icon: 'delete', cls: 'deleted' }
         };
         function getIcon(action, status) {
           const al = (action || '').toLowerCase();
@@ -3094,66 +3122,66 @@
     function generateOfficeReport(data) { const groups = {}; data.forEach(d => { const o = d['Endorsed To'] || 'Unassigned'; if (!groups[o]) groups[o] = []; groups[o].push(d); }); let h = getReportHeader('Office/Department Report'); h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`; Object.keys(groups).sort().forEach(o => { const docs = groups[o]; h += `<div style="margin-bottom:30px;page-break-inside:avoid"><h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Requisitioner</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${docs.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table></div>`; }); return h; }
     function generateCustomReport(data) {
       const cols = {
-        overdue:  document.getElementById('pcol-overdue').checked,
-        id:       document.getElementById('pcol-id').checked,
-        docTs:    document.getElementById('pcol-docTs').checked,
-        type:     document.getElementById('pcol-type').checked,
-        no:       document.getElementById('pcol-no').checked,
-        prDate:   document.getElementById('pcol-prDate').checked,
-        desc:     document.getElementById('pcol-desc').checked,
-        amount:   document.getElementById('pcol-amount').checked,
-        endUser:  document.getElementById('pcol-endUser').checked,
-        req:      document.getElementById('pcol-req').checked,
-        poTs:     document.getElementById('pcol-poTs').checked,
-        poNo:     document.getElementById('pcol-poNo').checked,
-        poDate:   document.getElementById('pcol-poDate').checked,
+        overdue: document.getElementById('pcol-overdue').checked,
+        id: document.getElementById('pcol-id').checked,
+        docTs: document.getElementById('pcol-docTs').checked,
+        type: document.getElementById('pcol-type').checked,
+        no: document.getElementById('pcol-no').checked,
+        prDate: document.getElementById('pcol-prDate').checked,
+        desc: document.getElementById('pcol-desc').checked,
+        amount: document.getElementById('pcol-amount').checked,
+        endUser: document.getElementById('pcol-endUser').checked,
+        req: document.getElementById('pcol-req').checked,
+        poTs: document.getElementById('pcol-poTs').checked,
+        poNo: document.getElementById('pcol-poNo').checked,
+        poDate: document.getElementById('pcol-poDate').checked,
         supplier: document.getElementById('pcol-supplier').checked,
-        office:   document.getElementById('pcol-office').checked,
-        status:   document.getElementById('pcol-status').checked,
-        date:     document.getElementById('pcol-date').checked,
-        notes:    document.getElementById('pcol-notes').checked
+        office: document.getElementById('pcol-office').checked,
+        status: document.getElementById('pcol-status').checked,
+        date: document.getElementById('pcol-date').checked,
+        notes: document.getElementById('pcol-notes').checked
       };
       let h = getReportHeader('Custom Report');
       h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`;
-      if (cols.overdue)  h += `<th>Overdue</th>`;
-      if (cols.id)       h += `<th>ID/Barcode</th>`;
-      if (cols.docTs)    h += `<th>Doc Time Stamp</th>`;
-      if (cols.type)     h += `<th>Doc Type</th>`;
-      if (cols.no)       h += `<th>Doc No</th>`;
-      if (cols.prDate)   h += `<th>PR Date</th>`;
-      if (cols.desc)     h += `<th>Description</th>`;
-      if (cols.amount)   h += `<th>Amount</th>`;
-      if (cols.endUser)  h += `<th>EndUser</th>`;
-      if (cols.req)      h += `<th>Requisitioner</th>`;
-      if (cols.poTs)     h += `<th>PO Time Stamp</th>`;
-      if (cols.poNo)     h += `<th>PO No</th>`;
-      if (cols.poDate)   h += `<th>PO Date</th>`;
+      if (cols.overdue) h += `<th>Overdue</th>`;
+      if (cols.id) h += `<th>ID/Barcode</th>`;
+      if (cols.docTs) h += `<th>Doc Time Stamp</th>`;
+      if (cols.type) h += `<th>Doc Type</th>`;
+      if (cols.no) h += `<th>Doc No</th>`;
+      if (cols.prDate) h += `<th>PR Date</th>`;
+      if (cols.desc) h += `<th>Description</th>`;
+      if (cols.amount) h += `<th>Amount</th>`;
+      if (cols.endUser) h += `<th>EndUser</th>`;
+      if (cols.req) h += `<th>Requisitioner</th>`;
+      if (cols.poTs) h += `<th>PO Time Stamp</th>`;
+      if (cols.poNo) h += `<th>PO No</th>`;
+      if (cols.poDate) h += `<th>PO Date</th>`;
       if (cols.supplier) h += `<th>Supplier</th>`;
-      if (cols.office)   h += `<th>Endorsed To</th>`;
-      if (cols.status)   h += `<th>Status</th>`;
-      if (cols.date)     h += `<th>Date Received</th>`;
-      if (cols.notes)    h += `<th>Notes</th>`;
+      if (cols.office) h += `<th>Endorsed To</th>`;
+      if (cols.status) h += `<th>Status</th>`;
+      if (cols.date) h += `<th>Date Received</th>`;
+      if (cols.notes) h += `<th>Notes</th>`;
       h += `</tr></thead><tbody>`;
       data.forEach(d => {
         h += `<tr>`;
-        if (cols.overdue)  h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td>`;
-        if (cols.id)       h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`;
-        if (cols.docTs)    h += `<td style="font-family:monospace;font-size:11px">${d['Doc Time Stamp'] || '-'}</td>`;
-        if (cols.type)     h += `<td>${d['Doc Type'] || '-'}</td>`;
-        if (cols.no)       h += `<td>${d['Doc No'] || '-'}</td>`;
-        if (cols.prDate)   h += `<td>${d['PR Date'] || '-'}</td>`;
-        if (cols.desc)     h += `<td>${d.Description || '-'}</td>`;
-        if (cols.amount)   h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`;
-        if (cols.endUser)  h += `<td>${d['EndUser'] || '-'}</td>`;
-        if (cols.req)      h += `<td>${d.Requisitioner || '-'}</td>`;
-        if (cols.poTs)     h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
-        if (cols.poNo)     h += `<td>${d['PO No'] || '-'}</td>`;
-        if (cols.poDate)   h += `<td>${d['PO Date'] || '-'}</td>`;
+        if (cols.overdue) h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td>`;
+        if (cols.id) h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`;
+        if (cols.docTs) h += `<td style="font-family:monospace;font-size:11px">${d['Doc Time Stamp'] || '-'}</td>`;
+        if (cols.type) h += `<td>${d['Doc Type'] || '-'}</td>`;
+        if (cols.no) h += `<td>${d['Doc No'] || '-'}</td>`;
+        if (cols.prDate) h += `<td>${d['PR Date'] || '-'}</td>`;
+        if (cols.desc) h += `<td>${d.Description || '-'}</td>`;
+        if (cols.amount) h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`;
+        if (cols.endUser) h += `<td>${d['EndUser'] || '-'}</td>`;
+        if (cols.req) h += `<td>${d.Requisitioner || '-'}</td>`;
+        if (cols.poTs) h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
+        if (cols.poNo) h += `<td>${d['PO No'] || '-'}</td>`;
+        if (cols.poDate) h += `<td>${d['PO Date'] || '-'}</td>`;
         if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`;
-        if (cols.office)   h += `<td>${d['Endorsed To'] || '-'}</td>`;
-        if (cols.status)   h += `<td>${d.Status || '-'}</td>`;
-        if (cols.date)     h += `<td>${d['Date Received'] || '-'}</td>`;
-        if (cols.notes)    h += `<td>${d.Notes || '-'}</td>`;
+        if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`;
+        if (cols.status) h += `<td>${d.Status || '-'}</td>`;
+        if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`;
+        if (cols.notes) h += `<td>${d.Notes || '-'}</td>`;
         h += `</tr>`;
       });
       h += `</tbody></table>`;
@@ -3166,25 +3194,25 @@
     function getExportFilename(ext) { const n = new Date(); return `DocuTracker_Export_${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, '0')}${String(n.getDate()).padStart(2, '0')}_${String(n.getHours()).padStart(2, '0')}${String(n.getMinutes()).padStart(2, '0')}.${ext}`; }
     function getExportData() {
       const cols = [], hdrs = [];
-      if (visibleColumns.overdue)   { cols.push('Overdue');         hdrs.push('Overdue'); }
-      if (visibleColumns.id)        { cols.push('ID/Barcode');      hdrs.push('ID/Barcode'); }
-      if (visibleColumns.docTs)     { cols.push('Doc Time Stamp');  hdrs.push('Doc Time Stamp'); }
-      if (visibleColumns.type)      { cols.push('Doc Type');        hdrs.push('Doc Type'); }
-      if (visibleColumns.no)        { cols.push('Doc No');          hdrs.push('Doc No'); }
-      if (visibleColumns.prDate)    { cols.push('PR Date');         hdrs.push('PR Date'); }
-      if (visibleColumns.desc)      { cols.push('Description');     hdrs.push('Description'); }
-      if (visibleColumns.amount)    { cols.push('Amount');          hdrs.push('Amount'); }
-      if (visibleColumns.endUser)   { cols.push('EndUser');         hdrs.push('EndUser'); }
-      if (visibleColumns.req)       { cols.push('Requisitioner');   hdrs.push('Requisitioner'); }
-      if (visibleColumns.poTs)      { cols.push('PO Time Stamp');   hdrs.push('PO Time Stamp'); }
-      if (visibleColumns.poNo)      { cols.push('PO No');           hdrs.push('PO No'); }
-      if (visibleColumns.poDate)    { cols.push('PO Date');         hdrs.push('PO Date'); }
-      if (visibleColumns.supplier)  { cols.push('Supplier');        hdrs.push('Supplier'); }
-      if (visibleColumns.office)    { cols.push('Endorsed To');     hdrs.push('Endorsed To'); }
-      if (visibleColumns.status)    { cols.push('Status');          hdrs.push('Status'); }
-      if (visibleColumns.date)      { cols.push('Date Received');   hdrs.push('Date Received'); }
-      if (visibleColumns.notes)     { cols.push('Notes');           hdrs.push('Notes'); }
-      if (visibleColumns.attachment){ cols.push('PDF Link');        hdrs.push('PDF Link'); }
+      if (visibleColumns.overdue) { cols.push('Overdue'); hdrs.push('Overdue'); }
+      if (visibleColumns.id) { cols.push('ID/Barcode'); hdrs.push('ID/Barcode'); }
+      if (visibleColumns.docTs) { cols.push('Doc Time Stamp'); hdrs.push('Doc Time Stamp'); }
+      if (visibleColumns.type) { cols.push('Doc Type'); hdrs.push('Doc Type'); }
+      if (visibleColumns.no) { cols.push('Doc No'); hdrs.push('Doc No'); }
+      if (visibleColumns.prDate) { cols.push('PR Date'); hdrs.push('PR Date'); }
+      if (visibleColumns.desc) { cols.push('Description'); hdrs.push('Description'); }
+      if (visibleColumns.amount) { cols.push('Amount'); hdrs.push('Amount'); }
+      if (visibleColumns.endUser) { cols.push('EndUser'); hdrs.push('EndUser'); }
+      if (visibleColumns.req) { cols.push('Requisitioner'); hdrs.push('Requisitioner'); }
+      if (visibleColumns.poTs) { cols.push('PO Time Stamp'); hdrs.push('PO Time Stamp'); }
+      if (visibleColumns.poNo) { cols.push('PO No'); hdrs.push('PO No'); }
+      if (visibleColumns.poDate) { cols.push('PO Date'); hdrs.push('PO Date'); }
+      if (visibleColumns.supplier) { cols.push('Supplier'); hdrs.push('Supplier'); }
+      if (visibleColumns.office) { cols.push('Endorsed To'); hdrs.push('Endorsed To'); }
+      if (visibleColumns.status) { cols.push('Status'); hdrs.push('Status'); }
+      if (visibleColumns.date) { cols.push('Date Received'); hdrs.push('Date Received'); }
+      if (visibleColumns.notes) { cols.push('Notes'); hdrs.push('Notes'); }
+      if (visibleColumns.attachment) { cols.push('PDF Link'); hdrs.push('PDF Link'); }
       const rows = [hdrs];
       filteredDocs.forEach(doc => {
         const row = [];
@@ -3304,9 +3332,9 @@
       // then fall back to URL search params (local / shim mode).
       const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
       const urlParams = new URLSearchParams(window.location.search);
-      const token     = gasParams.token || urlParams.get('token') || '';
-      const page      = gasParams.page  || urlParams.get('page')  || '';
-      const isLogout  = urlParams.get('logout') === '1';
+      const token = gasParams.token || urlParams.get('token') || '';
+      const page = gasParams.page || urlParams.get('page') || '';
+      const isLogout = urlParams.get('logout') === '1';
 
       // If a reset token is present the reset flow (checkResetToken) handles it
       if (token) return;
