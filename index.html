@@ -2760,8 +2760,9 @@
                         onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
                   </div>
                 </div>
-                <button class="btn btn-outline" onclick="loadDocs()"><span
-                    class="material-symbols-outlined">refresh</span><span class="btn-label">Refresh</span></button>
+                <button class="btn btn-outline" onclick="printTableView()" title="Print current view">
+                  <span class="material-symbols-outlined">print</span><span class="btn-label">Print</span>
+                </button>
                 <button class="btn btn-primary" onclick="openAddModal()"><span
                     class="material-symbols-outlined">add</span><span class="btn-label">Add Document</span></button>
               </div>
@@ -3132,6 +3133,37 @@
       <div class="modal-footer"><button class="btn btn-outline" onclick="closeAdminModal()">Cancel</button><button
           class="btn admin-btn" onclick="saveAdminSettings()"><span
             class="material-symbols-outlined">save</span><span>Save All Settings</span></button></div>
+    </div>
+  </div>
+
+  <!-- View Document Details Modal -->
+  <div class="modal" id="viewModal" style="display:none">
+    <div class="modal-content" style="max-width:680px">
+      <div class="modal-header" style="background:var(--primary);border-radius:12px 12px 0 0">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="material-symbols-outlined" style="color:#94a3b8;font-size:22px">description</span>
+          <h3 class="modal-title" style="color:#fff">Document Details</h3>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline" onclick="printDoc()" title="Print this document"
+            style="padding:6px 12px;font-size:13px;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff">
+            <span class="material-symbols-outlined" style="font-size:16px">print</span>
+            <span class="btn-label">Print</span>
+          </button>
+          <button class="modal-close" onclick="closeViewModal()" style="color:#fff">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body" id="viewModalBody" style="padding:24px;overflow-y:auto;max-height:75vh">
+        <!-- populated by viewDoc() -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeViewModal()">Close</button>
+        <button class="btn btn-primary" onclick="editDocFromView()">
+          <span class="material-symbols-outlined">edit</span>Edit Document
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3571,8 +3603,12 @@
 <td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
 <td><div class="table-actions">
-<button class="action-btn" onclick='editDoc(\`${id}\`)'><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-<button class="action-btn" onclick='deleteDoc(\`${id}\`)'><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+<button class="action-btn" title="View details" onclick='viewDoc(\`${id}\`)' style="color:var(--blue)">
+  <span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
+<button class="action-btn" title="Edit" onclick='editDoc(\`${id}\`)'>
+  <span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+<button class="action-btn" title="Delete" onclick='deleteDoc(\`${id}\`)' style="color:var(--danger)">
+  <span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
 </div></td></tr>`;
       }).join('');
       updatePageInfo(st + 1, en, tot); renderPageNums(tpg);
@@ -3585,6 +3621,185 @@
     function goPrev() { if (currentPage > 1) { currentPage--; renderTable(); } }
     function goNext() { const pp = perPage === 'all' ? filteredDocs.length : parseInt(perPage); const tp = Math.ceil(filteredDocs.length / pp); if (currentPage < tp) { currentPage++; renderTable(); } }
     function goLast() { const pp = perPage === 'all' ? filteredDocs.length : parseInt(perPage); const tp = Math.ceil(filteredDocs.length / pp); if (currentPage !== tp) { currentPage = tp; renderTable(); } }
+
+    // ===================== VIEW DETAILS MODAL =====================
+    let viewingDocId = null;
+
+    function viewDoc(id) {
+      const doc = allDocs.find(d => d['ID/Barcode'] === id);
+      if (!doc) { toast('Document not found', 'error'); return; }
+      viewingDocId = id;
+
+      const fmtDate = v => v || '—';
+      const fmtAmt  = v => {
+        if (!v || v === '') return '—';
+        const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
+        return isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      };
+      const fmtTs   = v => v ? String(v) : '—';
+      const ov = doc.Overdue || 'On time';
+      const ovColor = ov !== 'On time' ? '#dc2626' : '#059669';
+      const sta = doc.Status || '';
+      const sc  = sta.toLowerCase().replace(/\s+/g, '-');
+      const pdf = doc['PDF Link'] || '';
+
+      const field = (label, value, icon = '') => `
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">${icon ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px">${icon}</span> ` : ''}${label}</span>
+          <span style="font-size:14px;color:var(--text);word-break:break-word">${value}</span>
+        </div>`;
+
+      document.getElementById('viewModalBody').innerHTML = `
+        <!-- Header strip -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px">${doc['Doc No'] || '—'}</div>
+            <div style="font-size:13px;color:var(--muted)">${doc['Doc Type'] || '—'}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="status-badge status-${sc}" style="font-size:13px;padding:5px 14px">${sta}</span>
+            <span style="font-weight:700;color:${ovColor};font-size:13px">${ov}</span>
+          </div>
+        </div>
+
+        <!-- Grid of fields -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 24px;padding:20px;background:var(--bg);border-radius:10px;margin-bottom:16px">
+          ${field('ID / Barcode',         `<span style="font-family:monospace;font-size:13px">${doc['ID/Barcode'] || '—'}</span>`, 'qr_code')}
+          ${field('Document Type',         doc['Doc Type']     || '—', 'description')}
+          ${field('Document Number',        doc['Doc No']       || '—', 'tag')}
+          ${field('Description',            doc.Description     || '—', 'notes')}
+          ${field('Amount',                 fmtAmt(doc.Amount),         'payments')}
+          ${field('Status',                 sta                 || '—', 'info')}
+          ${field('Overdue',               `<span style="color:${ovColor};font-weight:600">${ov}</span>`, 'schedule')}
+          ${field('Date Received',          fmtDate(doc['Date Received']), 'event')}
+        </div>
+
+        <!-- Procurement section -->
+        <div style="padding:16px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:14px">📋 Procurement Details</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 24px">
+            ${field('PR Date',             fmtDate(doc['PR Date']),       'calendar_today')}
+            ${field('End User',             doc['EndUser']       || '—',  'person')}
+            ${field('Requisitioner',        doc.Requisitioner   || '—',   'badge')}
+            ${field('Supplier',             doc.Supplier        || '—',   'storefront')}
+            ${field('Endorsed To (Office)', doc['Endorsed To']  || '—',   'apartment')}
+            ${field('PO Number',            doc['PO No']        || '—',   'receipt_long')}
+            ${field('PO Date',             fmtDate(doc['PO Date']),       'event_note')}
+          </div>
+        </div>
+
+        <!-- Timestamps -->
+        <div style="padding:14px 16px;background:#f8fafc;border-radius:10px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 24px">
+          ${field('Doc Time Stamp',  `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`, 'schedule')}
+          ${field('PO Time Stamp',   `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`,  'update')}
+        </div>
+
+        <!-- Notes -->
+        ${doc.Notes ? `<div style="padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">📝 Notes</div>
+          <div style="font-size:14px;color:var(--text);white-space:pre-wrap">${doc.Notes}</div>
+        </div>` : ''}
+
+        <!-- PDF Attachment -->
+        ${pdf ? `<div style="padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;display:flex;align-items:center;gap:12px">
+          <span class="material-symbols-outlined" style="color:var(--blue);font-size:28px">picture_as_pdf</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--blue)">PDF Attachment</div>
+            <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pdf}</div>
+          </div>
+          <a href="${pdf}" target="_blank" class="btn btn-primary" style="padding:8px 14px;font-size:13px;text-decoration:none">
+            <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>Open
+          </a>
+        </div>` : '<div style="padding:12px 16px;background:#f8fafc;border-radius:10px;color:var(--muted);font-size:13px;text-align:center"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">attachment</span> No PDF attachment</div>'}
+      `;
+      showModal('viewModal');
+    }
+
+    function closeViewModal() { hideModal('viewModal'); viewingDocId = null; }
+
+    function editDocFromView() { closeViewModal(); if (viewingDocId) editDoc(viewingDocId); }
+
+    // ===================== PRINT FUNCTIONS =====================
+    // printTableView() — prints the current filtered/sorted table (respects visible columns)
+    function printTableView() {
+      const filterInfo = [];
+      const si = document.getElementById('searchInput').value.trim();
+      if (si) filterInfo.push(`Search: "${si}"`);
+      if (activeFilters.docType) filterInfo.push(`Type: ${activeFilters.docType}`);
+      if (activeFilters.status)  filterInfo.push(`Status: ${activeFilters.status}`);
+      if (activeFilters.endUser) filterInfo.push(`End User: ${activeFilters.endUser}`);
+      if (currentFilter !== 'all') filterInfo.push(`View: ${currentFilter}`);
+
+      // Collect visible column keys and their header labels
+      const colMap = [
+        { key: 'overdue',    label: 'Overdue',        field: 'Overdue' },
+        { key: 'id',         label: 'ID/Barcode',     field: 'ID/Barcode' },
+        { key: 'type',       label: 'Doc Type',       field: 'Doc Type' },
+        { key: 'no',         label: 'Doc No',         field: 'Doc No' },
+        { key: 'prDate',     label: 'PR Date',        field: 'PR Date' },
+        { key: 'desc',       label: 'Description',    field: 'Description' },
+        { key: 'amount',     label: 'Amount',         field: 'Amount' },
+        { key: 'endUser',    label: 'End User',       field: 'EndUser' },
+        { key: 'req',        label: 'Requisitioner',  field: 'Requisitioner' },
+        { key: 'poNo',       label: 'PO No',          field: 'PO No' },
+        { key: 'poDate',     label: 'PO Date',        field: 'PO Date' },
+        { key: 'supplier',   label: 'Supplier',       field: 'Supplier' },
+        { key: 'office',     label: 'Endorsed To',    field: 'Endorsed To' },
+        { key: 'status',     label: 'Status',         field: 'Status' },
+        { key: 'date',       label: 'Date Received',  field: 'Date Received' },
+        { key: 'notes',      label: 'Notes',          field: 'Notes' },
+      ].filter(c => visibleColumns[c.key]);
+
+      const thead = `<tr>${colMap.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+      const tbody = filteredDocs.map(d => {
+        const cells = colMap.map(c => {
+          let v = d[c.field] || '';
+          if (c.key === 'amount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g,'')); v = isNaN(n) ? v : '₱'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+          return `<td>${v}</td>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      const now = new Date().toLocaleString();
+      const title = document.getElementById('sectionTitle').textContent;
+      const w = window.open('', '_blank', 'width=1100,height=700');
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — ${title}</title>
+        <style>
+          body{font-family:Arial,sans-serif;font-size:12px;color:#0f172a;padding:20px}
+          h1{font-size:18px;margin:0 0 4px}p{margin:0 0 12px;color:#64748b;font-size:12px}
+          table{width:100%;border-collapse:collapse}
+          th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left;font-size:11px}
+          td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:12px}
+          tr:nth-child(even) td{background:#f8fafc}
+          @media print{body{padding:10px}}
+        </style></head><body>
+        <h1>📄 ${title}</h1>
+        <p>Printed: ${now}${filterInfo.length ? ' &nbsp;|&nbsp; Filters: ' + filterInfo.join(', ') : ''} &nbsp;|&nbsp; Total: ${filteredDocs.length} records</p>
+        <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+        <script>window.onload=function(){window.print();}<\/script>
+        </body></html>`);
+      w.document.close();
+    }
+
+    // printDoc() — prints the single document currently open in the View modal
+    function printDoc() {
+      const body = document.getElementById('viewModalBody').innerHTML;
+      const w = window.open('', '_blank', 'width=800,height:650');
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — Document Details</title>
+        <style>
+          body{font-family:Arial,sans-serif;font-size:13px;color:#0f172a;padding:24px}
+          h2{margin:0 0 4px}p{margin:0 0 14px;color:#64748b}
+          .status-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:600;background:#eff6ff;color:#3b82f6}
+          @media print{body{padding:12px}}
+        </style></head><body>
+        <h2>📄 DocuTracker — Document Details</h2>
+        <p>Printed: ${new Date().toLocaleString()}</p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin-bottom:16px">
+        ${body}
+        <script>window.onload=function(){window.print();}<\/script>
+        </body></html>`);
+      w.document.close();
+    }
   </script>
   <script>
     // ===================== CRUD MODALS =====================
@@ -4083,7 +4298,7 @@
     document.getElementById('mobileOverlay').addEventListener('click', closeMobileSidebar);
     // Auto-close sidebar on mobile when any nav item is tapped
     document.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => { if (window.innerWidth < 768) closeMobileSidebar(); }));
-    ['docModal', 'profileModal', 'adminModal'].forEach(id => { const el = document.getElementById(id); el.addEventListener('click', e => { if (e.target === el) { id === 'docModal' ? closeModal() : id === 'profileModal' ? closeProfileModal() : closeAdminModal(); } }); });
+    ['docModal', 'profileModal', 'adminModal', 'viewModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); } }); });
     document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); });
 
     // ===================== INIT =====================
