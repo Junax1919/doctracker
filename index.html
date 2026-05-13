@@ -2598,27 +2598,62 @@
       }).sendResetEmail(em);
     });
 
-    // Reset password view — check token on load
+    // Reset password view — check token on load.
+    // IMPORTANT: In a deployed GAS Web App, window.location.search is always empty
+    // because GAS serves all requests from the same /exec URL. The doGet() backend
+    // injects the original URL parameters into window.__GAS_PARAMS__ so the SPA can
+    // access them. We read from that object first, with a fallback to URL search
+    // params for local/shim mode.
     (function checkResetToken() {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
-      if (!token) return;
-      showView('reset');
-      google.script.run.withSuccessHandler(valid => {
-        if (!valid) { document.getElementById('resetCard').style.display = 'none'; document.getElementById('invalidTokenCard').style.display = 'block'; }
-      }).withFailureHandler(() => { document.getElementById('resetCard').style.display = 'none'; document.getElementById('invalidTokenCard').style.display = 'block'; }).validateResetToken(token);
+      const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
+      const urlParams = new URLSearchParams(window.location.search);
+      const token     = gasParams.token || urlParams.get('token') || '';
 
+      if (!token) return; // No reset token present — nothing to do
+
+      // Show the Reset Password view
+      showView('reset');
+
+      // Validate the token with the backend
+      google.script.run
+        .withSuccessHandler(function (valid) {
+          if (!valid) {
+            document.getElementById('resetCard').style.display = 'none';
+            document.getElementById('invalidTokenCard').style.display = 'block';
+          }
+        })
+        .withFailureHandler(function () {
+          document.getElementById('resetCard').style.display = 'none';
+          document.getElementById('invalidTokenCard').style.display = 'block';
+        })
+        .validateResetToken(token);
+
+      // Wire up the Reset Password button
       document.getElementById('resetBtn').addEventListener('click', function () {
         const np = document.getElementById('newPassword').value.trim();
         const cp = document.getElementById('confirmPassword').value.trim();
         if (!np || !cp) { showNotif('resetNotif', 'Please fill in all fields', 'error'); return; }
         if (np.length < 6) { showNotif('resetNotif', 'Password must be at least 6 characters', 'error'); return; }
         if (np !== cp) { showNotif('resetNotif', 'Passwords do not match', 'error'); return; }
-        this.disabled = true; this.textContent = 'Resetting...';
-        google.script.run.withSuccessHandler(r => {
-          if (r === 'success') { showNotif('resetNotif', 'Password reset successful!', 'success'); setTimeout(() => showView('login'), 1500); }
-          else { showNotif('resetNotif', 'Failed to reset password', 'error'); this.disabled = false; this.textContent = 'Reset Password'; }
-        }).withFailureHandler(() => { showNotif('resetNotif', 'An error occurred', 'error'); this.disabled = false; this.textContent = 'Reset Password'; }).setNewPassword(token, np);
+        this.disabled = true;
+        this.textContent = 'Resetting...';
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r === 'success') {
+              showNotif('resetNotif', 'Password reset successful! Redirecting to login...', 'success');
+              setTimeout(() => showView('login'), 1800);
+            } else {
+              showNotif('resetNotif', 'Failed to reset password. The link may have expired.', 'error');
+              this.disabled = false;
+              this.textContent = 'Reset Password';
+            }
+          })
+          .withFailureHandler(() => {
+            showNotif('resetNotif', 'An error occurred. Please try again.', 'error');
+            this.disabled = false;
+            this.textContent = 'Reset Password';
+          })
+          .setNewPassword(token, np);
       });
     })();
 
@@ -2866,11 +2901,38 @@
     function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(updates); }
     function handleLogout() {
       if (!confirm('Are you sure you want to logout?')) return;
-      google.script.run.withSuccessHandler(function (url) {
-        currentUser = null;
-        if (url && url.startsWith('http')) { window.location.href = url; }
-        else { showView('login'); document.getElementById('loginEmail').value = ''; document.getElementById('loginPassword').value = ''; }
-      }).logout();
+
+      // ── Build the redirect URL from the BROWSER'S current location ──────────
+      // This is the only reliable approach across all environments:
+      //   • Custom domain   (https://doctracker.junaxdmly.workers.dev/)
+      //   • Cloudflare / CDN proxy
+      //   • Localhost       (http://localhost:3000/)
+      //   • GAS exec URL    (https://script.google.com/macros/s/.../exec)
+      // window.location.origin + pathname always reflects the real host the user
+      // is browsing from — no hardcoded URLs, no backend value needed.
+      const currentOrigin = window.location.origin + window.location.pathname;
+
+      // Clear local UI state immediately (before the async call) for snappy UX
+      currentUser = null;
+      try { localStorage.removeItem('docutracker_session_email'); } catch (e) { }
+
+      // Tell the backend to clear the server-side session (PropertiesService).
+      // We no longer use the returned URL for navigation — we already have the
+      // correct one from the browser itself.
+      google.script.run
+        .withSuccessHandler(function () {
+          // Redirect back to the same origin/path with ?logout=1 so checkSession()
+          // skips the session restore and shows the login view immediately.
+          window.location.href = currentOrigin + '?logout=1';
+        })
+        .withFailureHandler(function () {
+          // Even if the backend call fails, clear the UI and show login.
+          // The session will expire naturally on the server side.
+          document.getElementById('loginEmail').value = '';
+          document.getElementById('loginPassword').value = '';
+          showView('login');
+        })
+        .logout();
     }
 
     // ===================== ADMIN =====================
@@ -3238,14 +3300,30 @@
 
     // Check session on load — if logged in go to dashboard
     (function checkSession() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('token')) return; // password reset flow handled separately
-      google.script.run.withSuccessHandler(function (user) {
-        if (user) { showView('dashboard'); initDashboard(); }
-        else { showView('login'); }
-      }).withFailureHandler(function () {
-        showView('login');
-      }).getCurrentUser();
+      // Read parameters from the server-injected object first (GAS deployed mode),
+      // then fall back to URL search params (local / shim mode).
+      const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
+      const urlParams = new URLSearchParams(window.location.search);
+      const token     = gasParams.token || urlParams.get('token') || '';
+      const page      = gasParams.page  || urlParams.get('page')  || '';
+      const isLogout  = urlParams.get('logout') === '1';
+
+      // If a reset token is present the reset flow (checkResetToken) handles it
+      if (token) return;
+
+      // If the user just logged out, skip session check and show login immediately
+      if (isLogout) { showView('login'); return; }
+
+      // Normal session check
+      google.script.run
+        .withSuccessHandler(function (user) {
+          if (user) { showView('dashboard'); initDashboard(); }
+          else { showView('login'); }
+        })
+        .withFailureHandler(function () {
+          showView('login');
+        })
+        .getCurrentUser();
     })();
   </script>
 </body>
