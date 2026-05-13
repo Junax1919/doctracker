@@ -2141,6 +2141,11 @@
         animation: dtSlideUp .24s cubic-bezier(.32, .72, 0, 1) both;
       }
 
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+
       @keyframes dtSlideUp {
         from {
           transform: translateY(48px);
@@ -3132,7 +3137,7 @@
             id="note" placeholder="Add any additional notes..."></textarea></div>
       </div>
       <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button><button
-          class="btn btn-primary" onclick="saveDoc()"><span class="material-symbols-outlined">save</span><span>Save
+          id="saveDocBtn" class="btn btn-primary" onclick="saveDoc()"><span class="material-symbols-outlined">save</span><span>Save
             Document</span></button></div>
     </div>
   </div>
@@ -3988,7 +3993,7 @@
       removeFile();
       showModal('docModal');
     }
-    function closeModal() { hideModal('docModal'); }
+    function closeModal() { _isSaving = false; _setSaveBtnState(false); hideModal('docModal'); }
     function editDoc(id) {
       const doc = allDocs.find(d => d['ID/Barcode'] === id);
       if (!doc) { toast('Document not found', 'error'); return; }
@@ -4028,50 +4033,133 @@
       removeFile();
       showModal('docModal');
     }
+    // ── Save guard: prevents double-submit & tracks in-flight state ──────
+    let _isSaving = false;
+
+    function _setSaveBtnState(loading) {
+      const btn = document.getElementById('saveDocBtn');
+      if (!btn) return;
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin .8s linear infinite;display:inline-block">sync</span> Saving...';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined">save</span>Save Document';
+      }
+    }
+
     function saveDoc() {
-      const docNo = document.getElementById('docNo').value.trim();
-      const prDate = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
-      const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
-      const poNo = document.getElementById('poNo') ? document.getElementById('poNo').value : '';
-      const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
-      const poAmount = document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g, '') : '';
+      if (_isSaving) return; // prevent double-click
+      const docNo    = document.getElementById('docNo').value.trim();
+      const prDate   = document.getElementById('prDate')   ? document.getElementById('prDate').value   : '';
+      const endUser  = document.getElementById('endUser')  ? document.getElementById('endUser').value  : '';
+      const poNo     = document.getElementById('poNo')     ? document.getElementById('poNo').value     : '';
+      const poDate   = document.getElementById('poDate')   ? document.getElementById('poDate').value   : '';
+      const poAmount = document.getElementById('poAmt')    ? document.getElementById('poAmt').value.replace(/,/g, '') : '';
       const data = {
-        docType: document.getElementById('docType').value,
+        docType:       document.getElementById('docType').value,
         docNo,
-        description: document.getElementById('desc').value,
-        amount: document.getElementById('amt').value.replace(/,/g, ''),
-        prDate,
-        endUser,
-        poNo,
-        poDate,
-        poAmount,
-        supplier: document.getElementById('supp').value,
+        description:   document.getElementById('desc').value,
+        amount:        document.getElementById('amt').value.replace(/,/g, ''),
+        prDate, endUser, poNo, poDate, poAmount,
+        supplier:      document.getElementById('supp').value,
         requisitioner: document.getElementById('req').value,
-        office: document.getElementById('office').value,
-        status: document.getElementById('stat').value,
-        notes: document.getElementById('note').value,
-        dateReceived: new Date().toISOString()
+        office:        document.getElementById('office').value,
+        status:        document.getElementById('stat').value,
+        notes:         document.getElementById('note').value,
+        dateReceived:  new Date().toISOString()
       };
       if (!data.docType || !data.docNo || !data.description || !data.prDate || !data.endUser || !data.office) {
         toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
         return;
       }
+      _isSaving = true;
+      _setSaveBtnState(true);
       if (selectedFile) {
         const reader = new FileReader();
         reader.onload = e => {
           const b64 = e.target.result.split(',')[1];
           toast('Uploading PDF...');
-          google.script.run.withSuccessHandler(r => {
-            if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
-            else toast('PDF upload failed', 'error');
-          }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
+          google.script.run
+            .withSuccessHandler(r => {
+              if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
+              else { _isSaving = false; _setSaveBtnState(false); toast('PDF upload failed', 'error'); }
+            })
+            .withFailureHandler(() => { _isSaving = false; _setSaveBtnState(false); toast('Upload error', 'error'); })
+            .uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
         };
         reader.readAsDataURL(selectedFile);
-      } else saveDocumentData(data);
+      } else {
+        saveDocumentData(data);
+      }
     }
+
+    // ── Optimistic in-place update: merges returned doc into allDocs ──────
+    // Called after a successful add/update. Avoids a full loadDocs() round-trip.
+    function _applyOptimisticDoc(savedDoc, editId) {
+      if (!savedDoc) return;
+      // Normalize: server returns raw values; format dates and amount for display
+      const normalize = d => {
+        const out = Object.assign({}, d);
+        // Keep as-is — formatAmountDisplay and date formatters handle display
+        return out;
+      };
+      const doc = normalize(savedDoc);
+      if (editId) {
+        // Update existing entry in allDocs in-place
+        const idx = allDocs.findIndex(d => d['ID/Barcode'] === editId);
+        if (idx !== -1) allDocs[idx] = doc;
+        else allDocs.unshift(doc);
+      } else {
+        // Prepend new doc so it appears at top when sorted by date
+        allDocs.unshift(doc);
+      }
+      // Re-run filters and re-render the current page only — no GAS call
+      populateTableFilters();
+      applyFilter(currentFilter);
+      _refreshStatsFromDocs();
+    }
+
     function saveDocumentData(data) {
-      if (isEdit) { const id = document.getElementById('editId').value; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Updated!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Update failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).updateDocument(id, data); }
-      else { google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Added!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Add failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).addDocument(data); }
+      // Capture editId before async call (isEdit state could change)
+      const editId = isEdit ? document.getElementById('editId').value : null;
+
+      const onSuccess = r => {
+        _isSaving = false;
+        _setSaveBtnState(false);
+        if (r.status === 'success') {
+          toast(editId ? 'Updated!' : 'Added!');
+          closeModal();
+          // Optimistic update: re-render immediately from returned doc data
+          _applyOptimisticDoc(r.doc, editId);
+          // Silent background sync after 12s to catch server-computed fields
+          setTimeout(() => loadDocs(), 12000);
+        } else if (r.message === 'duplicate') {
+          toast(`Document Number "${r.docNo}" already exists!`, 'error');
+          document.getElementById('docNoError').textContent = 'Value already exists';
+          document.getElementById('docNoError').style.display = 'block';
+        } else {
+          toast((editId ? 'Update' : 'Add') + ' failed', 'error');
+        }
+      };
+
+      const onError = () => {
+        _isSaving = false;
+        _setSaveBtnState(false);
+        toast('Connection error. Please try again.', 'error');
+      };
+
+      if (editId) {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onError)
+          .updateDocument(editId, data);
+      } else {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onError)
+          .addDocument(data);
+      }
     }
     function deleteDoc(id) { if (!confirm('Delete this document?')) return; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Deleted!'); loadDocs(); } else toast('Delete failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).deleteDocument(id); }
     function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
