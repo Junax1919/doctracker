@@ -20,10 +20,29 @@ const OVERDUE_THRESHOLD   = 5;
 //  MAIN ENTRY POINT  –  All pages served from one index.html (SPA)
 // =====================================================================
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('index')
+  const scriptUrl = ScriptApp.getService().getUrl();
+  // Capture URL parameters (e.g. ?token=xxx&page=reset) — GAS does not expose
+  // query-string params to the browser via window.location, so we inject them
+  // into the HTML as a JavaScript variable that the SPA reads on load.
+  const params    = (e && e.parameter) ? e.parameter : {};
+  const token     = params.token     || '';
+  const page      = params.page      || '';
+
+  // Build a small inline script that seeds the SPA's URL-parameter state
+  const injected  = `<script id="__gas_init__">
+    window.__GAS_SCRIPT_URL__ = ${JSON.stringify(scriptUrl)};
+    window.__GAS_PARAMS__     = ${JSON.stringify({ token: token, page: page })};
+  <\/script>`;
+
+  let html = HtmlService.createHtmlOutputFromFile('index')
     .setTitle('DocuTracker')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+
+  // Inject the init script right after <head> so it runs before any app code
+  const content = html.getContent().replace('<head>', '<head>' + injected);
+  html.setContent(content);
+  return html;
 }
 
 function getScriptUrl() {
@@ -186,14 +205,14 @@ function getCurrentUser() {
 
 function logout() {
   try {
-    const currentUser = getCurrentUser();
-    if (currentUser) logActivity('Logout', '', `User logged out: ${currentUser.email}`);
+    const cu = getCurrentUser();
+    if (cu) logActivity('Logout', '', `User logged out: ${cu.email}`);
     PropertiesService.getUserProperties().deleteProperty('currentUserEmail');
-    return ScriptApp.getService().getUrl();
   } catch (error) {
     Logger.log('logout error: ' + error);
-    return ScriptApp.getService().getUrl();
   }
+  // Always return the canonical Web App URL so the frontend can redirect cleanly
+  try { return ScriptApp.getService().getUrl(); } catch (e) { return ''; }
 }
 
 function updateUserProfile(updates) {
@@ -246,22 +265,45 @@ function sendResetEmail(email) {
   if (!email) return 'notfound';
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(USERS_SHEET);
-  const data = sheet.getDataRange().getValues();
+  if (!sheet) return 'notfound';
+  const data   = sheet.getDataRange().getValues();
   const token  = Utilities.getUuid();
-  const expiry = new Date(Date.now() + 1000 * 60 * 30);
+  const expiry = new Date(Date.now() + 1000 * 60 * 30); // 30-minute expiry
+
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === email.toLowerCase()) {
+      // Persist token + expiry into Users sheet (columns E & F)
       sheet.getRange(i + 1, 5).setValue(token);
       sheet.getRange(i + 1, 6).setValue(expiry);
-      const resetLink = ScriptApp.getService().getUrl() + '?token=' + encodeURIComponent(token);
+
+      // Build the reset link using the CURRENT deployed Web App URL.
+      // We pass both `page=reset` (so doGet knows to show the reset view)
+      // and `token` (for validation). GAS injects these via __GAS_PARAMS__.
+      const baseUrl    = ScriptApp.getService().getUrl();
+      const resetLink  = baseUrl + '?page=reset&token=' + encodeURIComponent(token);
+
       try {
         MailApp.sendEmail({
           to: email,
-          subject: 'DocuTracker Password Reset',
-          body: `Hello,\n\nA password reset was requested for your DocuTracker account.\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link is valid for 30 minutes.\n\nIf you did not request this, you can safely ignore this email.\n\nThank you,\nDocuTracker System`
+          subject: 'DocuTracker — Password Reset Request',
+          htmlBody: [
+            '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px">',
+            '<h2 style="margin:0 0 8px;color:#0f172a">&#128196; DocuTracker</h2>',
+            '<h3 style="margin:0 0 16px;color:#374151">Password Reset Request</h3>',
+            '<p style="color:#4b5563;font-size:14px">A password reset was requested for your account.</p>',
+            '<a href="' + resetLink + '" style="display:inline-block;margin:16px 0;background:#0f172a;color:#fff;',
+            'padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">',
+            'Reset My Password</a>',
+            '<p style="color:#6b7280;font-size:13px">This link expires in <strong>30 minutes</strong>.</p>',
+            '<p style="color:#6b7280;font-size:13px">If you did not request this, you can safely ignore this email.</p>',
+            '<hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">',
+            '<p style="color:#9ca3af;font-size:12px">DocuTracker System</p>',
+            '</div>'
+          ].join(''),
+          body: 'Hello,\n\nA password reset was requested for your DocuTracker account.\n\nReset link:\n' + resetLink + '\n\nThis link is valid for 30 minutes. If you did not request this, ignore this email.\n\nDocuTracker System'
         });
       } catch (error) {
-        Logger.log('Email send error: ' + error);
+        Logger.log('sendResetEmail — MailApp error: ' + error);
         return 'error';
       }
       return 'sent';
