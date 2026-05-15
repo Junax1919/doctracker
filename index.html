@@ -2763,7 +2763,8 @@
                     <div class="dropdown-item"><input type="checkbox" id="col-poTs" checked
                         onchange="toggleColumn('poTs')"><label for="col-poTs">PO Time Stamp</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateRecvdBAC" checked
-                        onchange="toggleColumn('dateRecvdBAC')"><label for="col-dateRecvdBAC">Date Received From BAC</label></div>
+                        onchange="toggleColumn('dateRecvdBAC')"><label for="col-dateRecvdBAC">Date Received From
+                        BAC</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poNo" checked
                         onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked
@@ -2777,15 +2778,20 @@
                     <div class="dropdown-item"><input type="checkbox" id="col-status" checked
                         onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndAcctng" checked
-                        onchange="toggleColumn('dateEndAcctng')"><label for="col-dateEndAcctng">Date Endorsed To Acctng</label></div>
+                        onchange="toggleColumn('dateEndAcctng')"><label for="col-dateEndAcctng">Date Endorsed To
+                        Acctng</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndCMO" checked
-                        onchange="toggleColumn('dateEndCMO')"><label for="col-dateEndCMO">Date Endorsed From CMO</label></div>
+                        onchange="toggleColumn('dateEndCMO')"><label for="col-dateEndCMO">Date Endorsed From CMO</label>
+                    </div>
                     <div class="dropdown-item"><input type="checkbox" id="col-deliveryStatus" checked
-                        onchange="toggleColumn('deliveryStatus')"><label for="col-deliveryStatus">Delivery Status</label></div>
+                        onchange="toggleColumn('deliveryStatus')"><label for="col-deliveryStatus">Delivery
+                        Status</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndCOA" checked
-                        onchange="toggleColumn('dateEndCOA')"><label for="col-dateEndCOA">Date Endorse To COA</label></div>
+                        onchange="toggleColumn('dateEndCOA')"><label for="col-dateEndCOA">Date Endorse To COA</label>
+                    </div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndCTO" checked
-                        onchange="toggleColumn('dateEndCTO')"><label for="col-dateEndCTO">Date Endorse To CTO</label></div>
+                        onchange="toggleColumn('dateEndCTO')"><label for="col-dateEndCTO">Date Endorse To CTO</label>
+                    </div>
                     <div class="dropdown-item"><input type="checkbox" id="col-date" checked
                         onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-notes" checked
@@ -2807,29 +2813,45 @@
                   <tr>
                     <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
                     <th class="sortable col-id" data-column="id" onclick="sortTable('id')">ID/Barcode</th>
-                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time Stamp</th>
+                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time
+                      Stamp</th>
                     <th class="sortable col-type" data-column="type" onclick="sortTable('type')">Doc Type</th>
                     <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
-                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR Date</th>
-                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description</th>
+                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR
+                      Date</th>
+                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
+                    </th>
                     <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
                     <th class="sortable col-endUser" data-column="endUser" onclick="sortTable('endUser')">EndUser</th>
                     <th class="sortable col-req" data-column="req" onclick="sortTable('req')">Requisitioner</th>
-                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time Stamp</th>
-                    <th class="sortable hide-mobile col-dateRecvdBAC" data-column="dateRecvdBAC" onclick="sortTable('dateRecvdBAC')">Date Rcvd From BAC</th>
+                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time
+                      Stamp</th>
+                    <th class="sortable hide-mobile col-dateRecvdBAC" data-column="dateRecvdBAC"
+                      onclick="sortTable('dateRecvdBAC')">Date Rcvd From BAC</th>
                     <th class="sortable col-poNo" data-column="poNo" onclick="sortTable('poNo')">PO No</th>
-                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO Date</th>
-                    <th class="sortable col-poAmount" data-column="poAmount" onclick="sortTable('poAmount')">PO Amount</th>
-                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier</th>
-                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">Endorsed To</th>
+                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO
+                      Date</th>
+                    <th class="sortable col-poAmount" data-column="poAmount" onclick="sortTable('poAmount')">PO Amount
+                    </th>
+                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
+                    </th>
+                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
+                      Endorsed To</th>
                     <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
-                    <th class="sortable hide-mobile col-dateEndAcctng" data-column="dateEndAcctng" onclick="sortTable('dateEndAcctng')">Date End. To Acctng</th>
-                    <th class="sortable hide-mobile col-dateEndCMO" data-column="dateEndCMO" onclick="sortTable('dateEndCMO')">Date End. From CMO</th>
-                    <th class="sortable hide-mobile col-deliveryStatus" data-column="deliveryStatus" onclick="sortTable('deliveryStatus')">Delivery Status</th>
-                    <th class="sortable hide-mobile col-dateEndCOA" data-column="dateEndCOA" onclick="sortTable('dateEndCOA')">Date End. To COA</th>
-                    <th class="sortable hide-mobile col-dateEndCTO" data-column="dateEndCTO" onclick="sortTable('dateEndCTO')">Date End. To CTO</th>
-                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date Received</th>
-                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes</th>
+                    <th class="sortable hide-mobile col-dateEndAcctng" data-column="dateEndAcctng"
+                      onclick="sortTable('dateEndAcctng')">Date End. To Acctng</th>
+                    <th class="sortable hide-mobile col-dateEndCMO" data-column="dateEndCMO"
+                      onclick="sortTable('dateEndCMO')">Date End. From CMO</th>
+                    <th class="sortable hide-mobile col-deliveryStatus" data-column="deliveryStatus"
+                      onclick="sortTable('deliveryStatus')">Delivery Status</th>
+                    <th class="sortable hide-mobile col-dateEndCOA" data-column="dateEndCOA"
+                      onclick="sortTable('dateEndCOA')">Date End. To COA</th>
+                    <th class="sortable hide-mobile col-dateEndCTO" data-column="dateEndCTO"
+                      onclick="sortTable('dateEndCTO')">Date End. To CTO</th>
+                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date
+                      Received</th>
+                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes
+                    </th>
                     <th class="col-attachment">PDF Link</th>
                     <th>Actions</th>
                   </tr>
@@ -2963,7 +2985,9 @@
                   </tr>
                 </thead>
                 <tbody id="usersTableBody">
-                  <tr><td colspan="5" class="empty-state">Click User Management to load users.</td></tr>
+                  <tr>
+                    <td colspan="5" class="empty-state">Click User Management to load users.</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -3026,18 +3050,24 @@
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-endUser"> EndUser</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-req"> Requisitioner</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poTs"> PO Time Stamp</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateRecvdBAC"> Date Received From BAC</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateRecvdBAC"> Date Received
+                    From BAC</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poNo"> PO No</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poDate"> PO Date</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poAmount"> PO Amount</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndAcctng"> Date End. To Acctng</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCMO"> Date End. From CMO</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-deliveryStatus"> Delivery Status</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCOA"> Date End. To COA</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCTO"> Date End. To CTO</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndAcctng"> Date End. To
+                    Acctng</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCMO"> Date End. From
+                    CMO</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-deliveryStatus"> Delivery
+                    Status</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCOA"> Date End. To
+                    COA</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCTO"> Date End. To
+                    CTO</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-date"> Date Received</label>
                   <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
                 </div>
@@ -3109,7 +3139,8 @@
           </div>
           <div class="form-group">
             <label class="form-label">Amount</label>
-            <input type="text" class="form-input" id="amt" placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)">
+            <input type="text" class="form-input" id="amt" placeholder="e.g., 15,500.00"
+              oninput="formatAmountInput(this)">
           </div>
 
           <!-- End User | Requisitioner -->
@@ -3153,7 +3184,8 @@
           </div>
           <div class="form-group">
             <label class="form-label">PO Amount</label>
-            <input type="text" class="form-input" id="poAmt" placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)">
+            <input type="text" class="form-input" id="poAmt" placeholder="e.g., 15,500.00"
+              oninput="formatAmountInput(this)">
           </div>
 
           <!-- Supplier | Endorsed To -->
@@ -3316,7 +3348,8 @@
     <div class="modal-content" style="max-width:480px">
       <div class="modal-header">
         <h3 class="modal-title" id="userModalTitle">Add User</h3>
-        <button class="modal-close" onclick="closeUserModal()"><span class="material-symbols-outlined">close</span></button>
+        <button class="modal-close" onclick="closeUserModal()"><span
+            class="material-symbols-outlined">close</span></button>
       </div>
       <div class="modal-body" style="display:grid;gap:16px">
         <input type="hidden" id="editUserEmail">
@@ -3329,7 +3362,8 @@
           <input type="email" class="form-input" id="uEmail" placeholder="user@example.com">
         </div>
         <div class="form-group">
-          <label class="form-label">Password <span id="uPwdHint" style="font-weight:400;color:var(--muted)"></span></label>
+          <label class="form-label">Password <span id="uPwdHint"
+              style="font-weight:400;color:var(--muted)"></span></label>
           <input type="password" class="form-input" id="uPassword" placeholder="Min 6 characters">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -3350,8 +3384,11 @@
           </div>
         </div>
         <div style="background:var(--bg);border-radius:8px;padding:14px;border:1px solid var(--border)">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Role Permissions</div>
-          <div id="uRolePermsInfo" style="font-size:13px;color:var(--text-secondary);line-height:1.6">Select a role to see default permissions.</div>
+          <div
+            style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+            Role Permissions</div>
+          <div id="uRolePermsInfo" style="font-size:13px;color:var(--text-secondary);line-height:1.6">Select a role to
+            see default permissions.</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -3473,7 +3510,7 @@
     // Stored in localStorage so it persists across refreshes but is NEVER
     // shared between browsers/devices — each gets its own unique token.
     let _sessionToken = '';
-    try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
+    try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
     // Active toolbar filter values
     let activeFilters = { docType: '', status: '', endUser: '' };
 
@@ -3522,7 +3559,7 @@
         if (r.status === 'success') {
           // Store the server-issued token for this browser session
           _sessionToken = r.token || '';
-          try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch(e) {}
+          try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
           showNotif('loginNotif', 'Login successful!', 'success');
           setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
         }
@@ -3631,7 +3668,7 @@
     function applyPermissions(p, role) {
       const isAdmin = (role || '').toLowerCase() === 'admin';
       // Sidebar nav visibility
-      document.getElementById('logsMenuLink').style.display  = (isAdmin || p.viewAnalytics)  ? 'block' : 'none';
+      document.getElementById('logsMenuLink').style.display = (isAdmin || p.viewAnalytics) ? 'block' : 'none';
       document.getElementById('adminMenuLink').style.display = (isAdmin || p.manageSettings) ? 'block' : 'none';
       const ul = document.getElementById('usersMenuLink');
       if (ul) ul.style.display = p.manageUsers ? 'block' : 'none';
@@ -4082,7 +4119,7 @@
       const euEl = document.getElementById('endUser'); if (euEl) euEl.value = doc['EndUser'] || '';
       const poNoEl = document.getElementById('poNo'); if (poNoEl) poNoEl.value = doc['PO No'] || '';
       const poDtEl = document.getElementById('poDate'); if (poDtEl) poDtEl.value = doc['PO Date'] || '';
-      const poAmtEl = document.getElementById('poAmt'); if (poAmtEl) { const pav = doc['PO Amount'] ? String(doc['PO Amount']).replace(/[₱,]/g,'') : ''; poAmtEl.value = pav; if (pav) formatAmountInput(poAmtEl); }
+      const poAmtEl = document.getElementById('poAmt'); if (poAmtEl) { const pav = doc['PO Amount'] ? String(doc['PO Amount']).replace(/[₱,]/g, '') : ''; poAmtEl.value = pav; if (pav) formatAmountInput(poAmtEl); }
       const drbEl = document.getElementById('dateReceivedFromBAC'); if (drbEl) drbEl.value = doc['Date Received From BAC'] || '';
       const detaEl = document.getElementById('dateEndorsedToAcctng'); if (detaEl) detaEl.value = doc['Date Endorsed To Acctng'] || '';
       const decmoEl = document.getElementById('dateEndorsedFromCMO'); if (decmoEl) decmoEl.value = doc['Date Endorsed From CMO'] || '';
@@ -4114,7 +4151,7 @@
         endUser,
         poNo,
         poDate,
-        poAmount: document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g,'') : '',
+        poAmount: document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g, '') : '',
         supplier: document.getElementById('supp').value,
         requisitioner: document.getElementById('req').value,
         office: document.getElementById('office').value,
@@ -4332,7 +4369,7 @@
     }
 
     // ===================== LOGS =====================
-    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv=document.getElementById('usersView'); if(uv) uv.style.display='none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
+    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
     function loadLogs() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>'; google.script.run.withSuccessHandler(renderLogs).getAllActivityLogs(); }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
     function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
@@ -4344,7 +4381,7 @@
   </script>
   <script>
     // ===================== PRINT REPORT =====================
-    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv=document.getElementById('usersView'); if(uv) uv.style.display='none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
+    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
     function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
     function populatePrintFilters() { const of = document.getElementById('printOfficeFilter'), dt = document.getElementById('printDocTypeFilter'); of.innerHTML = '<option value="all">All Offices</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join(''); dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
     function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, of = document.getElementById('printOfficeFilter').value, tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (of !== 'all') d = d.filter(x => x['Endorsed To'] === of); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
@@ -4609,7 +4646,7 @@
       if (isLogout) { showView('login'); return; }
 
       // Restore this browser's session token from localStorage
-      try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
+      try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
 
       // Normal session check — pass THIS browser's token (never shared with other browsers)
       google.script.run
@@ -4631,7 +4668,7 @@
     function showUsersView(evt) {
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
-      ['documentsView','trackView','logsView','printView'].forEach(id => {
+      ['documentsView', 'trackView', 'logsView', 'printView'].forEach(id => {
         const el = document.getElementById(id); if (el) el.classList.remove('active');
       });
       const uv = document.getElementById('usersView');
@@ -4648,7 +4685,7 @@
       google.script.run
         .withSuccessHandler(r => {
           if (r && r.status === 'success') { _allUsers = r.users || []; renderUsersTable(_allUsers); }
-          else if (tb) tb.innerHTML = `<tr><td colspan="5" class="empty-state">${(r&&r.message)||'Access denied'}</td></tr>`;
+          else if (tb) tb.innerHTML = `<tr><td colspan="5" class="empty-state">${(r && r.message) || 'Access denied'}</td></tr>`;
         })
         .withFailureHandler(() => { if (tb) tb.innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load users.</td></tr>'; })
         .getUsers(_sessionToken);
@@ -4669,11 +4706,11 @@
             <span style="font-weight:600">${u.name || '—'}</span>
           </div></td>
           <td style="color:var(--muted);font-size:13px">${u.email}</td>
-          <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role||'Staff'}</span></td>
-          <td><span class="status-badge ${active?'status-received':'status-hold'}">${u.status||'Active'}</span></td>
+          <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role || 'Staff'}</span></td>
+          <td><span class="status-badge ${active ? 'status-received' : 'status-hold'}">${u.status || 'Active'}</span></td>
           <td><div class="table-actions">
             <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-            <button class="action-btn" title="${active?'Deactivate':'Activate'}" style="color:${active?'var(--danger)':'var(--success)'}" onclick='toggleUser(\`${u.email}\`)'><span class="material-symbols-outlined" style="font-size:18px">${active?'person_off':'person'}</span></button>
+            <button class="action-btn" title="${active ? 'Deactivate' : 'Activate'}" style="color:${active ? 'var(--danger)' : 'var(--success)'}" onclick='toggleUser(\`${u.email}\`)'><span class="material-symbols-outlined" style="font-size:18px">${active ? 'person_off' : 'person'}</span></button>
           </div></td>
         </tr>`;
       }).join('');
@@ -4683,9 +4720,9 @@
 
     function _showRolePerms(role) {
       const map = {
-        Admin:   '✅ Full access — all features including user management, settings, delete, and analytics.',
+        Admin: '✅ Full access — all features including user management, settings, delete, and analytics.',
         Manager: '✅ Add/Edit docs, view analytics, export reports. ❌ Cannot delete docs, manage users or settings.',
-        Staff:   '✅ Add/Edit docs and track document history. ❌ No delete, no export, no admin access.'
+        Staff: '✅ Add/Edit docs and track document history. ❌ No delete, no export, no admin access.'
       };
       const el = document.getElementById('uRolePermsInfo');
       if (el) el.textContent = map[role] || 'Standard access.';
@@ -4695,7 +4732,7 @@
       _isEditUser = false;
       document.getElementById('userModalTitle').textContent = 'Add New User';
       document.getElementById('editUserEmail').value = '';
-      ['uFullName','uEmail','uPassword'].forEach(id => document.getElementById(id).value = '');
+      ['uFullName', 'uEmail', 'uPassword'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('uEmail').readOnly = false;
       document.getElementById('uRole').value = 'Staff';
       document.getElementById('uStatus').value = 'Active';
@@ -4708,12 +4745,12 @@
       _isEditUser = true;
       document.getElementById('userModalTitle').textContent = 'Edit User';
       document.getElementById('editUserEmail').value = u.email;
-      document.getElementById('uFullName').value  = u.name   || '';
-      document.getElementById('uEmail').value      = u.email  || '';
-      document.getElementById('uEmail').readOnly   = true;
-      document.getElementById('uPassword').value   = '';
-      document.getElementById('uRole').value       = u.role   || 'Staff';
-      document.getElementById('uStatus').value     = u.status || 'Active';
+      document.getElementById('uFullName').value = u.name || '';
+      document.getElementById('uEmail').value = u.email || '';
+      document.getElementById('uEmail').readOnly = true;
+      document.getElementById('uPassword').value = '';
+      document.getElementById('uRole').value = u.role || 'Staff';
+      document.getElementById('uStatus').value = u.status || 'Active';
       document.getElementById('uPwdHint').textContent = '(leave blank to keep current)';
       _showRolePerms(u.role || 'Staff');
       showModal('userModal');
@@ -4722,10 +4759,10 @@
     function closeUserModal() { hideModal('userModal'); }
 
     function saveUser() {
-      const name   = document.getElementById('uFullName').value.trim();
-      const email  = document.getElementById('uEmail').value.trim();
-      const pwd    = document.getElementById('uPassword').value;
-      const role   = document.getElementById('uRole').value;
+      const name = document.getElementById('uFullName').value.trim();
+      const email = document.getElementById('uEmail').value.trim();
+      const pwd = document.getElementById('uPassword').value;
+      const role = document.getElementById('uRole').value;
       const status = document.getElementById('uStatus').value;
       if (!name || !email) { toast('Name and Email are required', 'error'); return; }
       if (!_isEditUser && !pwd) { toast('Password is required for new users', 'error'); return; }
@@ -4734,13 +4771,13 @@
       if (pwd) ud.password = pwd;
       if (_isEditUser) {
         google.script.run
-          .withSuccessHandler(r => { if (r.status==='success') { toast('User updated!'); closeUserModal(); loadUsers(); } else toast(r.message||'Failed','error'); })
-          .withFailureHandler(() => toast('Error updating user','error'))
+          .withSuccessHandler(r => { if (r.status === 'success') { toast('User updated!'); closeUserModal(); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+          .withFailureHandler(() => toast('Error updating user', 'error'))
           .updateUser(_sessionToken, document.getElementById('editUserEmail').value, ud);
       } else {
         google.script.run
-          .withSuccessHandler(r => { if (r.status==='success') { toast('User added!'); closeUserModal(); loadUsers(); } else toast(r.message||'Failed','error'); })
-          .withFailureHandler(() => toast('Error adding user','error'))
+          .withSuccessHandler(r => { if (r.status === 'success') { toast('User added!'); closeUserModal(); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+          .withFailureHandler(() => toast('Error adding user', 'error'))
           .addUser(_sessionToken, ud);
       }
     }
@@ -4748,8 +4785,8 @@
     function toggleUser(email) {
       if (!confirm(`Change status for ${email}?`)) return;
       google.script.run
-        .withSuccessHandler(r => { if (r.status==='success') { toast(`User ${r.newStatus.toLowerCase()}d`); loadUsers(); } else toast(r.message||'Failed','error'); })
-        .withFailureHandler(() => toast('Error','error'))
+        .withSuccessHandler(r => { if (r.status === 'success') { toast(`User ${r.newStatus.toLowerCase()}d`); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+        .withFailureHandler(() => toast('Error', 'error'))
         .toggleUserStatus(_sessionToken, email);
     }
   </script>
