@@ -170,17 +170,26 @@ function getDropdownOptions() {
 function updateDropdownOptions(type, values, tokenParam) {
   try {
     const currentUser = getCurrentUser(tokenParam || _doPostToken);
-    if (!currentUser || (currentUser.role||'').toLowerCase() !== 'admin') {
-      return { status: 'error', message: 'Only administrators can update dropdown options' };
+    const role = currentUser ? (currentUser.role || '').toLowerCase() : '';
+    if (role !== 'admin' && role !== 'manager') {
+      return { status: 'error', message: 'Access restricted to Admin or Manager' };
     }
     const ss = SpreadsheetApp.openById(SHEET_ID);
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
     const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5 };
     const column = columnMap[type];
     if (!column) return { status: 'error', message: 'Invalid type' };
+    
+    const uniqueValues = [...new Set(values.map(v => String(v).trim()).filter(v => v))];
     const lastRow = configSheet.getLastRow();
-    if (lastRow > 1) configSheet.getRange(2, column, lastRow - 1, 1).clearContent();
-    values.forEach((v, i) => { if (v.trim()) configSheet.getRange(i + 2, column).setValue(v.trim()); });
+    if (lastRow > 1) {
+      configSheet.getRange(2, column, lastRow - 1, 1).clearContent();
+    }
+    if (uniqueValues.length > 0) {
+      const dataArr = uniqueValues.map(v => [v]);
+      configSheet.getRange(2, column, dataArr.length, 1).setValues(dataArr);
+    }
+    
     _invalidateDropdownCache();
     return { status: 'success', message: 'Dropdown options updated successfully' };
   } catch (error) {

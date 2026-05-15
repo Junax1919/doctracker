@@ -1646,6 +1646,7 @@
 
     .print-container {
       max-width: 1200px;
+      width: 100%;
       margin: 0 auto
     }
 
@@ -1712,7 +1713,8 @@
       padding: 40px;
       border-radius: 12px;
       box-shadow: var(--shadow);
-      display: none
+      display: none;
+      overflow-x: auto
     }
 
     #reportPreview.show {
@@ -1721,6 +1723,7 @@
 
     .print-table {
       width: 100%;
+      min-width: 800px;
       border-collapse: collapse;
       margin: 20px 0
     }
@@ -3027,9 +3030,9 @@
                     <option value="complete">Complete</option>
                   </select>
                 </div>
-                <div class="form-group"><label class="form-label">Office Filter</label><select class="form-select"
-                    id="printOfficeFilter">
-                    <option value="all">All Offices</option>
+                <div class="form-group"><label class="form-label">End User Filter</label><select class="form-select"
+                    id="printEndUserFilter">
+                    <option value="all">All End Users</option>
                   </select></div>
                 <div class="form-group"><label class="form-label">Document Type Filter</label><select
                     class="form-select" id="printDocTypeFilter">
@@ -4449,12 +4452,36 @@
     // ===================== PRINT REPORT =====================
     function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
     function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
-    function populatePrintFilters() { const of = document.getElementById('printOfficeFilter'), dt = document.getElementById('printDocTypeFilter'); of.innerHTML = '<option value="all">All Offices</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join(''); dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
-    function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, of = document.getElementById('printOfficeFilter').value, tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (of !== 'all') d = d.filter(x => x['Endorsed To'] === of); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
-    function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 style="margin:0;font-size:28px;font-weight:700;color:#0f172a">&#128196; DocuTracker</h1><h2 style="margin:8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h2><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
+    function populatePrintFilters() { const eu = document.getElementById('printEndUserFilter'), dt = document.getElementById('printDocTypeFilter'); if(eu) eu.innerHTML = '<option value="all">All End Users</option>' + (dropdownOptions.endUsers || []).map(o => `<option value="${o}">${o}</option>`).join(''); if(dt) dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
+    function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, eu = document.getElementById('printEndUserFilter') ? document.getElementById('printEndUserFilter').value : 'all', tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (eu !== 'all') d = d.filter(x => x.EndUser === eu || x['End User'] === eu); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
+    function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 contenteditable="true" style="margin:0;font-size:16px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</h1><h2 contenteditable="true" style="margin:4px 0;font-size:14px;font-weight:normal;color:#374151">City of Ozamiz</h2><h3 style="margin:16px 0 8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h3><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
     function fmtAmt(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '&#8369;' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-    function generateSummaryReport(data) { const s = { total: data.length, incoming: data.filter(d => (d.Status || '').toLowerCase() === 'incoming').length, received: data.filter(d => (d.Status || '').toLowerCase() === 'received').length, outgoing: data.filter(d => { const x = (d.Status || '').toLowerCase(); return x === 'outgoing' || x === 'forwarded'; }).length, hold: data.filter(d => (d.Status || '').toLowerCase() === 'hold').length, complete: data.filter(d => { const x = (d.Status || '').toLowerCase(); return x === 'complete' || x === 'completed'; }).length, overdue: data.filter(d => d.Overdue && d.Overdue !== 'On time').length }; const total$ = data.reduce((sum, d) => { const n = parseFloat((d.Amount || '').replace(/[^0-9.-]/g, '')); return sum + (isNaN(n) ? 0 : n); }, 0); let h = getReportHeader('Summary Report'); h += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:30px"><div style="background:#eff6ff;padding:20px;border-radius:8px;border-left:4px solid #3b82f6"><div style="font-size:12px;color:#1e40af;margin-bottom:8px">Total Documents</div><div style="font-size:32px;font-weight:700">${s.total}</div></div><div style="background:#f0fdf4;padding:20px;border-radius:8px;border-left:4px solid #10b981"><div style="font-size:12px;color:#047857;margin-bottom:8px">Received</div><div style="font-size:32px;font-weight:700">${s.received}</div></div><div style="background:#fef3c7;padding:20px;border-radius:8px;border-left:4px solid #f59e0b"><div style="font-size:12px;color:#b45309;margin-bottom:8px">Outgoing</div><div style="font-size:32px;font-weight:700">${s.outgoing}</div></div><div style="background:#f0fdf4;padding:20px;border-radius:8px;border-left:4px solid #10b981"><div style="font-size:12px;color:#047857;margin-bottom:8px">Completed</div><div style="font-size:32px;font-weight:700">${s.complete}</div></div><div style="background:#fef2f2;padding:20px;border-radius:8px;border-left:4px solid #ef4444"><div style="font-size:12px;color:#b91c1c;margin-bottom:8px">Overdue</div><div style="font-size:32px;font-weight:700;color:#ef4444">${s.overdue}</div></div><div style="background:#ecfdf5;padding:20px;border-radius:8px;border-left:4px solid #059669"><div style="font-size:12px;color:#047857;margin-bottom:8px">Total Amount</div><div style="font-size:24px;font-weight:700">&#8369;${total$.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div></div></div>`; if (s.overdue > 0) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); h += `<div style="background:#fef2f2;padding:20px;border-radius:8px;border-left:4px solid #ef4444;margin-top:20px"><h3 style="margin:0 0 16px 0;color:#991b1b">&#9888; Overdue Documents (${od.length})</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Office</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td style="color:#dc2626;font-weight:600">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table></div>`; } return h; }
-    function generateDetailedReport(data) { let h = getReportHeader('Detailed Document List'); h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Amount</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${data.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table>`; return h; }
+    function generateSummaryReport(data) {
+      let h = getReportHeader('Summary Report');
+      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><div style="overflow-x:auto;"><table class="print-table"><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th><th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th></tr></thead><tbody>`;
+      let totalAmt = 0, totalPoAmt = 0;
+      data.forEach(d => {
+        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        totalAmt += amt; totalPoAmt += poAmt;
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td><td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td><td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td><td>${d.Supplier || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+      });
+      h += `<tr style="font-weight:bold;background:#f3f4f6;"><td colspan="2" style="text-align:right">GRAND TOTAL:</td><td style="text-align:right;color:#059669;">${fmtAmt(totalAmt)}</td><td colspan="2"></td><td style="text-align:right;color:#059669;">${fmtAmt(totalPoAmt)}</td><td colspan="4"></td></tr></tbody></table></div>`;
+      return h;
+    }
+    function generateDetailedReport(data) {
+      let h = getReportHeader('Detailed Document List');
+      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><div style="overflow-x:auto;"><table class="print-table"><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th><th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th><th>DATE END. TO COA</th><th>DATE END. TO CTO</th><th>NOTES</th></tr></thead><tbody>`;
+      let totalAmt = 0, totalPoAmt = 0;
+      data.forEach(d => {
+        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        totalAmt += amt; totalPoAmt += poAmt;
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td><td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td><td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td><td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td><td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+      });
+      h += `<tr style="font-weight:bold;background:#f3f4f6;"><td colspan="2" style="text-align:right">GRAND TOTAL:</td><td style="text-align:right;color:#059669;">${fmtAmt(totalAmt)}</td><td colspan="2"></td><td style="text-align:right;color:#059669;">${fmtAmt(totalPoAmt)}</td><td colspan="9"></td></tr></tbody></table></div>`;
+      return h;
+    }
     function generateOverdueReport(data) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); let h = getReportHeader('Overdue Documents Report'); h += `<p style="margin-bottom:20px;color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>`; if (od.length === 0) return h + `<p style="text-align:center;padding:60px;color:#6b7280">&#10003; No overdue documents found!</p>`; h += `<table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table>`; return h; }
     function generateOfficeReport(data) { const groups = {}; data.forEach(d => { const o = d['Endorsed To'] || 'Unassigned'; if (!groups[o]) groups[o] = []; groups[o].push(d); }); let h = getReportHeader('Office/Department Report'); h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`; Object.keys(groups).sort().forEach(o => { const docs = groups[o]; h += `<div style="margin-bottom:30px;page-break-inside:avoid"><h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Requisitioner</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${docs.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table></div>`; }); return h; }
     function generateCustomReport(data) {
