@@ -1116,13 +1116,30 @@
     .modal-content {
       background: #fff;
       border-radius: 12px;
-      width: 90%;
-      max-width: 600px;
+      width: 95%;
+      max-width: 860px;
       max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       box-shadow: var(--shadow-lg)
+    }
+
+    /* Two-column form grid inside doc modal */
+    .form-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 24px
+    }
+
+    .form-grid-2col .form-group-full {
+      grid-column: 1 / -1
+    }
+
+    @media (max-width: 600px) {
+      .form-grid-2col {
+        grid-template-columns: 1fr
+      }
     }
 
     .modal-header {
@@ -1899,7 +1916,7 @@
       }
 
       .modal-content {
-        max-width: 560px;
+        max-width: 820px;
       }
 
       /* Logs */
@@ -2139,11 +2156,6 @@
         max-height: 93vh;
         border-radius: 16px 16px 0 0;
         animation: dtSlideUp .24s cubic-bezier(.32, .72, 0, 1) both;
-      }
-
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to   { transform: rotate(360deg); }
       }
 
       @keyframes dtSlideUp {
@@ -2750,6 +2762,8 @@
                         onchange="toggleColumn('req')"><label for="col-req">Requisitioner</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poTs" checked
                         onchange="toggleColumn('poTs')"><label for="col-poTs">PO Time Stamp</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-dateRecvdBAC" checked
+                        onchange="toggleColumn('dateRecvdBAC')"><label for="col-dateRecvdBAC">Date Received From BAC</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poNo" checked
                         onchange="toggleColumn('poNo')"><label for="col-poNo">PO No</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-poDate" checked
@@ -2762,6 +2776,16 @@
                         onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-status" checked
                         onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-dateEndAcctng" checked
+                        onchange="toggleColumn('dateEndAcctng')"><label for="col-dateEndAcctng">Date Endorsed To Acctng</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-dateEndCMO" checked
+                        onchange="toggleColumn('dateEndCMO')"><label for="col-dateEndCMO">Date Endorsed From CMO</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-deliveryStatus" checked
+                        onchange="toggleColumn('deliveryStatus')"><label for="col-deliveryStatus">Delivery Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-dateEndCOA" checked
+                        onchange="toggleColumn('dateEndCOA')"><label for="col-dateEndCOA">Date Endorse To COA</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-dateEndCTO" checked
+                        onchange="toggleColumn('dateEndCTO')"><label for="col-dateEndCTO">Date Endorse To CTO</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-date" checked
                         onchange="toggleColumn('date')"><label for="col-date">Date Received</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-notes" checked
@@ -2783,33 +2807,29 @@
                   <tr>
                     <th class="sortable col-overdue" data-column="overdue" onclick="sortTable('overdue')">Overdue</th>
                     <th class="sortable col-id" data-column="id" onclick="sortTable('id')">ID/Barcode</th>
-                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time
-                      Stamp</th>
+                    <th class="sortable hide-mobile col-docTs" data-column="docTs" onclick="sortTable('docTs')">Doc Time Stamp</th>
                     <th class="sortable col-type" data-column="type" onclick="sortTable('type')">Doc Type</th>
                     <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
-                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR
-                      Date</th>
-                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
-                    </th>
+                    <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR Date</th>
+                    <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description</th>
                     <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
                     <th class="sortable col-endUser" data-column="endUser" onclick="sortTable('endUser')">EndUser</th>
                     <th class="sortable col-req" data-column="req" onclick="sortTable('req')">Requisitioner</th>
-                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time
-                      Stamp</th>
+                    <th class="sortable hide-mobile col-poTs" data-column="poTs" onclick="sortTable('poTs')">PO Time Stamp</th>
+                    <th class="sortable hide-mobile col-dateRecvdBAC" data-column="dateRecvdBAC" onclick="sortTable('dateRecvdBAC')">Date Rcvd From BAC</th>
                     <th class="sortable col-poNo" data-column="poNo" onclick="sortTable('poNo')">PO No</th>
-                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO
-                      Date</th>
-                    <th class="sortable hide-mobile col-poAmount" data-column="poAmount" onclick="sortTable('poAmount')">PO
-                      Amount</th>
-                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier
-                    </th>
-                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
-                      Endorsed To</th>
+                    <th class="sortable hide-mobile col-poDate" data-column="poDate" onclick="sortTable('poDate')">PO Date</th>
+                    <th class="sortable col-poAmount" data-column="poAmount" onclick="sortTable('poAmount')">PO Amount</th>
+                    <th class="sortable col-supplier" data-column="supplier" onclick="sortTable('supplier')">Supplier</th>
+                    <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">Endorsed To</th>
                     <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
-                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date
-                      Received</th>
-                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes
-                    </th>
+                    <th class="sortable hide-mobile col-dateEndAcctng" data-column="dateEndAcctng" onclick="sortTable('dateEndAcctng')">Date End. To Acctng</th>
+                    <th class="sortable hide-mobile col-dateEndCMO" data-column="dateEndCMO" onclick="sortTable('dateEndCMO')">Date End. From CMO</th>
+                    <th class="sortable hide-mobile col-deliveryStatus" data-column="deliveryStatus" onclick="sortTable('deliveryStatus')">Delivery Status</th>
+                    <th class="sortable hide-mobile col-dateEndCOA" data-column="dateEndCOA" onclick="sortTable('dateEndCOA')">Date End. To COA</th>
+                    <th class="sortable hide-mobile col-dateEndCTO" data-column="dateEndCTO" onclick="sortTable('dateEndCTO')">Date End. To CTO</th>
+                    <th class="sortable hide-mobile col-date" data-column="date" onclick="sortTable('date')">Date Received</th>
+                    <th class="sortable hide-mobile col-notes" data-column="notes" onclick="sortTable('notes')">Notes</th>
                     <th class="col-attachment">PDF Link</th>
                     <th>Actions</th>
                   </tr>
@@ -3006,12 +3026,18 @@
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-endUser"> EndUser</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-req"> Requisitioner</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poTs"> PO Time Stamp</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateRecvdBAC"> Date Received From BAC</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poNo"> PO No</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poDate"> PO Date</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poAmount"> PO Amount</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndAcctng"> Date End. To Acctng</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCMO"> Date End. From CMO</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-deliveryStatus"> Delivery Status</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCOA"> Date End. To COA</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCTO"> Date End. To CTO</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-date"> Date Received</label>
                   <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
                 </div>
@@ -3044,100 +3070,162 @@
       <div class="modal-body">
         <input type="hidden" id="editId">
 
-        <!-- Doc Time Stamp (auto, view-only) -->
-        <div class="form-group">
-          <label class="form-label" style="display:flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">schedule</span>
-            Doc Time Stamp
-            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
-          </label>
-          <input type="text" class="form-input" id="docTimeStamp" readonly
-            style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
-            placeholder="Auto-generated on save">
-        </div>
+        <!-- ── Two-column grid for all form fields ── -->
+        <div class="form-grid-2col">
 
-        <div class="form-group"><label class="form-label">Document Type *</label><select class="form-select"
-            id="docType"></select></div>
-        <div class="form-group"><label class="form-label">Document Number *</label><input type="text" class="form-input"
-            id="docNo" placeholder="e.g., PR-2025-001"><span id="docNoError"
-            style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span></div>
-        <div class="form-group"><label class="form-label">Description *</label><input type="text" class="form-input"
-            id="desc" placeholder="Brief description"></div>
-
-        <!-- PR Date (required) -->
-        <div class="form-group">
-          <label class="form-label">PR Date *</label>
-          <input type="date" class="form-input" id="prDate">
-        </div>
-
-        <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="amt"
-            placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)"></div>
-
-        <!-- EndUser dropdown (required) -->
-        <div class="form-group">
-          <label class="form-label">End User *</label>
-          <select class="form-select" id="endUser">
-            <option value="">Select end user...</option>
-          </select>
-        </div>
-
-        <!-- Requisitioner (optional — moved below EndUser) -->
-        <div class="form-group"><label class="form-label">Requisitioner</label><input type="text" class="form-input"
-            id="req" placeholder="Enter name (optional)"></div>
-
-        <!-- PO Time Stamp (auto, view-only) -->
-        <div class="form-group">
-          <label class="form-label" style="display:flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">update</span>
-            PO Time Stamp
-            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
-          </label>
-          <input type="text" class="form-input" id="poTimeStamp" readonly
-            style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
-            placeholder="Auto-generated on save">
-        </div>
-
-        <!-- PO No -->
-        <div class="form-group">
-          <label class="form-label">PO No</label>
-          <input type="text" class="form-input" id="poNo" placeholder="e.g., PO-2025-001">
-        </div>
-
-        <!-- PO Date -->
-        <div class="form-group">
-          <label class="form-label">PO Date</label>
-          <input type="date" class="form-input" id="poDate">
-        </div>
-
-        <!-- PO Amount -->
-        <div class="form-group">
-          <label class="form-label">PO Amount</label>
-          <input type="text" class="form-input" id="poAmt" placeholder="e.g., 85,000.00" oninput="formatAmountInput(this)">
-        </div>
-
-        <div class="form-group"><label class="form-label">Supplier</label><select class="form-select" id="supp">
-            <option value="">Select supplier...</option>
-          </select></div>
-        <div class="form-group"><label class="form-label">Office/Department (Endorsed To) *</label><select
-            class="form-select" id="office"></select></div>
-        <div class="form-group"><label class="form-label">Status *</label><select class="form-select"
-            id="stat"></select></div>
-        <div class="form-group"><label class="form-label">Attach PDF (Optional)</label>
-          <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('pdfInput').click()">
-            <span class="material-symbols-outlined" style="font-size:48px;color:var(--muted)">upload_file</span>
-            <p style="margin-top:8px;color:var(--muted)">Click to upload PDF file</p>
-            <p style="font-size:12px;color:var(--muted)">Max size: 10MB</p>
+          <!-- Doc Time Stamp (full-width, auto) -->
+          <div class="form-group form-group-full">
+            <label class="form-label" style="display:flex;align-items:center;gap:6px">
+              <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">schedule</span>
+              Doc Time Stamp
+              <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
+            </label>
+            <input type="text" class="form-input" id="docTimeStamp" readonly
+              style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
+              placeholder="Auto-generated on save">
           </div>
-          <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
-            onchange="handleFileSelect(event)">
-          <div id="fileInfo" style="display:none" class="file-info"><span id="fileName"></span><button type="button"
-              class="file-remove" onclick="removeFile()">Remove</button></div>
-        </div>
-        <div class="form-group"><label class="form-label">Notes (Optional)</label><textarea class="form-textarea"
-            id="note" placeholder="Add any additional notes..."></textarea></div>
+
+          <!-- Doc Type | Doc No -->
+          <div class="form-group">
+            <label class="form-label">Document Type *</label>
+            <select class="form-select" id="docType"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Document Number *</label>
+            <input type="text" class="form-input" id="docNo" placeholder="e.g., PR-2025-001">
+            <span id="docNoError" style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span>
+          </div>
+
+          <!-- Description (full-width) -->
+          <div class="form-group form-group-full">
+            <label class="form-label">Description *</label>
+            <input type="text" class="form-input" id="desc" placeholder="Brief description">
+          </div>
+
+          <!-- PR Date | Amount -->
+          <div class="form-group">
+            <label class="form-label">PR Date *</label>
+            <input type="date" class="form-input" id="prDate">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount</label>
+            <input type="text" class="form-input" id="amt" placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)">
+          </div>
+
+          <!-- End User | Requisitioner -->
+          <div class="form-group">
+            <label class="form-label">End User *</label>
+            <select class="form-select" id="endUser">
+              <option value="">Select end user...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Requisitioner</label>
+            <input type="text" class="form-input" id="req" placeholder="Enter name (optional)">
+          </div>
+
+          <!-- PO Time Stamp (full-width, auto) -->
+          <div class="form-group form-group-full">
+            <label class="form-label" style="display:flex;align-items:center;gap:6px">
+              <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">update</span>
+              PO Time Stamp
+              <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-generated)</span>
+            </label>
+            <input type="text" class="form-input" id="poTimeStamp" readonly
+              style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
+              placeholder="Auto-generated on save">
+          </div>
+
+          <!-- DATE RECEIVED FROM BAC | PO No -->
+          <div class="form-group">
+            <label class="form-label">Date Received From BAC</label>
+            <input type="date" class="form-input" id="dateReceivedFromBAC">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PO No</label>
+            <input type="text" class="form-input" id="poNo" placeholder="e.g., PO-2025-001">
+          </div>
+
+          <!-- PO Date | PO Amount -->
+          <div class="form-group">
+            <label class="form-label">PO Date</label>
+            <input type="date" class="form-input" id="poDate">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PO Amount</label>
+            <input type="text" class="form-input" id="poAmt" placeholder="e.g., 15,500.00" oninput="formatAmountInput(this)">
+          </div>
+
+          <!-- Supplier | Endorsed To -->
+          <div class="form-group">
+            <label class="form-label">Supplier</label>
+            <select class="form-select" id="supp">
+              <option value="">Select supplier...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Office/Department (Endorsed To) *</label>
+            <select class="form-select" id="office"></select>
+          </div>
+
+          <!-- Status | Delivery Status -->
+          <div class="form-group">
+            <label class="form-label">Status *</label>
+            <select class="form-select" id="stat"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Delivery Status</label>
+            <select class="form-select" id="deliveryStatus">
+              <option value="">Select delivery status...</option>
+              <option value="For Delivery">For Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+
+          <!-- DATE ENDORSED TO ACCTNG | DATE ENDORSED FROM CMO -->
+          <div class="form-group">
+            <label class="form-label">Date Endorsed To Acctng</label>
+            <input type="date" class="form-input" id="dateEndorsedToAcctng">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date Endorsed From CMO</label>
+            <input type="date" class="form-input" id="dateEndorsedFromCMO">
+          </div>
+
+          <!-- DATE ENDORSE TO COA | DATE ENDORSE TO CTO -->
+          <div class="form-group">
+            <label class="form-label">Date Endorse To COA</label>
+            <input type="date" class="form-input" id="dateEndorseToCOA">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date Endorse To CTO</label>
+            <input type="date" class="form-input" id="dateEndorseToCTO">
+          </div>
+
+          <!-- PDF Upload (full-width) -->
+          <div class="form-group form-group-full">
+            <label class="form-label">Attach PDF (Optional)</label>
+            <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('pdfInput').click()">
+              <span class="material-symbols-outlined" style="font-size:48px;color:var(--muted)">upload_file</span>
+              <p style="margin-top:8px;color:var(--muted)">Click to upload PDF file</p>
+              <p style="font-size:12px;color:var(--muted)">Max size: 10MB</p>
+            </div>
+            <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
+              onchange="handleFileSelect(event)">
+            <div id="fileInfo" style="display:none" class="file-info"><span id="fileName"></span><button type="button"
+                class="file-remove" onclick="removeFile()">Remove</button></div>
+          </div>
+
+          <!-- Notes (full-width) -->
+          <div class="form-group form-group-full">
+            <label class="form-label">Notes (Optional)</label>
+            <textarea class="form-textarea" id="note" placeholder="Add any additional notes..."></textarea>
+          </div>
+
+        </div><!-- end form-grid-2col -->
       </div>
       <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button><button
-          id="saveDocBtn" class="btn btn-primary" onclick="saveDoc()"><span class="material-symbols-outlined">save</span><span>Save
+          class="btn btn-primary" onclick="saveDoc()"><span class="material-symbols-outlined">save</span><span>Save
             Document</span></button></div>
     </div>
   </div>
@@ -3318,15 +3406,12 @@
       }
 
       // After a successful login store the returned session token.
-      // On logout, clear it. getInitialData also returns user data on session restore.
+      // On logout, clear it. This is per-browser and never shared.
       const _origCallGAS = callGAS;
       async function callGASWithSessionCapture(method, args) {
         const result = await _origCallGAS(method, args);
         if (method === 'checkLogin' && result && result.status === 'success') {
           setSessionToken(result.token || '');
-        }
-        if (method === 'getInitialData' && result && result.user) {
-          // Session is still valid — token remains the same, nothing to update
         }
         if (method === 'logout') {
           setSessionToken('');
@@ -3381,7 +3466,7 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = null, sortDirection = 'asc';
-    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, status: true, date: true, notes: true, attachment: true };
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
     // Per-browser session token (UUID issued by the backend on login).
@@ -3520,65 +3605,44 @@
     document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
 
     // ===================== DASHBOARD INIT =====================
-    // Single batch call replaces 4 separate round-trips (user+opts+docs+stats).
     function initDashboard() {
-      document.getElementById('docTable').innerHTML = '<tr><td colspan="21" class="loading">Loading...</td></tr>';
-      google.script.run
-        .withSuccessHandler(data => {
-          if (!data) { showView('login'); return; }
-          // 1. User profile
-          const user = data.user;
-          if (user) {
-            currentUser = user;
-            document.getElementById('userName').textContent = user.name || 'User';
-            document.getElementById('userRole').textContent = user.role || 'User';
-            document.getElementById('userAvatar').textContent = getInitials(user.name);
-            document.getElementById('profileName').value = user.name || '';
-            document.getElementById('profileEmail').value = user.email || '';
-            document.getElementById('profileRole').value = user.role || '';
-            applyPermissions(user.permissions || {}, user.role || 'Staff');
-          }
-          // 2. Dropdown options
-          dropdownOptions = data.opts || { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
-          populateDropdowns();
-          populatePrintFilters();
-          // 3. Documents
-          allDocs = data.docs || [];
-          populateTableFilters();
-          applyFilter(currentFilter);
-          // 4. Stats from batch (no extra GAS call)
-          const s = data.stats || {};
-          document.getElementById('stat-total').textContent    = s.total    || 0;
-          document.getElementById('stat-incoming').textContent = s.incoming  || 0;
-          document.getElementById('stat-outgoing').textContent = s.outgoing  || 0;
-          document.getElementById('stat-complete').textContent = s.complete  || 0;
-          document.getElementById('stat-overdue').textContent  = s.overdue   || 0;
-          ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
-            const el = document.getElementById('badge-' + k);
-            if (el) el.textContent = s[k] || 0;
-          });
-          try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch(e) {}
-        })
-        .withFailureHandler(() => { toast('Failed to load dashboard data', 'error'); })
-        .getInitialData(_sessionToken);
+      loadUserProfile(); loadDropdownOptions(); loadDocs();
+      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
     }
 
     function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
+
+    function loadUserProfile() {
+      google.script.run.withSuccessHandler(user => {
+        if (!user) return;
+        currentUser = user;
+        document.getElementById('userName').textContent = user.name || 'User';
+        document.getElementById('userRole').textContent = user.role || 'User';
+        document.getElementById('userAvatar').textContent = getInitials(user.name);
+        document.getElementById('profileName').value = user.name || '';
+        document.getElementById('profileEmail').value = user.email || '';
+        document.getElementById('profileRole').value = user.role || '';
+        applyPermissions(user.permissions || {}, user.role || 'Staff');
+      }).getCurrentUser(_sessionToken);
+    }
 
     // Apply role-based permissions — hide/show UI elements based on what the
     // logged-in user is allowed to do.
     function applyPermissions(p, role) {
       const isAdmin = (role || '').toLowerCase() === 'admin';
+      // Sidebar nav visibility
       document.getElementById('logsMenuLink').style.display  = (isAdmin || p.viewAnalytics)  ? 'block' : 'none';
       document.getElementById('adminMenuLink').style.display = (isAdmin || p.manageSettings) ? 'block' : 'none';
       const ul = document.getElementById('usersMenuLink');
       if (ul) ul.style.display = p.manageUsers ? 'block' : 'none';
+      // Toolbar buttons
       const addBtn = document.getElementById('addDocBtn');
       if (addBtn) addBtn.style.display = p.addDoc !== false ? '' : 'none';
       const prtBtn = document.getElementById('printBtn');
       if (prtBtn) prtBtn.style.display = p.printExport !== false ? '' : 'none';
       const expBtn = document.getElementById('exportBtn');
       if (expBtn) expBtn.style.display = p.printExport !== false ? '' : 'none';
+      // Stats grid (analytics)
       const sg = document.querySelector('.stats-grid');
       if (sg) sg.style.display = (isAdmin || p.viewAnalytics) ? '' : 'none';
     }
@@ -3598,59 +3662,56 @@
 
     // ===================== DOCUMENTS =====================
     function loadDocs() {
-      document.getElementById('docTable').innerHTML = '<tr><td colspan="21" class="loading">Loading...</td></tr>';
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="27" class="loading">Loading...</td></tr>';
       google.script.run
         .withSuccessHandler(d => {
           allDocs = d || [];
-          populateTableFilters();
+          populateTableFilters(); // rebuild filter dropdowns from real data
           applyFilter(currentFilter);
-          // Refresh stats from the same loaded data to avoid extra GAS call
-          _refreshStatsFromDocs();
+          updateStats();
+          updateBadges();
         })
         .withFailureHandler(() => toast('Failed to load', 'error'))
         .getAllDocuments();
     }
 
-    // Compute stats client-side from already-loaded allDocs (no extra GAS call).
-    function _refreshStatsFromDocs() {
-      const docs = allDocs;
-      const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
-      docs.forEach(d => {
-        s.total++;
-        const st = (d.Status || '').toLowerCase().trim();
-        if (st === 'incoming') s.incoming++;
-        if (st === 'received') s.received++;
-        if (st === 'forwarded' || st === 'outgoing') s.outgoing++;
-        if (st === 'hold') s.hold++;
-        if (st === 'complete' || st === 'completed') s.complete++;
-        if (d.Overdue && d.Overdue !== 'On time') s.overdue++;
-      });
-      document.getElementById('stat-total').textContent    = s.total;
-      document.getElementById('stat-incoming').textContent = s.incoming;
-      document.getElementById('stat-outgoing').textContent = s.outgoing;
-      document.getElementById('stat-complete').textContent = s.complete;
-      document.getElementById('stat-overdue').textContent  = s.overdue;
-      ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
-        const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k];
-      });
-    }
-
     // Populate the three toolbar filter dropdowns from the actual data
     function populateTableFilters() {
       const unique = (key) => [...new Set(allDocs.map(d => (d[key] || '').trim()).filter(Boolean))].sort();
+
       const fill = (id, values, allLabel) => {
         const sel = document.getElementById(id);
-        const prev = sel.value;
+        const prev = sel.value; // preserve current selection if still valid
         sel.innerHTML = `<option value="">${allLabel}</option>` +
           values.map(v => `<option value="${v}">${v}</option>`).join('');
+        // Restore previous selection if the value still exists
         if (values.includes(prev)) sel.value = prev;
+        // Sync activeFilters
         const keyMap = { filterDocType: 'docType', filterStatus: 'status', filterEndUser: 'endUser' };
         if (keyMap[id]) activeFilters[keyMap[id]] = sel.value;
+        // Visual highlight when a filter is active
         sel.classList.toggle('filter-active', !!sel.value);
       };
+
       fill('filterDocType', unique('Doc Type'), 'All Types');
       fill('filterStatus', unique('Status'), 'All Statuses');
       fill('filterEndUser', unique('EndUser'), 'All End Users');
+    }
+
+    function updateStats() {
+      google.script.run.withSuccessHandler(s => {
+        document.getElementById('stat-total').textContent = s.total || 0;
+        document.getElementById('stat-incoming').textContent = s.incoming || 0;
+        document.getElementById('stat-outgoing').textContent = s.outgoing || 0;
+        document.getElementById('stat-complete').textContent = s.complete || 0;
+        document.getElementById('stat-overdue').textContent = s.overdue || 0;
+      }).getDocumentStats();
+    }
+
+    function updateBadges() {
+      google.script.run.withSuccessHandler(s => {
+        ['total', 'incoming', 'received', 'outgoing', 'hold', 'complete'].forEach(k => { document.getElementById('badge-' + k).textContent = s[k] || 0; });
+      }).getDocumentStats();
     }
 
     // applyTableFilters() — called by the toolbar dropdown onchange events.
@@ -3731,7 +3792,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${col}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', poNo: 'PO No', poDate: 'PO Date', poAmount: 'PO Amount', supplier: 'Supplier', office: 'Endorsed To', status: 'Status', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount' || sortColumn === 'poAmount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -3743,10 +3804,10 @@
 
     function renderTable() {
       const tb = document.getElementById('docTable');
-      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="21" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
+      if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="27" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAmt = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf ? `<a href="${pdf}" target="_blank" style="color:var(--blue);text-decoration:none"><span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>` : '-';
         const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
@@ -3762,12 +3823,18 @@
 <td class="col-endUser" style="display:${disp('endUser')}">${eu}</td>
 <td class="col-req" style="display:${disp('req')}">${rq}</td>
 <td class="hide-mobile col-poTs" style="display:${disp('poTs')};font-family:monospace;font-size:12px;color:var(--muted)">${poTs}</td>
+<td class="hide-mobile col-dateRecvdBAC" style="display:${disp('dateRecvdBAC')}">${dateRcvdBAC}</td>
 <td class="col-poNo" style="display:${disp('poNo')}">${poNo}</td>
 <td class="hide-mobile col-poDate" style="display:${disp('poDate')}">${poDate}</td>
-<td class="hide-mobile col-poAmount" style="display:${disp('poAmount')}">${poAmt}</td>
+<td class="col-poAmount" style="display:${disp('poAmount')}">${poAm}</td>
 <td class="col-supplier" style="display:${disp('supplier')}">${sp}</td>
 <td class="hide-mobile col-office" style="display:${disp('office')}">${of}</td>
 <td class="col-status" style="display:${disp('status')}"><span class="status-badge status-${sc}">${sta}</span></td>
+<td class="hide-mobile col-dateEndAcctng" style="display:${disp('dateEndAcctng')}">${dateEndAcctng}</td>
+<td class="hide-mobile col-dateEndCMO" style="display:${disp('dateEndCMO')}">${dateEndCMO}</td>
+<td class="hide-mobile col-deliveryStatus" style="display:${disp('deliveryStatus')}">${dlvStatus}</td>
+<td class="hide-mobile col-dateEndCOA" style="display:${disp('dateEndCOA')}">${dateEndCOA}</td>
+<td class="hide-mobile col-dateEndCTO" style="display:${disp('dateEndCTO')}">${dateEndCTO}</td>
 <td class="hide-mobile col-date" style="display:${disp('date')}">${dt}</td>
 <td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
@@ -3854,7 +3921,6 @@
             ${field('Endorsed To (Office)', doc['Endorsed To'] || '—', 'apartment')}
             ${field('PO Number', doc['PO No'] || '—', 'receipt_long')}
             ${field('PO Date', fmtDate(doc['PO Date']), 'event_note')}
-            ${field('PO Amount', fmtAmt(doc['PO Amount']), 'paid')}
           </div>
         </div>
 
@@ -3913,7 +3979,6 @@
         { key: 'req', label: 'Requisitioner', field: 'Requisitioner' },
         { key: 'poNo', label: 'PO No', field: 'PO No' },
         { key: 'poDate', label: 'PO Date', field: 'PO Date' },
-        { key: 'poAmount', label: 'PO Amount', field: 'PO Amount' },
         { key: 'supplier', label: 'Supplier', field: 'Supplier' },
         { key: 'office', label: 'Endorsed To', field: 'Endorsed To' },
         { key: 'status', label: 'Status', field: 'Status' },
@@ -3925,7 +3990,7 @@
       const tbody = filteredDocs.map(d => {
         const cells = colMap.map(c => {
           let v = d[c.field] || '';
-          if (c.key === 'amount' || c.key === 'poAmount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g, '')); v = isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+          if (c.key === 'amount') { const n = parseFloat(v.toString().replace(/[^\d.-]/g, '')); v = isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
           return `<td>${v}</td>`;
         }).join('');
         return `<tr>${cells}</tr>`;
@@ -3978,7 +4043,8 @@
       isEdit = false; selectedFile = null;
       document.getElementById('modalTitle').textContent = 'Add New Document';
       ['editId', 'docNo', 'desc', 'amt', 'req', 'note', 'poNo', 'poAmt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-      ['prDate', 'poDate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['prDate', 'poDate', 'dateReceivedFromBAC', 'dateEndorsedToAcctng', 'dateEndorsedFromCMO', 'dateEndorseToCOA', 'dateEndorseToCTO'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const dlvEl = document.getElementById('deliveryStatus'); if (dlvEl) dlvEl.value = '';
       const docTypeEl = document.getElementById('docType'); if (docTypeEl) docTypeEl.value = '';
       const suppEl = document.getElementById('supp'); if (suppEl) suppEl.value = '';
       const officeEl = document.getElementById('office'); if (officeEl) officeEl.value = '';
@@ -3993,7 +4059,7 @@
       removeFile();
       showModal('docModal');
     }
-    function closeModal() { _isSaving = false; _setSaveBtnState(false); hideModal('docModal'); }
+    function closeModal() { hideModal('docModal'); }
     function editDoc(id) {
       const doc = allDocs.find(d => d['ID/Barcode'] === id);
       if (!doc) { toast('Document not found', 'error'); return; }
@@ -4016,13 +4082,13 @@
       const euEl = document.getElementById('endUser'); if (euEl) euEl.value = doc['EndUser'] || '';
       const poNoEl = document.getElementById('poNo'); if (poNoEl) poNoEl.value = doc['PO No'] || '';
       const poDtEl = document.getElementById('poDate'); if (poDtEl) poDtEl.value = doc['PO Date'] || '';
-      // PO Amount
-      const poAmtEl = document.getElementById('poAmt');
-      if (poAmtEl) {
-        const pav = doc['PO Amount'] ? String(doc['PO Amount']).replace(/[₱,]/g, '') : '';
-        poAmtEl.value = pav;
-        if (pav) formatAmountInput(poAmtEl);
-      }
+      const poAmtEl = document.getElementById('poAmt'); if (poAmtEl) { const pav = doc['PO Amount'] ? String(doc['PO Amount']).replace(/[₱,]/g,'') : ''; poAmtEl.value = pav; if (pav) formatAmountInput(poAmtEl); }
+      const drbEl = document.getElementById('dateReceivedFromBAC'); if (drbEl) drbEl.value = doc['Date Received From BAC'] || '';
+      const detaEl = document.getElementById('dateEndorsedToAcctng'); if (detaEl) detaEl.value = doc['Date Endorsed To Acctng'] || '';
+      const decmoEl = document.getElementById('dateEndorsedFromCMO'); if (decmoEl) decmoEl.value = doc['Date Endorsed From CMO'] || '';
+      const dlvEl = document.getElementById('deliveryStatus'); if (dlvEl) dlvEl.value = doc['Delivery Status'] || '';
+      const decoaEl = document.getElementById('dateEndorseToCOA'); if (decoaEl) decoaEl.value = doc['Date Endorse To COA'] || '';
+      const dectoEl = document.getElementById('dateEndorseToCTO'); if (dectoEl) dectoEl.value = doc['Date Endorse To CTO'] || '';
       // Timestamps: show existing (read-only); PO Time Stamp will refresh on save
       const now = new Date();
       const dtsEl = document.getElementById('docTimeStamp');
@@ -4033,133 +4099,55 @@
       removeFile();
       showModal('docModal');
     }
-    // ── Save guard: prevents double-submit & tracks in-flight state ──────
-    let _isSaving = false;
-
-    function _setSaveBtnState(loading) {
-      const btn = document.getElementById('saveDocBtn');
-      if (!btn) return;
-      if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin .8s linear infinite;display:inline-block">sync</span> Saving...';
-      } else {
-        btn.disabled = false;
-        btn.innerHTML = '<span class="material-symbols-outlined">save</span>Save Document';
-      }
-    }
-
     function saveDoc() {
-      if (_isSaving) return; // prevent double-click
-      const docNo    = document.getElementById('docNo').value.trim();
-      const prDate   = document.getElementById('prDate')   ? document.getElementById('prDate').value   : '';
-      const endUser  = document.getElementById('endUser')  ? document.getElementById('endUser').value  : '';
-      const poNo     = document.getElementById('poNo')     ? document.getElementById('poNo').value     : '';
-      const poDate   = document.getElementById('poDate')   ? document.getElementById('poDate').value   : '';
-      const poAmount = document.getElementById('poAmt')    ? document.getElementById('poAmt').value.replace(/,/g, '') : '';
+      const docNo = document.getElementById('docNo').value.trim();
+      const prDate = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
+      const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
+      const poNo = document.getElementById('poNo') ? document.getElementById('poNo').value : '';
+      const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
       const data = {
-        docType:       document.getElementById('docType').value,
+        docType: document.getElementById('docType').value,
         docNo,
-        description:   document.getElementById('desc').value,
-        amount:        document.getElementById('amt').value.replace(/,/g, ''),
-        prDate, endUser, poNo, poDate, poAmount,
-        supplier:      document.getElementById('supp').value,
+        description: document.getElementById('desc').value,
+        amount: document.getElementById('amt').value.replace(/,/g, ''),
+        prDate,
+        endUser,
+        poNo,
+        poDate,
+        poAmount: document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g,'') : '',
+        supplier: document.getElementById('supp').value,
         requisitioner: document.getElementById('req').value,
-        office:        document.getElementById('office').value,
-        status:        document.getElementById('stat').value,
-        notes:         document.getElementById('note').value,
-        dateReceived:  new Date().toISOString()
+        office: document.getElementById('office').value,
+        status: document.getElementById('stat').value,
+        notes: document.getElementById('note').value,
+        dateReceived: new Date().toISOString(),
+        dateReceivedFromBAC: document.getElementById('dateReceivedFromBAC') ? document.getElementById('dateReceivedFromBAC').value : '',
+        dateEndorsedToAcctng: document.getElementById('dateEndorsedToAcctng') ? document.getElementById('dateEndorsedToAcctng').value : '',
+        dateEndorsedFromCMO: document.getElementById('dateEndorsedFromCMO') ? document.getElementById('dateEndorsedFromCMO').value : '',
+        deliveryStatus: document.getElementById('deliveryStatus') ? document.getElementById('deliveryStatus').value : '',
+        dateEndorseToCOA: document.getElementById('dateEndorseToCOA') ? document.getElementById('dateEndorseToCOA').value : '',
+        dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : ''
       };
       if (!data.docType || !data.docNo || !data.description || !data.prDate || !data.endUser || !data.office) {
         toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
         return;
       }
-      _isSaving = true;
-      _setSaveBtnState(true);
       if (selectedFile) {
         const reader = new FileReader();
         reader.onload = e => {
           const b64 = e.target.result.split(',')[1];
           toast('Uploading PDF...');
-          google.script.run
-            .withSuccessHandler(r => {
-              if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
-              else { _isSaving = false; _setSaveBtnState(false); toast('PDF upload failed', 'error'); }
-            })
-            .withFailureHandler(() => { _isSaving = false; _setSaveBtnState(false); toast('Upload error', 'error'); })
-            .uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
+          google.script.run.withSuccessHandler(r => {
+            if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
+            else toast('PDF upload failed', 'error');
+          }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
         };
         reader.readAsDataURL(selectedFile);
-      } else {
-        saveDocumentData(data);
-      }
+      } else saveDocumentData(data);
     }
-
-    // ── Optimistic in-place update: merges returned doc into allDocs ──────
-    // Called after a successful add/update. Avoids a full loadDocs() round-trip.
-    function _applyOptimisticDoc(savedDoc, editId) {
-      if (!savedDoc) return;
-      // Normalize: server returns raw values; format dates and amount for display
-      const normalize = d => {
-        const out = Object.assign({}, d);
-        // Keep as-is — formatAmountDisplay and date formatters handle display
-        return out;
-      };
-      const doc = normalize(savedDoc);
-      if (editId) {
-        // Update existing entry in allDocs in-place
-        const idx = allDocs.findIndex(d => d['ID/Barcode'] === editId);
-        if (idx !== -1) allDocs[idx] = doc;
-        else allDocs.unshift(doc);
-      } else {
-        // Prepend new doc so it appears at top when sorted by date
-        allDocs.unshift(doc);
-      }
-      // Re-run filters and re-render the current page only — no GAS call
-      populateTableFilters();
-      applyFilter(currentFilter);
-      _refreshStatsFromDocs();
-    }
-
     function saveDocumentData(data) {
-      // Capture editId before async call (isEdit state could change)
-      const editId = isEdit ? document.getElementById('editId').value : null;
-
-      const onSuccess = r => {
-        _isSaving = false;
-        _setSaveBtnState(false);
-        if (r.status === 'success') {
-          toast(editId ? 'Updated!' : 'Added!');
-          closeModal();
-          // Optimistic update: re-render immediately from returned doc data
-          _applyOptimisticDoc(r.doc, editId);
-          // Silent background sync after 12s to catch server-computed fields
-          setTimeout(() => loadDocs(), 12000);
-        } else if (r.message === 'duplicate') {
-          toast(`Document Number "${r.docNo}" already exists!`, 'error');
-          document.getElementById('docNoError').textContent = 'Value already exists';
-          document.getElementById('docNoError').style.display = 'block';
-        } else {
-          toast((editId ? 'Update' : 'Add') + ' failed', 'error');
-        }
-      };
-
-      const onError = () => {
-        _isSaving = false;
-        _setSaveBtnState(false);
-        toast('Connection error. Please try again.', 'error');
-      };
-
-      if (editId) {
-        google.script.run
-          .withSuccessHandler(onSuccess)
-          .withFailureHandler(onError)
-          .updateDocument(editId, data);
-      } else {
-        google.script.run
-          .withSuccessHandler(onSuccess)
-          .withFailureHandler(onError)
-          .addDocument(data);
-      }
+      if (isEdit) { const id = document.getElementById('editId').value; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Updated!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Update failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).updateDocument(id, data); }
+      else { google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Added!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Add failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).addDocument(data); }
     }
     function deleteDoc(id) { if (!confirm('Delete this document?')) return; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Deleted!'); loadDocs(); } else toast('Delete failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).deleteDocument(id); }
     function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
@@ -4209,47 +4197,9 @@
     }
 
     // ===================== ADMIN =====================
-    function openAdminSettings() {
-      if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; }
-      // Use cached dropdownOptions if available to avoid an extra GAS call
-      const opts = (dropdownOptions && dropdownOptions.docTypes && dropdownOptions.docTypes.length)
-        ? Promise.resolve(dropdownOptions)
-        : new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(() => res(dropdownOptions)).getDropdownOptions());
-      opts.then(o => {
-        document.getElementById('adminDocTypes').value = (o.docTypes || []).join('\n');
-        document.getElementById('adminSuppliers').value = (o.suppliers || []).join('\n');
-        document.getElementById('adminOffices').value = (o.offices || []).join('\n');
-        document.getElementById('adminStatuses').value = (o.statuses || []).join('\n');
-        const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (o.endUsers || []).join('\n');
-        showModal('adminModal');
-      });
-    }
+    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
     function closeAdminModal() { hideModal('adminModal'); }
-    function saveAdminSettings() {
-      const ids  = ['adminDocTypes','adminSuppliers','adminOffices','adminStatuses','adminEndUsers'];
-      const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
-      let done = 0;
-      const btn = document.querySelector('#adminModal .admin-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-      keys.forEach((k, i) => {
-        const el = document.getElementById(ids[i]);
-        const vals = el ? el.value.split('\n').filter(l => l.trim()) : [];
-        google.script.run
-          .withSuccessHandler(() => {
-            if (++done === 5) {
-              if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">save</span><span>Save All Settings</span>'; }
-              toast('All settings saved!');
-              closeAdminModal();
-              loadDropdownOptions(); // refresh client-side cache
-            }
-          })
-          .withFailureHandler(() => {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">save</span><span>Save All Settings</span>'; }
-            toast('Failed to save settings', 'error');
-          })
-          .updateDropdownOptions(k, vals);
-      });
-    }
+    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'], keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers']; let done = 0; types.forEach((t, i) => { const el = document.getElementById(ids[i]); const vals = el ? el.value.split('\n').filter(l => l.trim()) : []; google.script.run.withSuccessHandler(() => { if (++done === 5) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
 
     // ===================== TRACK =====================
     function showTrack(evt) {
@@ -4324,7 +4274,6 @@
             <div class="doc-info-item"><span class="doc-info-label">PO Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['PO Time Stamp'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO No</span><span class="doc-info-value">${doc['PO No'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO Date</span><span class="doc-info-value">${doc['PO Date'] || '-'}</span></div>
-            <div class="doc-info-item"><span class="doc-info-label">PO Amount</span><span class="doc-info-value">${formatAmountDisplay(doc['PO Amount'])}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Supplier</span><span class="doc-info-value">${doc.Supplier || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div>
@@ -4418,15 +4367,22 @@
         endUser: document.getElementById('pcol-endUser').checked,
         req: document.getElementById('pcol-req').checked,
         poTs: document.getElementById('pcol-poTs').checked,
+        dateRecvdBAC: document.getElementById('pcol-dateRecvdBAC') ? document.getElementById('pcol-dateRecvdBAC').checked : false,
         poNo: document.getElementById('pcol-poNo').checked,
         poDate: document.getElementById('pcol-poDate').checked,
         poAmount: document.getElementById('pcol-poAmount') ? document.getElementById('pcol-poAmount').checked : false,
         supplier: document.getElementById('pcol-supplier').checked,
         office: document.getElementById('pcol-office').checked,
         status: document.getElementById('pcol-status').checked,
+        dateEndAcctng: document.getElementById('pcol-dateEndAcctng') ? document.getElementById('pcol-dateEndAcctng').checked : false,
+        dateEndCMO: document.getElementById('pcol-dateEndCMO') ? document.getElementById('pcol-dateEndCMO').checked : false,
+        deliveryStatus: document.getElementById('pcol-deliveryStatus') ? document.getElementById('pcol-deliveryStatus').checked : false,
+        dateEndCOA: document.getElementById('pcol-dateEndCOA') ? document.getElementById('pcol-dateEndCOA').checked : false,
+        dateEndCTO: document.getElementById('pcol-dateEndCTO') ? document.getElementById('pcol-dateEndCTO').checked : false,
         date: document.getElementById('pcol-date').checked,
         notes: document.getElementById('pcol-notes').checked
       };
+
       let h = getReportHeader('Custom Report');
       h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`;
       if (cols.overdue) h += `<th>Overdue</th>`;
@@ -4440,12 +4396,18 @@
       if (cols.endUser) h += `<th>EndUser</th>`;
       if (cols.req) h += `<th>Requisitioner</th>`;
       if (cols.poTs) h += `<th>PO Time Stamp</th>`;
+      if (cols.dateRecvdBAC) h += `<th>Date Received From BAC</th>`;
       if (cols.poNo) h += `<th>PO No</th>`;
       if (cols.poDate) h += `<th>PO Date</th>`;
       if (cols.poAmount) h += `<th>PO Amount</th>`;
       if (cols.supplier) h += `<th>Supplier</th>`;
       if (cols.office) h += `<th>Endorsed To</th>`;
       if (cols.status) h += `<th>Status</th>`;
+      if (cols.dateEndAcctng) h += `<th>Date Endorsed To Acctng</th>`;
+      if (cols.dateEndCMO) h += `<th>Date Endorsed From CMO</th>`;
+      if (cols.deliveryStatus) h += `<th>Delivery Status</th>`;
+      if (cols.dateEndCOA) h += `<th>Date Endorse To COA</th>`;
+      if (cols.dateEndCTO) h += `<th>Date Endorse To CTO</th>`;
       if (cols.date) h += `<th>Date Received</th>`;
       if (cols.notes) h += `<th>Notes</th>`;
       h += `</tr></thead><tbody>`;
@@ -4462,12 +4424,18 @@
         if (cols.endUser) h += `<td>${d['EndUser'] || '-'}</td>`;
         if (cols.req) h += `<td>${d.Requisitioner || '-'}</td>`;
         if (cols.poTs) h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
+        if (cols.dateRecvdBAC) h += `<td>${d['Date Received From BAC'] || '-'}</td>`;
         if (cols.poNo) h += `<td>${d['PO No'] || '-'}</td>`;
         if (cols.poDate) h += `<td>${d['PO Date'] || '-'}</td>`;
         if (cols.poAmount) h += `<td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>`;
         if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`;
         if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`;
         if (cols.status) h += `<td>${d.Status || '-'}</td>`;
+        if (cols.dateEndAcctng) h += `<td>${d['Date Endorsed To Acctng'] || '-'}</td>`;
+        if (cols.dateEndCMO) h += `<td>${d['Date Endorsed From CMO'] || '-'}</td>`;
+        if (cols.deliveryStatus) h += `<td>${d['Delivery Status'] || '-'}</td>`;
+        if (cols.dateEndCOA) h += `<td>${d['Date Endorse To COA'] || '-'}</td>`;
+        if (cols.dateEndCTO) h += `<td>${d['Date Endorse To CTO'] || '-'}</td>`;
         if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`;
         if (cols.notes) h += `<td>${d.Notes || '-'}</td>`;
         h += `</tr>`;
@@ -4493,12 +4461,18 @@
       if (visibleColumns.endUser) { cols.push('EndUser'); hdrs.push('EndUser'); }
       if (visibleColumns.req) { cols.push('Requisitioner'); hdrs.push('Requisitioner'); }
       if (visibleColumns.poTs) { cols.push('PO Time Stamp'); hdrs.push('PO Time Stamp'); }
+      if (visibleColumns.dateRecvdBAC) { cols.push('Date Received From BAC'); hdrs.push('Date Received From BAC'); }
       if (visibleColumns.poNo) { cols.push('PO No'); hdrs.push('PO No'); }
       if (visibleColumns.poDate) { cols.push('PO Date'); hdrs.push('PO Date'); }
       if (visibleColumns.poAmount) { cols.push('PO Amount'); hdrs.push('PO Amount'); }
       if (visibleColumns.supplier) { cols.push('Supplier'); hdrs.push('Supplier'); }
       if (visibleColumns.office) { cols.push('Endorsed To'); hdrs.push('Endorsed To'); }
       if (visibleColumns.status) { cols.push('Status'); hdrs.push('Status'); }
+      if (visibleColumns.dateEndAcctng) { cols.push('Date Endorsed To Acctng'); hdrs.push('Date Endorsed To Acctng'); }
+      if (visibleColumns.dateEndCMO) { cols.push('Date Endorsed From CMO'); hdrs.push('Date Endorsed From CMO'); }
+      if (visibleColumns.deliveryStatus) { cols.push('Delivery Status'); hdrs.push('Delivery Status'); }
+      if (visibleColumns.dateEndCOA) { cols.push('Date Endorse To COA'); hdrs.push('Date Endorse To COA'); }
+      if (visibleColumns.dateEndCTO) { cols.push('Date Endorse To CTO'); hdrs.push('Date Endorse To CTO'); }
       if (visibleColumns.date) { cols.push('Date Received'); hdrs.push('Date Received'); }
       if (visibleColumns.notes) { cols.push('Notes'); hdrs.push('Notes'); }
       if (visibleColumns.attachment) { cols.push('PDF Link'); hdrs.push('PDF Link'); }
@@ -4509,7 +4483,7 @@
           let v = doc[col];
           if (v === null || v === undefined) v = '';
           else v = String(v);
-          if (col === 'Amount' && v) v = v.replace(/[₱,]/g, '');
+          if ((col === 'Amount' || col === 'PO Amount') && v) v = v.replace(/[₱,]/g, '');
           row.push(v);
         });
         rows.push(row);
@@ -4619,12 +4593,13 @@
     window.addEventListener('load', () => { const now = new Date(); document.getElementById('printDateTo').value = now.toISOString().split('T')[0]; const first = new Date(now.getFullYear(), now.getMonth(), 1); document.getElementById('printDateFrom').value = first.toISOString().split('T')[0]; });
 
     // Check session on load — if logged in go to dashboard
-    // Single getInitialData call: restores session AND loads all dashboard data
-    // in one round-trip, fixing the browser-refresh login-reappear issue.
     (function checkSession() {
+      // Read parameters from the server-injected object first (GAS deployed mode),
+      // then fall back to URL search params (local / shim mode).
       const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
       const urlParams = new URLSearchParams(window.location.search);
       const token = gasParams.token || urlParams.get('token') || '';
+      const page = gasParams.page || urlParams.get('page') || '';
       const isLogout = urlParams.get('logout') === '1';
 
       // If a reset token is present the reset flow (checkResetToken) handles it
@@ -4636,51 +4611,16 @@
       // Restore this browser's session token from localStorage
       try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch(e) {}
 
-      // If no stored token, go straight to login — no GAS round-trip needed
-      if (!_sessionToken) { showView('login'); return; }
-
-      // Session exists: load everything in a single batch call
-      // This also pre-loads all documents/stats so the dashboard appears immediately
+      // Normal session check — pass THIS browser's token (never shared with other browsers)
       google.script.run
-        .withSuccessHandler(function (data) {
-          if (data && data.user) {
-            showView('dashboard');
-            // Reuse batch data directly instead of calling initDashboard() which
-            // would fire another getInitialData round-trip
-            const user = data.user;
-            currentUser = user;
-            document.getElementById('userName').textContent = user.name || 'User';
-            document.getElementById('userRole').textContent = user.role || 'User';
-            document.getElementById('userAvatar').textContent = getInitials(user.name);
-            document.getElementById('profileName').value = user.name || '';
-            document.getElementById('profileEmail').value = user.email || '';
-            document.getElementById('profileRole').value = user.role || '';
-            applyPermissions(user.permissions || {}, user.role || 'Staff');
-            dropdownOptions = data.opts || { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
-            populateDropdowns();
-            populatePrintFilters();
-            allDocs = data.docs || [];
-            populateTableFilters();
-            applyFilter(currentFilter);
-            const s = data.stats || {};
-            document.getElementById('stat-total').textContent    = s.total    || 0;
-            document.getElementById('stat-incoming').textContent = s.incoming  || 0;
-            document.getElementById('stat-outgoing').textContent = s.outgoing  || 0;
-            document.getElementById('stat-complete').textContent = s.complete  || 0;
-            document.getElementById('stat-overdue').textContent  = s.overdue   || 0;
-            ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
-              const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k] || 0;
-            });
-          } else {
-            _sessionToken = '';
-            try { localStorage.removeItem('docutracker_session_token'); } catch(e) {}
-            showView('login');
-          }
+        .withSuccessHandler(function (user) {
+          if (user) { showView('dashboard'); initDashboard(); }
+          else { _sessionToken = ''; showView('login'); }
         })
         .withFailureHandler(function () {
           showView('login');
         })
-        .getInitialData(_sessionToken);
+        .getCurrentUser(_sessionToken);
     })();
   </script>
 
