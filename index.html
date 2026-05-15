@@ -4267,7 +4267,42 @@
     // ===================== ADMIN =====================
     function openAdminSettings() { const r = currentUser ? (currentUser.role || '').toLowerCase() : ''; if (r !== 'admin' && r !== 'manager') { toast('Access restricted to Admin or Manager', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
     function closeAdminModal() { hideModal('adminModal'); }
-    function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'], keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers']; let done = 0; types.forEach((t, i) => { const el = document.getElementById(ids[i]); const vals = el ? el.value.split('\n').filter(l => l.trim()) : []; google.script.run.withSuccessHandler(() => { if (++done === 5) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
+    function saveAdminSettings() {
+      const ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'];
+      const keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'];
+      let done = 0;
+      let hasError = false;
+      
+      keys.forEach((key, i) => {
+        const el = document.getElementById(ids[i]);
+        const vals = el ? el.value.split('\n').filter(l => l.trim()) : [];
+        
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res && res.status === 'error') {
+              if (!hasError) {
+                toast('Error saving ' + key + ': ' + res.message, 'error');
+                hasError = true;
+              }
+            }
+            if (++done === 5) {
+              if (!hasError) {
+                toast('All settings saved!');
+                closeAdminModal();
+              }
+              loadDropdownOptions();
+            }
+          })
+          .withFailureHandler((err) => {
+            if (!hasError) {
+              toast('Network error saving settings.', 'error');
+              hasError = true;
+            }
+            if (++done === 5) loadDropdownOptions();
+          })
+          .updateDropdownOptions(key, vals, _sessionToken);
+      });
+    }
 
     // ===================== TRACK =====================
     function showTrack(evt) {
