@@ -2614,8 +2614,8 @@
             <li id="logsMenuLink" style="display:none"><a class="nav-link" onclick="showLogsView(event)"><span
                   class="material-symbols-outlined">list_alt</span><span class="nav-label">Activity Logs</span></a></li>
             <li id="adminMenuLink" style="display:none"><a class="nav-link" onclick="openAdminSettings()"><span
-                  class="material-symbols-outlined">admin_panel_settings</span><span class="nav-label">Admin
-                  Settings</span></a></li>
+                  class="material-symbols-outlined">admin_panel_settings</span><span class="nav-label">Category
+                  List</span></a></li>
             <li id="usersMenuLink" style="display:none"><a class="nav-link" onclick="showUsersView(event)"><span
                   class="material-symbols-outlined">manage_accounts</span><span class="nav-label">User
                   Management</span></a></li>
@@ -3146,9 +3146,12 @@
           <!-- End User | Requisitioner -->
           <div class="form-group">
             <label class="form-label">End User *</label>
-            <select class="form-select" id="endUser">
-              <option value="">Select end user...</option>
-            </select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="endUser" style="flex:1;">
+                <option value="">Select end user...</option>
+              </select>
+              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage End Users"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Requisitioner</label>
@@ -3191,19 +3194,28 @@
           <!-- Supplier | Endorsed To -->
           <div class="form-group">
             <label class="form-label">Supplier</label>
-            <select class="form-select" id="supp">
-              <option value="">Select supplier...</option>
-            </select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="supp" style="flex:1;">
+                <option value="">Select supplier...</option>
+              </select>
+              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Suppliers"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Office/Department (Endorsed To) *</label>
-            <select class="form-select" id="office"></select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="office" style="flex:1;"></select>
+              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Offices"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+            </div>
           </div>
 
           <!-- Status | Delivery Status -->
           <div class="form-group">
             <label class="form-label">Status *</label>
-            <select class="form-select" id="stat"></select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="stat" style="flex:1;"></select>
+              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Statuses"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Delivery Status</label>
@@ -3291,7 +3303,7 @@
   <div class="modal" id="adminModal" style="display:none">
     <div class="modal-content" style="max-width:800px">
       <div class="modal-header">
-        <h3 class="modal-title">Admin Settings - Manage Dropdown Options</h3><button class="modal-close"
+        <h3 class="modal-title">Category List - Manage Dropdown Options</h3><button class="modal-close"
           onclick="closeAdminModal()"><span class="material-symbols-outlined">close</span></button>
       </div>
       <div class="modal-body">
@@ -3669,7 +3681,7 @@
       const isAdmin = (role || '').toLowerCase() === 'admin';
       // Sidebar nav visibility
       document.getElementById('logsMenuLink').style.display = (isAdmin || p.viewAnalytics) ? 'block' : 'none';
-      document.getElementById('adminMenuLink').style.display = (isAdmin || p.manageSettings) ? 'block' : 'none';
+      document.getElementById('adminMenuLink').style.display = (isAdmin || (role || '').toLowerCase() === 'manager' || p.manageSettings) ? 'block' : 'none';
       const ul = document.getElementById('usersMenuLink');
       if (ul) ul.style.display = p.manageUsers ? 'block' : 'none';
       // Toolbar buttons
@@ -3689,12 +3701,31 @@
     }
 
     function populateDropdowns() {
+      const getVal = id => { const el = document.getElementById(id); return el ? el.value : null; };
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+      
+      const vDocType = getVal('docType');
       document.getElementById('docType').innerHTML = '<option value="">Select document type...</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+      setVal('docType', vDocType);
+      
+      const vSupp = getVal('supp');
       document.getElementById('supp').innerHTML = '<option value="">Select supplier...</option>' + dropdownOptions.suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
+      setVal('supp', vSupp);
+      
+      const vOffice = getVal('office');
       document.getElementById('office').innerHTML = '<option value="">Select office...</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join('');
+      setVal('office', vOffice);
+      
+      const vStat = getVal('stat');
       document.getElementById('stat').innerHTML = dropdownOptions.statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+      setVal('stat', vStat);
+      
       const eu = document.getElementById('endUser');
-      if (eu) eu.innerHTML = '<option value="">Select end user...</option>' + (dropdownOptions.endUsers || []).map(u => `<option value="${u}">${u}</option>`).join('');
+      if (eu) {
+        const vEu = eu.value;
+        eu.innerHTML = '<option value="">Select end user...</option>' + (dropdownOptions.endUsers || []).map(u => `<option value="${u}">${u}</option>`).join('');
+        eu.value = vEu;
+      }
     }
 
     // ===================== DOCUMENTS =====================
@@ -4234,7 +4265,7 @@
     }
 
     // ===================== ADMIN =====================
-    function openAdminSettings() { if (!currentUser || (currentUser.role || '').toLowerCase() !== 'admin') { toast('Admin access required', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
+    function openAdminSettings() { const r = currentUser ? (currentUser.role || '').toLowerCase() : ''; if (r !== 'admin' && r !== 'manager') { toast('Access restricted to Admin or Manager', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
     function closeAdminModal() { hideModal('adminModal'); }
     function saveAdminSettings() { const types = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'], ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'], keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers']; let done = 0; types.forEach((t, i) => { const el = document.getElementById(ids[i]); const vals = el ? el.value.split('\n').filter(l => l.trim()) : []; google.script.run.withSuccessHandler(() => { if (++done === 5) { toast('All settings saved!'); closeAdminModal(); loadDropdownOptions(); } }).updateDropdownOptions(keys[i], vals); }); }
 
