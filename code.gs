@@ -81,8 +81,7 @@ function doPost(e) {
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
       'uploadPDFToGoogleDrive', 'getScriptUrl',
-      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus',
-      'getInitialData'
+      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus'
     ];
 
     if (!allowedMethods.includes(method)) {
@@ -146,26 +145,21 @@ function initializeConfigSheet() {
 
 function getDropdownOptions() {
   try {
-    const cached = _cacheGet(CACHE_OPTS);
-    if (cached) return cached;
+    const hit = CacheService.getScriptCache().get('dropdown_opts');
+    if (hit) { try { return JSON.parse(hit); } catch(e) {} }
     const ss = SpreadsheetApp.openById(SHEET_ID);
-    let configSheet = ss.getSheetByName(CONFIG_SHEET);
-    if (!configSheet) configSheet = initializeConfigSheet();
-    // Ensure EndUser column exists without a redundant extra call
-    const lastCol = configSheet.getLastColumn();
-    if (lastCol < 5 || !configSheet.getRange(1, 5).getValue()) {
-      configSheet.getRange(1, 5).setValue('EndUser').setFontWeight('bold');
-    }
+    let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
+    initializeConfigSheet();
     const data = configSheet.getDataRange().getValues();
     const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0]) options.docTypes.push(String(data[i][0]).trim());
-      if (data[i][1]) options.suppliers.push(String(data[i][1]).trim());
-      if (data[i][2]) options.offices.push(String(data[i][2]).trim());
-      if (data[i][3]) options.statuses.push(String(data[i][3]).trim());
-      if (data[i][4]) options.endUsers.push(String(data[i][4]).trim());
+      if (data[i][0]) options.docTypes.push(data[i][0]);
+      if (data[i][1]) options.suppliers.push(data[i][1]);
+      if (data[i][2]) options.offices.push(data[i][2]);
+      if (data[i][3]) options.statuses.push(data[i][3]);
+      if (data[i][4]) options.endUsers.push(data[i][4]);
     }
-    _cachePut(CACHE_OPTS, options);
+    try { CacheService.getScriptCache().put('dropdown_opts', JSON.stringify(options), 300); } catch(e) {}
     return options;
   } catch (error) {
     Logger.log('getDropdownOptions error: ' + error);
@@ -173,10 +167,10 @@ function getDropdownOptions() {
   }
 }
 
-function updateDropdownOptions(type, values) {
+function updateDropdownOptions(type, values, tokenParam) {
   try {
-    const currentUser = getCurrentUser();
-    if (!currentUser || currentUser.role !== 'Admin') {
+    const currentUser = getCurrentUser(tokenParam || _doPostToken);
+    if (!currentUser || (currentUser.role||'').toLowerCase() !== 'admin') {
       return { status: 'error', message: 'Only administrators can update dropdown options' };
     }
     const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -187,6 +181,7 @@ function updateDropdownOptions(type, values) {
     const lastRow = configSheet.getLastRow();
     if (lastRow > 1) configSheet.getRange(2, column, lastRow - 1, 1).clearContent();
     values.forEach((v, i) => { if (v.trim()) configSheet.getRange(i + 2, column).setValue(v.trim()); });
+    _invalidateDropdownCache();
     return { status: 'success', message: 'Dropdown options updated successfully' };
   } catch (error) {
     Logger.log('updateDropdownOptions error: ' + error);
@@ -211,21 +206,33 @@ function _createSession(email) {
 function _validateSession(token) {
   if (!token) return null;
   try {
+    // CacheService first (fast, avoids ScriptProperties quota hits)
+    const ck = 'sv_' + token.replace(/-/g, '');
+    const hit = CacheService.getScriptCache().get(ck);
+    if (hit) return hit;
     const raw = PropertiesService.getScriptProperties().getProperty('sess_' + token);
     if (!raw) return null;
     const sess = JSON.parse(raw);
-    if (sess.expires < Date.now()) {
+    const now  = Date.now();
+    if (sess.expires < now) {
       PropertiesService.getScriptProperties().deleteProperty('sess_' + token);
       return null;
     }
+    const ttl = Math.min(300, Math.floor((sess.expires - now) / 1000));
+    if (ttl > 0) CacheService.getScriptCache().put(ck, sess.email, ttl);
     return sess.email;
   } catch (e) { return null; }
 }
 
 function _destroySession(token) {
   if (!token) return;
-  try { PropertiesService.getScriptProperties().deleteProperty('sess_' + token); } catch (e) {}
+  try {
+    PropertiesService.getScriptProperties().deleteProperty('sess_' + token);
+    CacheService.getScriptCache().remove('sv_' + token.replace(/-/g, ''));
+  } catch (e) {}
 }
+function _invalidateDocsCache()     { try { CacheService.getScriptCache().remove('all_docs');      } catch(e) {} }
+function _invalidateDropdownCache() { try { CacheService.getScriptCache().remove('dropdown_opts'); } catch(e) {} }
 
 function _getDefaultPermissions(role) {
   const r = (role || 'Staff').toLowerCase();
@@ -490,6 +497,8 @@ function getDocumentById(docId) {
             } else {
               doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
             }
+          } else if (value === '') {
+            doc[h] = '';
           } else {
             doc[h] = value;
           }
@@ -618,61 +627,35 @@ function checkDuplicateDocNo(docNo, excludeId) {
   }
 }
 
-// Fast variant of logActivity — accepts pre-fetched userName to avoid a
-// redundant getCurrentUser() call inside the same request.
-function _logActivityFast(action, documentId, details, userName) {
-  try {
-    const logSheet = initializeActivityLogSheet();
-    if (!logSheet) return;
-    logSheet.appendRow([
-      new Date(),
-      String(action || '').trim(),
-      userName || 'System',
-      String(documentId || '').trim(),
-      String(details || '').trim(),
-      'N/A'
-    ]);
-  } catch(e) { Logger.log('_logActivityFast error: ' + e); }
-}
-
-// Fast variant of logDocumentHistory — accepts pre-fetched userName.
-function _logDocHistoryFast(docId, action, status, userName, remarks) {
-  try {
-    const histSheet = initializeHistorySheet();
-    if (!histSheet) return;
-    histSheet.appendRow([docId, action, status || '', userName || 'System', new Date(), remarks || '']);
-  } catch(e) { Logger.log('_logDocHistoryFast error: ' + e); }
-}
-
 // =====================================================================
 //  SCHEMA MIGRATION HELPER
 //  Ensures the Documents sheet has all 20 columns in the correct order.
 //  Safe to run on both new and existing sheets.
 // =====================================================================
-// Column count constant — update here only when schema changes
-const DOCS_COL_COUNT = 21;
-const EXPECTED_HEADERS = [
-  'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
-  'EndUser','PO Time Stamp','PO No','PO Date','PO Amount',
-  'Supplier','Requisitioner','Endorsed To','Status',
-  'Date Received','Due Date','Overdue','Notes','PDF Link'
-];
-
 function ensureDocumentSheetHeaders(sheet) {
   try {
+    const EXPECTED_HEADERS = [
+      'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
+      'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
+      'Supplier','Requisitioner','Endorsed To','Status',
+      'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
+      'Date Endorse To COA','Date Endorse To CTO',
+      'Date Received','Due Date','Overdue','Notes','PDF Link'
+    ];
     if (!sheet) return;
     const data = sheet.getDataRange().getValues();
     if (data.length === 0) {
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setValues([EXPECTED_HEADERS]);
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]);
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setFontWeight('bold');
       return;
     }
     const current = data[0].map(h => h.toString().trim());
-    const needsUpdate = current.length < DOCS_COL_COUNT ||
+    // Validate EVERY header — fixes spelling variants like 'PO TimeStamp' vs 'PO Time Stamp'
+    const needsUpdate = current.length < EXPECTED_HEADERS.length ||
       EXPECTED_HEADERS.some((h, i) => current[i] !== h);
     if (needsUpdate) {
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setValues([EXPECTED_HEADERS]);
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]);
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setFontWeight('bold');
       Logger.log('Document sheet headers normalized to expected schema.');
     }
   } catch (e) {
@@ -681,57 +664,13 @@ function ensureDocumentSheetHeaders(sheet) {
 }
 
 // =====================================================================
-//  CACHE HELPERS  — 5-minute CacheService invalidated on writes
-// =====================================================================
-const CACHE_TTL     = 300; // seconds
-const CACHE_DOCS    = 'dt_docs_v2';
-const CACHE_OPTS    = 'dt_opts_v1';
-const CACHE_STATS   = 'dt_stats_v1';
-
-function _cacheGet(key) {
-  try {
-    const raw = CacheService.getScriptCache().get(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch(e) { return null; }
-}
-function _cachePut(key, value) {
-  try {
-    const raw = JSON.stringify(value);
-    if (raw.length < 100000) CacheService.getScriptCache().put(key, raw, CACHE_TTL);
-  } catch(e) {}
-}
-function _cacheInvalidateDocs() {
-  try { CacheService.getScriptCache().removeAll([CACHE_DOCS, CACHE_STATS]); } catch(e) {}
-}
-
-// =====================================================================
-//  BATCH LOADER — single round-trip for dashboard init
-//  The sessionToken arg is sent by the frontend; doPost already put it
-//  in _doPostToken, so getCurrentUser() picks it up automatically.
-//  We still accept (and optionally override) the arg for flexibility.
-// =====================================================================
-function getInitialData(sessionToken) {
-  try {
-    // Override the module-level token if an arg was passed directly
-    if (sessionToken) _doPostToken = sessionToken;
-    const user  = getCurrentUser();
-    // Only continue loading data if the session is valid
-    if (!user) return { user: null, opts: {}, docs: [], stats: {} };
-    const opts  = getDropdownOptions();
-    const docs  = getAllDocuments();
-    const stats = getDocumentStats();
-    return { user: user, opts: opts, docs: docs, stats: stats };
-  } catch(e) {
-    Logger.log('getInitialData error: ' + e);
-    return { user: null, opts: {}, docs: [], stats: {} };
-  }
-}
-
-// =====================================================================
 //  DOCUMENT CRUD
 // =====================================================================
 function getAllDocuments() {
   try {
+    // 30-second server-side cache — cuts sheet reads for rapid sequential calls
+    const hit = CacheService.getScriptCache().get('all_docs');
+    if (hit) { try { return JSON.parse(hit); } catch(e) {} }
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return [];
@@ -754,7 +693,6 @@ function getAllDocuments() {
       const doc = {};
       for (let j = 0; j < headers.length; j++) {
         const value = data[i][j];
-        // Timestamp fields: format with time; date-only fields: format date only
         if (value instanceof Date) {
           const h = headers[j];
           if (h === 'Doc Time Stamp' || h === 'PO Time Stamp') {
@@ -762,115 +700,91 @@ function getAllDocuments() {
           } else {
             doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
           }
-        } else {
-          doc[headers[j]] = value;
-        }
+        } else { doc[headers[j]] = value; }
       }
-      const drVal = dateRcvdCol !== -1 ? doc['Date Received'] : doc['Date Received'];
-      const stVal = statusCol   !== -1 ? doc['Status']        : doc['Status'];
-      if (drVal) {
-        doc['Overdue'] = calculateOverdueStatus(drVal, stVal);
-      }
+      if (doc['Date Received']) doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
       documents.push(doc);
     }
+    try {
+      const json = JSON.stringify(documents);
+      if (json.length < 98304) CacheService.getScriptCache().put('all_docs', json, 30);
+    } catch(e) {}
     return documents;
-  } catch (error) {
-    Logger.log('getAllDocuments error: ' + error);
-    return [];
-  }
+  } catch (error) { Logger.log('getAllDocuments error: ' + error); return []; }
 }
 
 function addDocument(docData) {
   try {
-    const ss  = SpreadsheetApp.openById(SHEET_ID);
+    if (checkDuplicateDocNo(docData.docNo)) {
+      return { status: 'error', message: 'duplicate', docNo: docData.docNo };
+    }
+    const ss = SpreadsheetApp.openById(SHEET_ID);
     let sheet = ss.getSheetByName(DOCS_SHEET);
-    const tz  = Session.getScriptTimeZone();
-
-    // ── ONE read covers: header-check + duplicate-check ────────────────
-    let existingData = null;
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setValues([EXPECTED_HEADERS]).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 27).setValues([[
+        'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
+        'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
+        'Supplier','Requisitioner','Endorsed To','Status',
+        'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
+        'Date Endorse To COA','Date Endorse To CTO',
+        'Date Received','Due Date','Overdue','Notes','PDF Link'
+      ]]);
+      sheet.getRange(1, 1, 1, 27).setFontWeight('bold');
     } else {
-      existingData = sheet.getDataRange().getValues();
-      // Fix headers if needed (uses the already-loaded data, no extra read)
-      if (existingData.length > 0) {
-        const curr = existingData[0].map(h => h.toString().trim());
-        if (curr.length < DOCS_COL_COUNT || EXPECTED_HEADERS.some((h, i) => curr[i] !== h)) {
-          sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setValues([EXPECTED_HEADERS]).setFontWeight('bold');
-        }
-      }
-      // Duplicate check from the same data (NO extra Sheets read)
-      if (existingData.length > 1) {
-        const hdr   = existingData[0].map(h => h.toString().trim());
-        const noIdx = hdr.indexOf('Doc No');
-        if (noIdx !== -1) {
-          const target = (docData.docNo || '').trim();
-          for (let i = 1; i < existingData.length; i++) {
-            if (String(existingData[i][noIdx] || '').trim() === target) {
-              return { status: 'error', message: 'duplicate', docNo: docData.docNo };
-            }
-          }
-        }
-      }
+      // Ensure new columns exist in existing sheets
+      ensureDocumentSheetHeaders(sheet);
     }
-
-    // ── Build new row ────────────────────────────────────────────────────
-    const now    = new Date();
-    const docId  = `DOC-${Utilities.formatDate(now, tz, 'yyyyMMddHHmmss')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
+    const now      = new Date();
+    const docId    = `DOC-${Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     const dateRcvd = new Date(docData.dateReceived || now);
     const dueDate  = new Date(dateRcvd);
     dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
-    const tsStr  = Utilities.formatDate(now,      tz, 'yyyy-MM-dd HH:mm:ss');
-    const drStr  = Utilities.formatDate(dateRcvd, tz, 'yyyy-MM-dd');
-    const ddStr  = Utilities.formatDate(dueDate,  tz, 'yyyy-MM-dd');
-    const overdue = calculateOverdueStatus(dateRcvd, docData.status);
-
-    const newRow = [
-      tsStr,
+    const cu = getCurrentUser();
+    // Doc Time Stamp: auto-generated on create
+    const docTimeStamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    // PO Time Stamp: auto-generated on create/update
+    const poTimeStamp  = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    sheet.appendRow([
+      docTimeStamp,
       docId,
-      docData.docType       || '',
-      docData.docNo         || '',
-      docData.prDate        || '',
-      docData.description   || '',
+      docData.docType              || '',
+      docData.docNo                || '',
+      docData.prDate               || '',
+      docData.description          || '',
       formatAmount(docData.amount),
-      docData.endUser       || '',
-      tsStr,
-      docData.poNo          || '',
-      docData.poDate        || '',
+      docData.endUser              || '',
+      poTimeStamp,
+      docData.dateReceivedFromBAC  || '',
+      docData.poNo                 || '',
+      docData.poDate               || '',
       formatAmount(docData.poAmount),
-      docData.supplier      || '',
-      docData.requisitioner || '',
-      docData.office        || '',
-      docData.status        || 'Received',
-      drStr, ddStr, overdue,
-      docData.notes         || '',
-      docData.pdfLink       || ''
-    ];
-
-    // ── ONE write (setValues on specific row is reliable for large sheets) ─
-    const nextRow = existingData ? existingData.length + 1 : 2;
-    sheet.getRange(nextRow, 1, 1, DOCS_COL_COUNT).setValues([newRow]);
-    _cacheInvalidateDocs();
-
-    // ── Build doc object for optimistic frontend update ──────────────────
-    const docObj = {};
-    EXPECTED_HEADERS.forEach((h, i) => { docObj[h] = newRow[i]; });
-    docObj['Overdue'] = overdue;
-
-    // ── Logging (reuse already-fetched user; no extra getCurrentUser call) ─
-    const cu      = getCurrentUser();
-    const cuName  = cu ? cu.name : 'System';
-    const remarks = [
+      docData.supplier             || '',
+      docData.requisitioner        || '',
+      docData.office               || '',
+      docData.status               || 'Received',
+      docData.dateEndorsedToAcctng || '',
+      docData.dateEndorsedFromCMO  || '',
+      docData.deliveryStatus       || '',
+      docData.dateEndorseToCOA     || '',
+      docData.dateEndorseToCTO     || '',
+      Utilities.formatDate(dateRcvd, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      Utilities.formatDate(dueDate,  Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      calculateOverdueStatus(dateRcvd, docData.status),
+      docData.notes                || '',
+      docData.pdfLink              || ''
+    ]);
+    _invalidateDocsCache();
+    const createRemarks = [
       `${docData.docType} — ${docData.docNo}`,
-      docData.office   ? `Endorsed To: ${docData.office}`   : '',
-      docData.endUser  ? `End User: ${docData.endUser}`     : '',
-      docData.prDate   ? `PR Date: ${docData.prDate}`       : ''
+      docData.office    ? `Endorsed To: ${docData.office}`       : '',
+      docData.endUser   ? `End User: ${docData.endUser}`         : '',
+      docData.prDate    ? `PR Date: ${docData.prDate}`           : '',
+      docData.supplier  ? `Supplier: ${docData.supplier}`        : ''
     ].filter(Boolean).join(' | ');
-    _logDocHistoryFast(docId, 'Document Created', docData.status || 'Received', cuName, remarks);
-    _logActivityFast('Create Document', docId, `Document created: ${docData.docType} - ${docData.docNo}`, cuName);
-
-    return { status: 'success', docId: docId, doc: docObj };
+    logDocumentHistory(docId, 'Document Created', docData.status || 'Received', cu ? cu.name : 'System', createRemarks);
+    logActivity('Create Document', docId, `Document created: ${docData.docType} - ${docData.docNo}`);
+    return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('addDocument error: ' + error);
     return { status: 'error', message: error.toString() };
@@ -879,108 +793,89 @@ function addDocument(docData) {
 
 function updateDocument(docId, docData) {
   try {
+    if (checkDuplicateDocNo(docData.docNo, docId)) {
+      return { status: 'error', message: 'duplicate', docNo: docData.docNo };
+    }
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
-    const tz    = Session.getScriptTimeZone();
-
-    // ── ONE read covers: header-check + duplicate-check + row-find ──────
-    const data    = sheet.getDataRange().getValues();
+    ensureDocumentSheetHeaders(sheet);
+    const data = sheet.getDataRange().getValues();
     const headers = data[0].map(h => h.toString().trim());
-
-    // Fix headers if needed (inline — no extra read)
-    if (headers.length < DOCS_COL_COUNT || EXPECTED_HEADERS.some((h, i) => headers[i] !== h)) {
-      sheet.getRange(1, 1, 1, DOCS_COL_COUNT).setValues([EXPECTED_HEADERS]).setFontWeight('bold');
-    }
-
-    const colIdx   = {};
+    // Build column index map from actual headers (handles both old and new schemas)
+    const colIdx = {};
     headers.forEach((h, i) => { colIdx[h] = i; });
-    const idColIdx = colIdx['ID/Barcode'] !== undefined ? colIdx['ID/Barcode'] : 0;
-    const noColIdx = colIdx['Doc No']     !== undefined ? colIdx['Doc No']     : 2;
-    const targetNo = (docData.docNo || '').trim();
-
-    // ── Single-pass: duplicate check AND row-find simultaneously ────────
     let rowIndex = -1;
+    const idCol = colIdx['ID/Barcode'] !== undefined ? colIdx['ID/Barcode'] : 0;
     for (let i = 1; i < data.length; i++) {
-      const rowId = String(data[i][idColIdx] || '').trim();
-      const rowNo = String(data[i][noColIdx] || '').trim();
-      // Duplicate: same Doc No but different ID
-      if (rowNo === targetNo && rowId !== docId) {
-        return { status: 'error', message: 'duplicate', docNo: docData.docNo };
-      }
-      if (rowId === docId) rowIndex = i + 1; // 1-indexed sheet row
+      if (data[i][idCol] === docId) { rowIndex = i + 1; break; }
     }
     if (rowIndex === -1) return { status: 'error', message: 'Document not found' };
-
-    // ── Compute values ──────────────────────────────────────────────────
-    const now      = new Date();
-    const dateRcvd = docData.dateReceived ? new Date(docData.dateReceived) : now;
+    const dateRcvd = docData.dateReceived ? new Date(docData.dateReceived) : new Date();
     const dueDate  = new Date(dateRcvd);
     dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
-    const origRow   = data[rowIndex - 1];
-    const docTsCol  = colIdx['Doc Time Stamp'];
-    const origDocTs = (docTsCol !== undefined && origRow[docTsCol])
-      ? origRow[docTsCol]
-      : Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss');
-    const pdfLinkCol  = colIdx['PDF Link'];
-    const existingPdf = pdfLinkCol !== undefined ? origRow[pdfLinkCol] : '';
-    const poTs = Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss');
-    const drStr = Utilities.formatDate(dateRcvd, tz, 'yyyy-MM-dd');
-    const ddStr = Utilities.formatDate(dueDate,  tz, 'yyyy-MM-dd');
-    const overdue = calculateOverdueStatus(dateRcvd, docData.status);
-
-    const updRow = [
+    const cu = getCurrentUser();
+    const now = new Date();
+    // Preserve original Doc Time Stamp; generate new PO Time Stamp on update
+    const origRow      = data[rowIndex - 1];
+    const docTsCol     = colIdx['Doc Time Stamp'];
+    const origDocTs    = (docTsCol !== undefined && origRow[docTsCol]) ? origRow[docTsCol] : Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const poTimeStamp  = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const pdfLinkCol   = colIdx['PDF Link'];
+    const existingPdf  = (pdfLinkCol !== undefined) ? origRow[pdfLinkCol] : '';
+    sheet.getRange(rowIndex, 1, 1, 27).setValues([[
       origDocTs,
       docId,
-      docData.docType       || '',
-      docData.docNo         || '',
-      docData.prDate        || '',
-      docData.description   || '',
+      docData.docType              || '',
+      docData.docNo                || '',
+      docData.prDate               || '',
+      docData.description          || '',
       formatAmount(docData.amount),
-      docData.endUser       || '',
-      poTs,
-      docData.poNo          || '',
-      docData.poDate        || '',
+      docData.endUser              || '',
+      poTimeStamp,
+      docData.dateReceivedFromBAC  || '',
+      docData.poNo                 || '',
+      docData.poDate               || '',
       formatAmount(docData.poAmount),
-      docData.supplier      || '',
-      docData.requisitioner || '',
-      docData.office        || '',
-      docData.status        || 'Received',
-      drStr, ddStr, overdue,
-      docData.notes         || '',
-      docData.pdfLink       || existingPdf || ''
-    ];
-
-    // ── ONE write ───────────────────────────────────────────────────────
-    sheet.getRange(rowIndex, 1, 1, DOCS_COL_COUNT).setValues([updRow]);
-    _cacheInvalidateDocs();
-
-    // ── Build doc object for optimistic frontend update ─────────────────
-    const docObj = {};
-    EXPECTED_HEADERS.forEach((h, i) => { docObj[h] = updRow[i]; });
-    docObj['Overdue'] = overdue;
-
-    // ── Logging (reuse already-fetched user) ────────────────────────────
-    const cu     = getCurrentUser();
-    const cuName = cu ? cu.name : 'System';
-    const statusKey  = (docData.status || '').toLowerCase().trim();
-    const actionMap  = {
-      'incoming':'Status: Incoming','received':'Document Received',
-      'in review':'Status: In Review','in process':'Status: In Process',
-      'approved':'Document Approved','forwarded':'Document Forwarded',
-      'hold':'Document On Hold','completed':'Document Completed','complete':'Document Completed'
+      docData.supplier             || '',
+      docData.requisitioner        || '',
+      docData.office               || '',
+      docData.status               || 'Received',
+      docData.dateEndorsedToAcctng || '',
+      docData.dateEndorsedFromCMO  || '',
+      docData.deliveryStatus       || '',
+      docData.dateEndorseToCOA     || '',
+      docData.dateEndorseToCTO     || '',
+      Utilities.formatDate(dateRcvd, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      Utilities.formatDate(dueDate,  Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      calculateOverdueStatus(dateRcvd, docData.status),
+      docData.notes                || '',
+      docData.pdfLink              || existingPdf || ''
+    ]]);
+    _invalidateDocsCache();
+    const statusActionMap = {
+      'incoming':   'Status: Incoming',
+      'received':   'Document Received',
+      'in review':  'Status: In Review',
+      'in process': 'Status: In Process',
+      'approved':   'Document Approved',
+      'forwarded':  'Document Forwarded',
+      'hold':       'Document On Hold',
+      'completed':  'Document Completed',
+      'complete':   'Document Completed'
     };
-    const actionName = actionMap[statusKey] || 'Document Updated';
-    const remarks = [
+    const statusKey  = (docData.status || '').toLowerCase().trim();
+    const actionName = statusActionMap[statusKey] || 'Document Updated';
+    const updateRemarks = [
       `Status: ${docData.status}`,
-      docData.office  ? `Endorsed To: ${docData.office}` : '',
-      docData.endUser ? `End User: ${docData.endUser}`   : '',
-      docData.poNo    ? `PO No: ${docData.poNo}`         : ''
+      docData.office   ? `Endorsed To: ${docData.office}`       : '',
+      docData.endUser  ? `End User: ${docData.endUser}`         : '',
+      docData.dateReceived ? `Date Received: ${docData.dateReceived}` : '',
+      docData.poNo     ? `PO No: ${docData.poNo}`               : ''
     ].filter(Boolean).join(' | ');
-    _logDocHistoryFast(docId, actionName, docData.status || 'Received', cuName, remarks);
-    _logActivityFast('Update Document', docId, `Document updated: Status → ${docData.status}`, cuName);
-
-    return { status: 'success', docId: docId, doc: docObj };
+    logDocumentHistory(docId, actionName, docData.status || 'Received', cu ? cu.name : 'System', updateRemarks);
+    logActivity('Update Document', docId, `Document updated: Status changed to ${docData.status}`);
+    return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('updateDocument error: ' + error);
     return { status: 'error', message: error.toString() };
@@ -1004,7 +899,7 @@ function deleteDocument(docId) {
         logDocumentHistory(docId, 'Document Deleted', stCol !== -1 ? data[i][stCol] : '', cu ? cu.name : 'System', 'Document permanently deleted');
         logActivity('Delete Document', docId, `Document deleted: ${tyCol !== -1 ? data[i][tyCol] : ''} - ${noCol !== -1 ? data[i][noCol] : ''}`);
         sheet.deleteRow(i + 1);
-        _cacheInvalidateDocs();
+        _invalidateDocsCache();
         return { status: 'success' };
       }
     }
@@ -1017,38 +912,19 @@ function deleteDocument(docId) {
 
 function getDocumentStats() {
   try {
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(DOCS_SHEET);
-    const zero  = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
-    if (!sheet) return zero;
-    const data       = sheet.getDataRange().getValues();
-    if (data.length <= 1) return zero;
-    const headers    = data[0].map(h => h.toString().trim());
-    const idCol      = headers.indexOf('ID/Barcode');
-    const noCol      = headers.indexOf('Doc No');
-    const statusCol  = headers.indexOf('Status');
-    const dateRcvdCol= headers.indexOf('Date Received');
-    const stats      = Object.assign({}, zero);
-    const seenDocNos = new Set();
-    for (let i = 1; i < data.length; i++) {
-      const rowId = idCol !== -1 ? data[i][idCol] : data[i][0];
-      if (!rowId || rowId.toString().trim() === '') continue;
-      const docNo = noCol !== -1 ? data[i][noCol] : data[i][2];
-      if (seenDocNos.has(docNo)) continue;
-      seenDocNos.add(docNo);
+    // Reuse the cached getAllDocuments result — no extra sheet read needed
+    const docs = getAllDocuments();
+    const stats = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
+    docs.forEach(doc => {
       stats.total++;
-      const status   = String(statusCol !== -1 ? data[i][statusCol] : data[i][8]).toLowerCase().trim();
-      const dateRcvd = dateRcvdCol !== -1 ? data[i][dateRcvdCol] : data[i][9];
-      if (status.includes('forwarded'))                               stats.outgoing++;
-      else if (status.includes('completed') || status.includes('complete')) stats.complete++;
-      else                                                            stats.incoming++;
-      if (status.includes('received')) stats.received++;
-      else if (status.includes('hold')) stats.hold++;
-      if (dateRcvd) {
-        const ov = calculateOverdueStatus(dateRcvd, status);
-        if (ov && ov !== 'On time') stats.overdue++;
-      }
-    }
+      const st = String(doc.Status || '').toLowerCase().trim();
+      if      (st.includes('forwarded'))                                  stats.outgoing++;
+      else if (st.includes('completed') || st.includes('complete'))      stats.complete++;
+      else                                                                stats.incoming++;
+      if (st.includes('received')) stats.received++;
+      if (st.includes('hold'))     stats.hold++;
+      if (doc.Overdue && doc.Overdue !== 'On time')                      stats.overdue++;
+    });
     return stats;
   } catch (error) {
     Logger.log('getDocumentStats error: ' + error);
