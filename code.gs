@@ -240,7 +240,16 @@ function _destroySession(token) {
     CacheService.getScriptCache().remove('sv_' + token.replace(/-/g, ''));
   } catch (e) {}
 }
-function _invalidateDocsCache()     { try { CacheService.getScriptCache().remove('all_docs');      } catch(e) {} }
+function _invalidateDocsCache() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const nStr  = cache.get('all_docs_n');
+    const n     = nStr ? parseInt(nStr) : 1;
+    const keys  = ['all_docs_n'];
+    if (n === 1) keys.push('all_docs'); else for (let i = 0; i < n; i++) keys.push('all_docs_' + i);
+    cache.removeAll(keys);
+  } catch(e) {}
+}
 function _invalidateDropdownCache() { try { CacheService.getScriptCache().remove('dropdown_opts'); } catch(e) {} }
 
 function _getDefaultPermissions(role) {
@@ -566,6 +575,7 @@ function logActivity(action, documentId, details) {
       String(details || '').trim(),
       'N/A'
     ]);
+    CacheService.getScriptCache().remove('all_activity_logs');
     return true;
   } catch (error) {
     Logger.log('logActivity error: ' + error);
@@ -575,16 +585,28 @@ function logActivity(action, documentId, details) {
 
 function getAllActivityLogs() {
   try {
+    // 30-second cache — activity logs are append-only; this is safe
+    const cache = CacheService.getScriptCache();
+    const hit   = cache.get('all_activity_logs');
+    if (hit) { try { return JSON.parse(hit); } catch(e) {} }
+
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!sheet) return [];
     const data = sheet.getDataRange().getValues();
     if (data.length <= 1) return [];
-    const logs = [];
-    for (let i = 1; i < data.length; i++) {
+    // Format all dates in one pass using JS (no Utilities.formatDate per row)
+    const tz     = Session.getScriptTimeZone();
+    const locale = 'en-US';
+    const logs   = [];
+    for (let i = data.length - 1; i >= 1; i--) {          // reversed = newest first, no sort needed
       if (!data[i][0]) continue;
+      const ts  = new Date(data[i][0]);
+      const fmt = isNaN(ts) ? String(data[i][0]) :
+        ts.toLocaleDateString(locale, { month:'short', day:'numeric', year:'numeric' }) + ' ' +
+        ts.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' });
       logs.push({
-        Timestamp:  Utilities.formatDate(new Date(data[i][0]), Session.getScriptTimeZone(), 'MMM dd, yyyy hh:mm a'),
+        Timestamp:  fmt,
         Action:     data[i][1] || '',
         User:       data[i][2] || '',
         DocumentID: data[i][3] || '',
@@ -592,12 +614,12 @@ function getAllActivityLogs() {
         IPAddress:  data[i][5] || 'N/A'
       });
     }
-    logs.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+    try {
+      const json = JSON.stringify(logs);
+      if (json.length < 98304) cache.put('all_activity_logs', json, 30);
+    } catch(e) {}
     return logs;
-  } catch (error) {
-    Logger.log('getAllActivityLogs error: ' + error);
-    return [];
-  }
+  } catch (error) { Logger.log('getAllActivityLogs error: ' + error); return []; }
 }
 
 // =====================================================================
@@ -684,56 +706,105 @@ function ensureDocumentSheetHeaders(sheet) {
 // =====================================================================
 //  DOCUMENT CRUD
 // =====================================================================
+// Pure-JS date formatters — zero GAS API overhead, replaces Utilities.formatDate()
+function _fmtDate(d) {
+  // yyyy-MM-dd
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function _fmtTs(d) {
+  // yyyy-MM-dd HH:mm:ss
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// Split a JSON string into ≤99 KB chunks for CacheService storage
+function _cacheSet(key, json) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const CHUNK = 99000;
+    if (json.length <= CHUNK) {
+      cache.put(key, json, 300);
+      cache.put(key + '_n', '1', 300);
+    } else {
+      const n = Math.ceil(json.length / CHUNK);
+      for (let i = 0; i < n; i++) cache.put(key + '_' + i, json.slice(i*CHUNK, (i+1)*CHUNK), 300);
+      cache.put(key + '_n', String(n), 300);
+    }
+  } catch(e) {}
+}
+function _cacheGet(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const nStr  = cache.get(key + '_n');
+    if (!nStr) return null;
+    const n = parseInt(nStr);
+    if (n === 1) return cache.get(key);
+    const parts = [];
+    for (let i = 0; i < n; i++) { const p = cache.get(key + '_' + i); if (!p) return null; parts.push(p); }
+    return parts.join('');
+  } catch(e) { return null; }
+}
+
 function getAllDocuments() {
   try {
-    // 30-second server-side cache — cuts sheet reads for rapid sequential calls
-    const hit = CacheService.getScriptCache().get('all_docs');
+    // 5-minute chunked cache — works for datasets beyond the 100 KB CacheService limit
+    const hit = _cacheGet('all_docs');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
+
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return [];
-    ensureDocumentSheetHeaders(sheet);
+    // NOTE: ensureDocumentSheetHeaders() removed from here — it costs a full
+    // sheet read on every cold load. It's still called in addDocument() where
+    // a schema migration is actually needed.
     const data = sheet.getDataRange().getValues();
     if (data.length <= 1) return [];
+
     const headers    = data[0].map(h => h.toString().trim());
     const idCol      = headers.indexOf('ID/Barcode');
     const noCol      = headers.indexOf('Doc No');
-    const dateRcvdCol= headers.indexOf('Date Received');
     const statusCol  = headers.indexOf('Status');
+    // Pre-build a set of timestamp column indices so we format them differently
+    const tsColSet   = new Set(['Doc Time Stamp','PO Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
     const documents  = [];
-    const seenDocNos = new Set();
+    const seenIds    = new Set();
+
     for (let i = 1; i < data.length; i++) {
       const rowId = idCol !== -1 ? data[i][idCol] : data[i][0];
       if (!rowId || rowId.toString().trim() === '') continue;
-      const docNo = noCol !== -1 ? data[i][noCol] : data[i][2];
-      if (seenDocNos.has(docNo)) continue;
-      seenDocNos.add(docNo);
+      const rowIdStr = String(rowId).trim();
+      if (seenIds.has(rowIdStr)) continue;
+      seenIds.add(rowIdStr);
+
       const doc = {};
       for (let j = 0; j < headers.length; j++) {
-        const value = data[i][j];
-        if (value instanceof Date) {
-          const h = headers[j];
-          if (h === 'Doc Time Stamp' || h === 'PO Time Stamp') {
-            doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-          } else {
-            doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-          }
-        } else { doc[headers[j]] = value; }
+        const v = data[i][j];
+        if (v instanceof Date) {
+          // Pure JS formatting — no GAS API call, orders of magnitude faster
+          doc[headers[j]] = tsColSet.has(j) ? _fmtTs(v) : _fmtDate(v);
+        } else {
+          doc[headers[j]] = v;
+        }
       }
-      if (doc['Date Received']) doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
+      if (doc['Date Received']) {
+        doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
+      }
       documents.push(doc);
     }
-    try {
-      const json = JSON.stringify(documents);
-      if (json.length < 98304) CacheService.getScriptCache().put('all_docs', json, 30);
-    } catch(e) {}
+
+    _cacheSet('all_docs', JSON.stringify(documents));
     return documents;
   } catch (error) { Logger.log('getAllDocuments error: ' + error); return []; }
 }
 
 function addDocument(docData) {
   try {
-    if (checkDuplicateDocNo(docData.docNo)) {
+    // Use cached docs for duplicate check — avoids a cold sheet read
+    const cachedDocs = getAllDocuments();
+    if (cachedDocs.some(d => d['Doc No'] === docData.docNo)) {
       return { status: 'error', message: 'duplicate', docNo: docData.docNo };
     }
     const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -811,14 +882,19 @@ function addDocument(docData) {
 
 function updateDocument(docId, docData) {
   try {
-    if (checkDuplicateDocNo(docData.docNo, docId)) {
-      return { status: 'error', message: 'duplicate', docNo: docData.docNo };
-    }
+    // Use cached docs for duplicate check — avoids a full sheet read
+    const cachedDocs = getAllDocuments();
+    const dupExists = cachedDocs.some(d =>
+      d['Doc No'] === docData.docNo && d['ID/Barcode'] !== docId
+    );
+    if (dupExists) return { status: 'error', message: 'duplicate', docNo: docData.docNo };
+
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
-    ensureDocumentSheetHeaders(sheet);
-    const data = sheet.getDataRange().getValues();
+    // Skip ensureDocumentSheetHeaders() on update — headers never change mid-session
+    // and it costs a full sheet read. Only needed on addDocument (new sheets).
+    const data    = sheet.getDataRange().getValues();
     const headers = data[0].map(h => h.toString().trim());
     // Build column index map from actual headers (handles both old and new schemas)
     const colIdx = {};
@@ -1071,25 +1147,33 @@ function toggleUserStatus(tokenParam, targetEmail) {
 function getInitialData(token) {
   try {
     _doPostToken = token || _doPostToken;
-    const user      = getCurrentUser(token);
-    const docs      = getAllDocuments();
-    const opts      = getDropdownOptions();
+    const user = getCurrentUser(token);
+    const docs = getAllDocuments();
+    const opts = getDropdownOptions();
+    const logs = getAllActivityLogs();          // preload — no extra sheet read (cached)
+
+    // Preload users list for admin/manager so the Users tab opens instantly
+    let users = [];
+    if (user && user.permissions && user.permissions.manageUsers) {
+      try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
+    }
+
     // Compute stats from the already-loaded docs array (no extra sheet read)
     const stats = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
     (docs || []).forEach(doc => {
       stats.total++;
       const st = String(doc.Status || '').toLowerCase().trim();
-      if      (st.includes('forwarded'))                                  stats.outgoing++;
-      else if (st.includes('completed') || st.includes('complete'))      stats.complete++;
-      else                                                                stats.incoming++;
+      if      (st.includes('forwarded'))                             stats.outgoing++;
+      else if (st.includes('completed') || st.includes('complete')) stats.complete++;
+      else                                                           stats.incoming++;
       if (st.includes('received')) stats.received++;
       if (st.includes('hold'))     stats.hold++;
-      if (doc.Overdue && doc.Overdue !== 'On time')                      stats.overdue++;
+      if (doc.Overdue && doc.Overdue !== 'On time')                 stats.overdue++;
     });
-    return { user, docs, opts, stats };
+    return { user, docs, opts, stats, logs, users };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
-    return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {} };
+    return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {}, logs: [], users: [] };
   }
 }
 
@@ -1106,20 +1190,24 @@ function updateAllDropdownOptions(optionsObj, tokenParam) {
     }
     const ss = SpreadsheetApp.openById(SHEET_ID);
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
-    const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5 };
+
+    const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
+    // Build per-column value arrays
+    const cols = keys.map(k =>
+      [...new Set((optionsObj[k] || []).map(v => String(v).trim()).filter(v => v))]
+    );
+    const maxRows = Math.max(...cols.map(c => c.length), 1);
+
+    // Clear existing data rows (all 5 columns in one API call)
     const lastRow = configSheet.getLastRow();
-    // Clear all 5 columns at once then write back — fewer API calls
-    if (lastRow > 1) {
-      configSheet.getRange(2, 1, lastRow - 1, 5).clearContent();
-    }
-    Object.keys(columnMap).forEach(key => {
-      const values = (optionsObj[key] || []).map(v => String(v).trim()).filter(v => v);
-      const uniqueValues = [...new Set(values)];
-      if (uniqueValues.length > 0) {
-        const col = columnMap[key];
-        configSheet.getRange(2, col, uniqueValues.length, 1).setValues(uniqueValues.map(v => [v]));
-      }
-    });
+    if (lastRow > 1) configSheet.getRange(2, 1, lastRow - 1, 5).clearContent();
+
+    // Write all 5 columns in ONE setValues call (build 2D array)
+    const grid = Array.from({ length: maxRows }, (_, r) =>
+      cols.map(col => col[r] !== undefined ? col[r] : '')
+    );
+    configSheet.getRange(2, 1, maxRows, 5).setValues(grid);
+
     _invalidateDropdownCache();
     return { status: 'success', message: 'All dropdown options updated successfully' };
   } catch (error) {
