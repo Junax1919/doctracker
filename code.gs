@@ -75,13 +75,14 @@ function doPost(e) {
     const allowedMethods = [
       'checkLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
       'sendResetEmail', 'validateResetToken', 'setNewPassword',
-      'getDropdownOptions', 'updateDropdownOptions',
+      'getDropdownOptions', 'updateDropdownOptions', 'updateAllDropdownOptions',
       'getAllDocuments', 'getDocumentById', 'getDocumentStats',
       'addDocument', 'updateDocument', 'deleteDocument',
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
       'uploadPDFToGoogleDrive', 'getScriptUrl',
-      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus'
+      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus',
+      'getInitialData'
     ];
 
     if (!allowedMethods.includes(method)) {
@@ -149,7 +150,6 @@ function getDropdownOptions() {
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
     const ss = SpreadsheetApp.openById(SHEET_ID);
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
-    initializeConfigSheet();
     const data = configSheet.getDataRange().getValues();
     const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
     for (let i = 1; i < data.length; i++) {
@@ -279,6 +279,13 @@ function getCurrentUser(tokenParam) {
     const token = tokenParam || _doPostToken;
     const email = _validateSession(token);
     if (!email) return null;
+    // Short-lived user-object cache (60 s) — avoids repeated sheet reads within one
+    // browser session (initDashboard, logActivity, logDocumentHistory all call this).
+    const ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
+    try {
+      const hit = CacheService.getScriptCache().get(ck);
+      if (hit) return JSON.parse(hit);
+    } catch (e) {}
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(USERS_SHEET);
     if (!sheet) return null;
@@ -291,7 +298,9 @@ function getCurrentUser(tokenParam) {
       if (status.toLowerCase() === 'inactive') return null;
       const perms  = _getDefaultPermissions(role);
       try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
-      return { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms };
+      const user = { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms };
+      try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 60); } catch (e) {}
+      return user;
     }
     return null;
   } catch (error) { Logger.log('getCurrentUser error: ' + error); return null; }
@@ -1053,4 +1062,68 @@ function toggleUserStatus(tokenParam, targetEmail) {
     }
     return { status: 'error', message: 'User not found' };
   } catch (e) { Logger.log('toggleUserStatus error: ' + e); return { status: 'error', message: e.toString() }; }
+}
+
+// =====================================================================
+//  BATCH INIT — returns user + documents + dropdown options + stats
+//  in a single round-trip so initDashboard() only needs ONE server call.
+// =====================================================================
+function getInitialData(token) {
+  try {
+    _doPostToken = token || _doPostToken;
+    const user      = getCurrentUser(token);
+    const docs      = getAllDocuments();
+    const opts      = getDropdownOptions();
+    // Compute stats from the already-loaded docs array (no extra sheet read)
+    const stats = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
+    (docs || []).forEach(doc => {
+      stats.total++;
+      const st = String(doc.Status || '').toLowerCase().trim();
+      if      (st.includes('forwarded'))                                  stats.outgoing++;
+      else if (st.includes('completed') || st.includes('complete'))      stats.complete++;
+      else                                                                stats.incoming++;
+      if (st.includes('received')) stats.received++;
+      if (st.includes('hold'))     stats.hold++;
+      if (doc.Overdue && doc.Overdue !== 'On time')                      stats.overdue++;
+    });
+    return { user, docs, opts, stats };
+  } catch (e) {
+    Logger.log('getInitialData error: ' + e);
+    return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {} };
+  }
+}
+
+// =====================================================================
+//  BATCH DROPDOWN UPDATE — saves all 5 categories in ONE server call
+//  instead of 5 separate google.script.run calls.
+// =====================================================================
+function updateAllDropdownOptions(optionsObj, tokenParam) {
+  try {
+    const currentUser = getCurrentUser(tokenParam || _doPostToken);
+    const role = currentUser ? (currentUser.role || '').toLowerCase() : '';
+    if (role !== 'admin' && role !== 'manager') {
+      return { status: 'error', message: 'Access restricted to Admin or Manager' };
+    }
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
+    const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5 };
+    const lastRow = configSheet.getLastRow();
+    // Clear all 5 columns at once then write back — fewer API calls
+    if (lastRow > 1) {
+      configSheet.getRange(2, 1, lastRow - 1, 5).clearContent();
+    }
+    Object.keys(columnMap).forEach(key => {
+      const values = (optionsObj[key] || []).map(v => String(v).trim()).filter(v => v);
+      const uniqueValues = [...new Set(values)];
+      if (uniqueValues.length > 0) {
+        const col = columnMap[key];
+        configSheet.getRange(2, col, uniqueValues.length, 1).setValues(uniqueValues.map(v => [v]));
+      }
+    });
+    _invalidateDropdownCache();
+    return { status: 'success', message: 'All dropdown options updated successfully' };
+  } catch (error) {
+    Logger.log('updateAllDropdownOptions error: ' + error);
+    return { status: 'error', message: error.toString() };
+  }
 }
