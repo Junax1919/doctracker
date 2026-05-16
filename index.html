@@ -1738,7 +1738,11 @@
     .print-table th {
       background: #000000;
       color: #ffffff;
-      font-weight: 600
+      font-weight: 600;
+      text-align: center;
+      vertical-align: middle;
+      white-space: normal;
+      word-break: break-word
     }
 
     /* ---- MOBILE ---- */
@@ -3002,12 +3006,13 @@
                   <th>Action</th>
                   <th>User</th>
                   <th>Document ID</th>
+                  <th>Doc No</th>
                   <th>Description</th>
                 </tr>
               </thead>
               <tbody id="logsBody">
                 <tr>
-                  <td colspan="5" class="empty-state">Load logs from Activity Logs menu.</td>
+                  <td colspan="6" class="empty-state">Load logs from Activity Logs menu.</td>
                 </tr>
               </tbody>
             </table>
@@ -4776,17 +4781,71 @@
         applyLogFilters();
         return;
       }
-      document.getElementById('logsBody').innerHTML = '<tr><td colspan="5" class="empty-state">Loading logs...</td></tr>';
+      document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>';
       google.script.run
         .withSuccessHandler(function(logs) { allLogs = logs || []; applyLogFilters(); })
-        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load logs.</td></tr>'; })
+        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
         .getAllActivityLogs();
     }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
-    function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
-    function renderLogsTable(logs) { const tbody = document.getElementById('logsBody'); if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No logs found.</td></tr>'; return; } tbody.innerHTML = logs.map(log => `<tr><td>${log.Timestamp}</td><td>${log.Action}</td><td>${log.User}</td><td>${log.DocumentID || '-'}</td><td>${log.Details || '-'}</td></tr>`).join(''); }
+    function applyLogFilters() {
+      const from   = document.getElementById('logsFrom').value;
+      const to     = document.getElementById('logsTo').value;
+      const type   = document.getElementById('logsType').value.toLowerCase();
+      const search = document.getElementById('logsSearch').value.toLowerCase().trim();
+      // Build ID→DocNo map for search
+      const docNoMap = {};
+      (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = (d['Doc No'] || '').toLowerCase(); });
+      let filtered = allLogs.filter(log => {
+        const ts      = new Date(log.Timestamp);
+        const action  = log.Action.toLowerCase();
+        const details = (log.Details || '').toLowerCase();
+        const user    = (log.User || '').toLowerCase();
+        const doc     = (log.DocumentID || '').toLowerCase();
+        const docNo   = log.DocumentID ? (docNoMap[log.DocumentID] || '') : '';
+        let m = true;
+        if (from) m = m && ts >= new Date(from);
+        if (to) { const t2 = new Date(to); t2.setHours(23,59,59,999); m = m && ts <= t2; }
+        if (type) m = m && action.includes(type);
+        if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search) || docNo.includes(search));
+        return m;
+      });
+      renderLogsTable(filtered);
+    }
+    function renderLogsTable(logs) {
+      const tbody = document.getElementById('logsBody');
+      if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No logs found.</td></tr>'; return; }
+      // Build a quick ID→DocNo lookup from the in-memory allDocs array (zero server calls)
+      const docNoMap = {};
+      (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
+      tbody.innerHTML = logs.map(log => {
+        const docNo = log.DocumentID ? (docNoMap[log.DocumentID] || '') : '';
+        return `<tr>
+          <td>${log.Timestamp}</td>
+          <td>${log.Action}</td>
+          <td>${log.User}</td>
+          <td style="font-family:monospace;font-size:11px">${log.DocumentID || '-'}</td>
+          <td>${docNo || '-'}</td>
+          <td>${log.Details || '-'}</td>
+        </tr>`;
+      }).join('');
+    }
     function clearLogFilters() { ['logsSearch', 'logsFrom', 'logsTo'].forEach(id => document.getElementById(id).value = ''); document.getElementById('logsType').value = ''; applyLogFilters(); }
-    function exportLogsCSV() { const rows = [['Timestamp', 'Action', 'User', 'Document ID', 'Description']]; allLogs.forEach(l => rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', (l.Details || '').replace(/(\r\n|\n|\r)/gm, ' ')])); const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`; a.click(); }
+    function exportLogsCSV() {
+      const docNoMap = {};
+      (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
+      const rows = [['Timestamp', 'Action', 'User', 'Document ID', 'Doc No', 'Description']];
+      allLogs.forEach(l => {
+        const docNo = l.DocumentID ? (docNoMap[l.DocumentID] || '') : '';
+        rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', docNo, (l.Details || '').replace(/(\r\n|\n|\r)/gm, ' ')]);
+      });
+      const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
     ['logsFrom', 'logsTo', 'logsType'].forEach(id => document.getElementById(id).addEventListener('change', applyLogFilters));
     document.getElementById('logsSearch').addEventListener('input', applyLogFilters);
   </script>
@@ -4798,34 +4857,147 @@
     function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, eu = document.getElementById('printEndUserFilter') ? document.getElementById('printEndUserFilter').value : 'all', tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (eu !== 'all') d = d.filter(x => x.EndUser === eu || x['End User'] === eu); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
     function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 contenteditable="true" style="margin:0;font-size:16px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</h1><h2 contenteditable="true" style="margin:4px 0;font-size:14px;font-weight:normal;color:#374151">City of Ozamiz</h2><h3 style="margin:16px 0 8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h3><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
     function fmtAmt(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '&#8369;' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    // ── Column-width style blocks per report type ─────────────────────────────
+    // Each entry maps to a <colgroup> injected into the table.
+    // Widths must sum to 100. Description gets extra width in every report.
+    const _reportCols = {
+      summary: [
+        // DOC NO | PR DATE | AMOUNT | PO NO | PO DATE | PO AMT | DESCRIPTION | END USER | SUPPLIER | NOTES
+        { w: 9 }, { w: 7 }, { w: 7 }, { w: 8 }, { w: 7 }, { w: 7 }, { w: 20 }, { w: 9 }, { w: 12 }, { w: 14 }
+      ],
+      detailed: [
+        // DOC NO | PR DATE | AMT | PO NO | PO DATE | PO AMT | DESC | END USER | SUPPLIER | END.ACCTNG | END.CMO | DELIVERY | END.COA | END.CTO | NOTES
+        { w: 6 }, { w: 5 }, { w: 6 }, { w: 6 }, { w: 5 }, { w: 6 }, { w: 13 }, { w: 7 }, { w: 8 }, { w: 7 }, { w: 7 }, { w: 7 }, { w: 6 }, { w: 6 }, { w: 9 }
+      ],
+      overdue: [
+        // DOC NO | PR DATE | PO NO | PO DATE | DESCRIPTION | END USER | ENDORSED TO | STATUS | DATE RECEIVED | OVERDUE
+        { w: 8 }, { w: 7 }, { w: 8 }, { w: 7 }, { w: 22 }, { w: 10 }, { w: 10 }, { w: 8 }, { w: 10 }, { w: 10 }
+      ],
+      office: [
+        // DOC NO | DESCRIPTION | REQUISITIONER | STATUS | DATE RECEIVED | OVERDUE
+        { w: 10 }, { w: 30 }, { w: 18 }, { w: 12 }, { w: 16 }, { w: 14 }
+      ]
+    };
+
+    function _colgroup(cols) {
+      return '<colgroup>' + cols.map(c => `<col style="width:${c.w}%">`).join('') + '</colgroup>';
+    }
+
     function generateSummaryReport(data) {
       let h = getReportHeader('Summary Report');
-      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><div style="overflow-x:auto;"><table class="print-table"><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th><th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th></tr></thead><tbody>`;
+      const cg = _colgroup(_reportCols.summary);
+      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p>
+        <div style="overflow-x:auto;"><table class="print-table">${cg}<thead><tr>
+          <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th>
+        </tr></thead><tbody>`;
       let totalAmt = 0, totalPoAmt = 0;
       data.forEach(d => {
-        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
-        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+        const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td><td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td><td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td><td>${d.Supplier || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+        h += `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
+          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
+          <td>${d['PO Date']||'-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
+          <td>${d.Supplier||'-'}</td><td>${d.Notes||'-'}</td></tr>`;
       });
-      h += `<tr style="font-weight:bold;background:#f3f4f6;"><td colspan="2" style="text-align:right">GRAND TOTAL:</td><td style="text-align:right;color:#059669;">${fmtAmt(totalAmt)}</td><td colspan="2"></td><td style="text-align:right;color:#059669;">${fmtAmt(totalPoAmt)}</td><td colspan="4"></td></tr></tbody></table></div>`;
+      h += `<tr style="font-weight:bold;background:#f3f4f6;">
+          <td colspan="2" style="text-align:right">GRAND TOTAL:</td>
+          <td style="text-align:right;color:#059669">${fmtAmt(totalAmt)}</td>
+          <td colspan="2"></td>
+          <td style="text-align:right;color:#059669">${fmtAmt(totalPoAmt)}</td>
+          <td colspan="4"></td>
+        </tr></tbody></table></div>`;
       return h;
     }
+
     function generateDetailedReport(data) {
       let h = getReportHeader('Detailed Document List');
-      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p><div style="overflow-x:auto;"><table class="print-table"><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th><th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th><th>DATE END. TO COA</th><th>DATE END. TO CTO</th><th>NOTES</th></tr></thead><tbody>`;
+      const cg = _colgroup(_reportCols.detailed);
+      h += `<p style="margin-bottom:20px">Total Documents: <strong>${data.length}</strong></p>
+        <div style="overflow-x:auto;"><table class="print-table">${cg}<thead><tr>
+          <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th><th>PO AMOUNT</th>
+          <th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
+          <th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th>
+          <th>DATE END. TO COA</th><th>DATE END. TO CTO</th><th>NOTES</th>
+        </tr></thead><tbody>`;
       let totalAmt = 0, totalPoAmt = 0;
       data.forEach(d => {
-        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
-        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+        const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td><td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td><td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td><td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td><td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+        h += `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
+          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
+          <td>${d['PO Date']||'-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
+          <td>${d.Supplier||'-'}</td><td>${d['Date Endorsed To Acctng']||'-'}</td>
+          <td>${d['Date Endorsed From CMO']||'-'}</td><td>${d['Delivery Status']||'-'}</td>
+          <td>${d['Date Endorse To COA']||'-'}</td><td>${d['Date Endorse To CTO']||'-'}</td>
+          <td>${d.Notes||'-'}</td></tr>`;
       });
-      h += `<tr style="font-weight:bold;background:#f3f4f6;"><td colspan="2" style="text-align:right">GRAND TOTAL:</td><td style="text-align:right;color:#059669;">${fmtAmt(totalAmt)}</td><td colspan="2"></td><td style="text-align:right;color:#059669;">${fmtAmt(totalPoAmt)}</td><td colspan="9"></td></tr></tbody></table></div>`;
+      h += `<tr style="font-weight:bold;background:#f3f4f6;">
+          <td colspan="2" style="text-align:right">GRAND TOTAL:</td>
+          <td style="text-align:right;color:#059669">${fmtAmt(totalAmt)}</td>
+          <td colspan="2"></td>
+          <td style="text-align:right;color:#059669">${fmtAmt(totalPoAmt)}</td>
+          <td colspan="9"></td>
+        </tr></tbody></table></div>`;
       return h;
     }
-    function generateOverdueReport(data) { const od = data.filter(d => d.Overdue && d.Overdue !== 'On time'); let h = getReportHeader('Overdue Documents Report'); h += `<p style="margin-bottom:20px;color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>`; if (od.length === 0) return h + `<p style="text-align:center;padding:60px;color:#6b7280">&#10003; No overdue documents found!</p>`; h += `<table class="print-table"><thead><tr><th>ID</th><th>Type</th><th>Doc No</th><th>Description</th><th>Requisitioner</th><th>Office</th><th>Status</th><th>Date</th><th>Days Overdue</th></tr></thead><tbody>${od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d['Doc No'] || '-'}</td><td>${d.Description || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d['Endorsed To'] || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td></tr>`).join('')}</tbody></table>`; return h; }
-    function generateOfficeReport(data) { const groups = {}; data.forEach(d => { const o = d['Endorsed To'] || 'Unassigned'; if (!groups[o]) groups[o] = []; groups[o].push(d); }); let h = getReportHeader('Office/Department Report'); h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`; Object.keys(groups).sort().forEach(o => { const docs = groups[o]; h += `<div style="margin-bottom:30px;page-break-inside:avoid"><h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3><table class="print-table"><thead><tr><th>Doc No</th><th>Type</th><th>Requisitioner</th><th>Status</th><th>Date</th><th>Overdue</th></tr></thead><tbody>${docs.map(d => `<tr><td>${d['Doc No'] || '-'}</td><td>${d['Doc Type'] || '-'}</td><td>${d.Requisitioner || '-'}</td><td>${d.Status || '-'}</td><td>${d['Date Received'] || '-'}</td><td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'}">${d.Overdue || 'On time'}</td></tr>`).join('')}</tbody></table></div>`; }); return h; }
+
+    function generateOverdueReport(data) {
+      const od = data.filter(d => d.Overdue && d.Overdue !== 'On time');
+      let h = getReportHeader('Overdue Documents Report');
+      h += `<p style="margin-bottom:20px;color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>`;
+      if (od.length === 0) return h + `<p style="text-align:center;padding:60px;color:#6b7280">&#10003; No overdue documents found!</p>`;
+      const cg = _colgroup(_reportCols.overdue);
+      h += `<table class="print-table">${cg}<thead><tr>
+          <th>DOC NO</th><th>PR DATE</th><th>PO NO</th><th>PO DATE</th>
+          <th>DESCRIPTION</th><th>END USER</th><th>ENDORSED TO</th>
+          <th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th>
+        </tr></thead><tbody>`;
+      od.forEach(d => {
+        h += `<tr>
+          <td>${d['Doc No']||'-'}</td>
+          <td>${d['PR Date']||'-'}</td>
+          <td>${d['PO No']||'-'}</td>
+          <td>${d['PO Date']||'-'}</td>
+          <td>${d.Description||'-'}</td>
+          <td>${d.EndUser||d['End User']||'-'}</td>
+          <td>${d['Endorsed To']||'-'}</td>
+          <td>${d.Status||'-'}</td>
+          <td>${d['Date Received']||'-'}</td>
+          <td style="color:#dc2626;font-weight:700">${d.Overdue||'-'}</td>
+        </tr>`;
+      });
+      h += `</tbody></table>`;
+      return h;
+    }
+
+    function generateOfficeReport(data) {
+      const groups = {};
+      data.forEach(d => { const o = d['Endorsed To']||'Unassigned'; if(!groups[o]) groups[o]=[]; groups[o].push(d); });
+      let h = getReportHeader('Office/Department Report');
+      h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`;
+      const cg = _colgroup(_reportCols.office);
+      Object.keys(groups).sort().forEach(o => {
+        const docs = groups[o];
+        h += `<div style="margin-bottom:30px;page-break-inside:avoid">
+          <h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3>
+          <table class="print-table">${cg}<thead><tr>
+            <th>DOC NO</th><th>DESCRIPTION</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th>
+          </tr></thead><tbody>`;
+        docs.forEach(d => {
+          h += `<tr><td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
+            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td>
+            <td>${d['Date Received']||'-'}</td>
+            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td></tr>`;
+        });
+        h += `</tbody></table></div>`;
+      });
+      return h;
+    }
     function generateCustomReport(data) {
       const cols = {
         overdue: document.getElementById('pcol-overdue').checked,
@@ -4933,7 +5105,8 @@
         thead { display: table-header-group; }
         tbody tr { page-break-inside: avoid; }
         th { background: #000000 !important; color: #ffffff !important; font-weight: 700;
-             padding: 5px 4px; text-align: left; font-size: 9px; word-break: break-word;
+             padding: 5px 4px; text-align: center; vertical-align: middle;
+             font-size: 9px; white-space: normal; word-break: break-word;
              border: 1px solid #000;
              -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         td { padding: 4px; border: 1px solid #ddd; font-size: 9px; word-break: break-word; }
@@ -4961,7 +5134,7 @@
     }
 
     function printReport() {
-      generatePreview(); // also refreshes the in-page preview
+      generatePreview();
       const type = document.getElementById('reportType').value;
       const data = getPrintFilteredData();
       const now  = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
@@ -4969,11 +5142,17 @@
         <div style="font-size:14px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</div>
         <div style="font-size:12px;color:#374151;margin-top:2px">City of Ozamiz</div>`;
 
+      // Shared colgroup builder
+      function cg(widths) {
+        return '<colgroup>' + widths.map(w => `<col style="width:${w}%">`).join('') + '</colgroup>';
+      }
+
       let html = '';
+
       if (type === 'summary') {
         let totalAmt = 0, totalPoAmt = 0;
         const rows = data.map(d => {
-          const amt = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
           const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
           totalAmt += amt; totalPoAmt += poAmt;
           return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
@@ -4984,7 +5163,8 @@
         }).join('');
         html = orgHeader + `<h3>Summary Report</h3><p>As of ${now}</p></div>
           <p>Total Documents: <strong>${data.length}</strong></p>
-          <table><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <table>${cg([9,7,7,8,7,7,20,9,12,14])}
+          <thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th></tr></thead>
           <tbody>${rows}
           <tr class="grand-total"><td colspan="2" class="text-right">GRAND TOTAL:</td>
@@ -4995,7 +5175,7 @@
       } else if (type === 'detailed') {
         let totalAmt = 0, totalPoAmt = 0;
         const rows = data.map(d => {
-          const amt = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
           const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
           totalAmt += amt; totalPoAmt += poAmt;
           return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
@@ -5009,7 +5189,8 @@
         }).join('');
         html = orgHeader + `<h3>Detailed Document List</h3><p>As of ${now}</p></div>
           <p>Total Documents: <strong>${data.length}</strong></p>
-          <table><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <table>${cg([6,5,6,6,5,6,13,7,8,7,7,7,6,6,9])}
+          <thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
           <th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th>
           <th>DATE END. TO COA</th><th>DATE END. TO CTO</th><th>NOTES</th></tr></thead>
@@ -5021,27 +5202,43 @@
 
       } else if (type === 'overdue') {
         const od = data.filter(d => d.Overdue && d.Overdue !== 'On time');
-        const rows = od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode']||'-'}</td>
-          <td>${d['Doc Type']||'-'}</td><td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
-          <td>${d.Requisitioner||'-'}</td><td>${d['Endorsed To']||'-'}</td><td>${d.Status||'-'}</td>
-          <td>${d['Date Received']||'-'}</td><td class="text-danger">${d.Overdue||'-'}</td></tr>`).join('');
+        const rows = od.map(d => `<tr>
+          <td>${d['Doc No']||'-'}</td>
+          <td>${d['PR Date']||'-'}</td>
+          <td>${d['PO No']||'-'}</td>
+          <td>${d['PO Date']||'-'}</td>
+          <td>${d.Description||'-'}</td>
+          <td>${d.EndUser||d['End User']||'-'}</td>
+          <td>${d['Endorsed To']||'-'}</td>
+          <td>${d.Status||'-'}</td>
+          <td>${d['Date Received']||'-'}</td>
+          <td class="text-danger">${d.Overdue||'-'}</td>
+        </tr>`).join('');
         html = orgHeader + `<h3>Overdue Documents Report</h3><p>As of ${now}</p></div>
           <p style="color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>
-          ${od.length === 0 ? '<p style="text-align:center;padding:40px;color:#6b7280">&#10003; No overdue documents found!</p>' :
-          `<table><thead><tr><th>ID</th><th>TYPE</th><th>DOC NO</th><th>DESCRIPTION</th>
-          <th>REQUISITIONER</th><th>OFFICE</th><th>STATUS</th><th>DATE</th><th>DAYS OVERDUE</th></tr></thead>
-          <tbody>${rows}</tbody></table>`}`;
+          ${od.length === 0
+            ? '<p style="text-align:center;padding:40px;color:#6b7280">&#10003; No overdue documents found!</p>'
+            : `<table>${cg([8,7,8,7,22,10,10,8,10,10])}
+               <thead><tr><th>DOC NO</th><th>PR DATE</th><th>PO NO</th><th>PO DATE</th>
+               <th>DESCRIPTION</th><th>END USER</th><th>ENDORSED TO</th>
+               <th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th></tr></thead>
+               <tbody>${rows}</tbody></table>`}`;
 
       } else if (type === 'office') {
         const groups = {};
         data.forEach(d => { const o = d['Endorsed To']||'Unassigned'; if(!groups[o]) groups[o]=[]; groups[o].push(d); });
         const sections = Object.keys(groups).sort().map(o => {
           const docs = groups[o];
-          const rows = docs.map(d => `<tr><td>${d['Doc No']||'-'}</td><td>${d['Doc Type']||'-'}</td>
-            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td><td>${d['Date Received']||'-'}</td>
-            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td></tr>`).join('');
-          return `<div class="section-break"><div class="section-title">${o} (${docs.length} documents)</div>
-            <table><thead><tr><th>DOC NO</th><th>TYPE</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE</th><th>OVERDUE</th></tr></thead>
+          const rows = docs.map(d => `<tr>
+            <td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
+            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td>
+            <td>${d['Date Received']||'-'}</td>
+            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td>
+          </tr>`).join('');
+          return `<div class="section-break">
+            <div class="section-title">${o} (${docs.length} documents)</div>
+            <table>${cg([10,30,18,12,16,14])}
+            <thead><tr><th>DOC NO</th><th>DESCRIPTION</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th></tr></thead>
             <tbody>${rows}</tbody></table></div>`;
         }).join('');
         html = orgHeader + `<h3>Office/Department Report</h3><p>As of ${now}</p></div>
@@ -5049,9 +5246,8 @@
           ${sections}`;
 
       } else if (type === 'custom') {
-        // Reuse the in-page generateCustomReport but strip the wrapper (it generates table HTML)
         const previewContent = document.getElementById('reportPreview').innerHTML;
-        html = previewContent; // already generated by generatePreview() above
+        html = previewContent;
         _openPrintWindow('Custom Report', html);
         return;
       }
