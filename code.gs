@@ -633,7 +633,7 @@ function getAllActivityLogs() {
     }
     try {
       const json = JSON.stringify(logs);
-      if (json.length < 98304) cache.put('all_activity_logs', json, 30);
+      if (json.length < 98304) cache.put('all_activity_logs', json, 120);
     } catch(e) {}
     return logs;
   } catch (error) { Logger.log('getAllActivityLogs error: ' + error); return []; }
@@ -775,12 +775,12 @@ function _cacheSet(key, json) {
     const cache = CacheService.getScriptCache();
     const CHUNK = 99000;
     if (json.length <= CHUNK) {
-      cache.put(key, json, 300);
-      cache.put(key + '_n', '1', 300);
+      cache.put(key, json, 600);
+      cache.put(key + '_n', '1', 600);
     } else {
       const n = Math.ceil(json.length / CHUNK);
-      for (let i = 0; i < n; i++) cache.put(key + '_' + i, json.slice(i*CHUNK, (i+1)*CHUNK), 300);
-      cache.put(key + '_n', String(n), 300);
+      for (let i = 0; i < n; i++) cache.put(key + '_' + i, json.slice(i*CHUNK, (i+1)*CHUNK), 600);
+      cache.put(key + '_n', String(n), 600);
     }
   } catch(e) {}
 }
@@ -1210,40 +1210,125 @@ function getInitialData(token) {
   try {
     _doPostToken = token || _doPostToken;
     const user = getCurrentUser(token);
-    const docs = getAllDocuments();
-    const opts = getDropdownOptions();
-    // Activity logs deferred — fetched on-demand when Logs tab is opened.
-    // This removes the heaviest read from the cold-start path.
-    // We only preload if already cached (fast, < 1 ms).
-    let logs = [];
-    try {
-      const cached = CacheService.getScriptCache().get('all_activity_logs');
-      if (cached) logs = JSON.parse(cached);
-    } catch(e) {}
+    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {}, logs: [], users: [] };
 
-    // Preload users list for admin/manager so the Users tab opens instantly
+    // ── Fast path: serve entirely from cache ─────────────────────────────────
+    const cache    = CacheService.getScriptCache();
+    const docsCached = _cacheGet('all_docs');
+    const optsCached = cache.get('dropdown_opts');
+
+    if (docsCached && optsCached) {
+      // All data cached — zero sheet reads, returns in ~100ms
+      try {
+        const docs = JSON.parse(docsCached);
+        const opts = JSON.parse(optsCached);
+        let logs = [];
+        try { const lc = cache.get('all_activity_logs'); if (lc) logs = JSON.parse(lc); } catch(e) {}
+        let users = [];
+        if (user.permissions && user.permissions.manageUsers) {
+          try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
+        }
+        const stats = _computeStatsGAS(docs);
+        return { user, docs, opts, stats, logs, users };
+      } catch(e) {
+        // Cache parse error — fall through to cold path
+      }
+    }
+
+    // ── Cold path: read all needed sheets in ONE batch ────────────────────────
+    // Load all sheet data in one pass rather than sheet-by-sheet
+    const ss     = _getSS();
+    const sheets = ss.getSheets();
+    const sheetMap = {};
+    sheets.forEach(s => { sheetMap[s.getName()] = s; });
+
+    // Read docs sheet
+    let docs = [];
+    if (!docsCached) {
+      const docSheet = sheetMap[DOCS_SHEET];
+      if (docSheet) docs = _parseDocsSheet(docSheet);
+    } else {
+      try { docs = JSON.parse(docsCached); } catch(e) { docs = []; }
+    }
+
+    // Read config/dropdown sheet
+    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
+    if (!optsCached) {
+      const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
+      if (cfgSheet) {
+        const cfgData = cfgSheet.getDataRange().getValues();
+        for (let i = 1; i < cfgData.length; i++) {
+          if (cfgData[i][0]) opts.docTypes.push(cfgData[i][0]);
+          if (cfgData[i][1]) opts.suppliers.push(cfgData[i][1]);
+          if (cfgData[i][2]) opts.offices.push(cfgData[i][2]);
+          if (cfgData[i][3]) opts.statuses.push(cfgData[i][3]);
+          if (cfgData[i][4]) opts.endUsers.push(cfgData[i][4]);
+        }
+        try { cache.put('dropdown_opts', JSON.stringify(opts), 600); } catch(e) {}
+      }
+    } else {
+      try { opts = JSON.parse(optsCached); } catch(e) {}
+    }
+
+    // Logs: only from cache (not read on cold path — too slow for startup)
+    let logs = [];
+    try { const lc = cache.get('all_activity_logs'); if (lc) logs = JSON.parse(lc); } catch(e) {}
+
+    // Users: only for admin/manager
     let users = [];
-    if (user && user.permissions && user.permissions.manageUsers) {
+    if (user.permissions && user.permissions.manageUsers) {
       try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
     }
 
-    // Compute stats from the already-loaded docs array (no extra sheet read)
-    const stats = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
-    (docs || []).forEach(doc => {
-      stats.total++;
-      const st = String(doc.Status || '').toLowerCase().trim();
-      if      (st.includes('forwarded'))                             stats.outgoing++;
-      else if (st.includes('completed') || st.includes('complete')) stats.complete++;
-      else                                                           stats.incoming++;
-      if (st.includes('received')) stats.received++;
-      if (st.includes('hold'))     stats.hold++;
-      if (doc.Overdue && doc.Overdue !== 'On time')                 stats.overdue++;
-    });
+    const stats = _computeStatsGAS(docs);
     return { user, docs, opts, stats, logs, users };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
     return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {}, logs: [], users: [] };
   }
+}
+
+// Pure-GAS stats computation (mirrors client-side _computeStats)
+function _computeStatsGAS(docs) {
+  const s = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
+  (docs || []).forEach(doc => {
+    s.total++;
+    const st = String(doc.Status || '').toLowerCase().trim();
+    if      (st.includes('forwarded'))                             s.outgoing++;
+    else if (st.includes('completed') || st.includes('complete')) s.complete++;
+    else                                                           s.incoming++;
+    if (st.includes('received')) s.received++;
+    if (st.includes('hold'))     s.hold++;
+    if (doc.Overdue && doc.Overdue !== 'On time')                 s.overdue++;
+  });
+  return s;
+}
+
+// Parse a document sheet into the standard docs array (extracted from getAllDocuments)
+function _parseDocsSheet(sheet) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+  const headers   = data[0].map(h => h.toString().trim());
+  const idCol     = headers.indexOf('ID/Barcode');
+  const tsColSet  = new Set(['Doc Time Stamp','PO Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
+  const seenIds   = new Set();
+  const documents = [];
+  for (let i = 1; i < data.length; i++) {
+    const rowId = idCol !== -1 ? data[i][idCol] : data[i][0];
+    if (!rowId || rowId.toString().trim() === '') continue;
+    const rowIdStr = String(rowId).trim();
+    if (seenIds.has(rowIdStr)) continue;
+    seenIds.add(rowIdStr);
+    const doc = {};
+    for (let j = 0; j < headers.length; j++) {
+      const v = data[i][j];
+      doc[headers[j]] = (v instanceof Date) ? (tsColSet.has(j) ? _fmtTs(v) : _fmtDate(v)) : v;
+    }
+    if (doc['Date Received']) doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
+    documents.push(doc);
+  }
+  _cacheSet('all_docs', JSON.stringify(documents));
+  return documents;
 }
 
 // =====================================================================

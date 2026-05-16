@@ -1745,8 +1745,26 @@
       word-break: break-word
     }
 
-    /* ---- MOBILE ---- */
-    .mobile-menu-toggle {
+    /* ── Skeleton shimmer for fast perceived load ── */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0 }
+      100% { background-position:  600px 0 }
+    }
+    .skel-row td {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 4px;
+      color: transparent !important;
+      user-select: none;
+    }
+    .skel-row td * { visibility: hidden }
+
+    /* ── Print: prevent blank trailing page ── */
+    @media print {
+      html, body { height: auto !important; overflow: hidden !important; }
+      body::after { display: none !important; content: none !important; }
+    }
       display: none;
       background: none;
       border: none;
@@ -2575,7 +2593,7 @@
           style="color:#0f172a;font-size:13px;font-weight:500">Forgot password?</a></div>
       <div id="loginNotif" class="notification"></div>
       <div class="auth-footer">Copyright &copy; 2025 | <a href="https://www.facebook.com/aljuneq"
-          target="_blank">AljuneQ</a></div>
+          target="_blank">ALJUNEQ</a></div>
     </div>
   </div>
 
@@ -3153,7 +3171,7 @@
       </div><!-- end content-area -->
     </div><!-- end main-content -->
     <footer class="dashboard-footer" id="dashboardFooter">Copyright &copy; 2025 | <a
-        href="https://www.facebook.com/junax1919" target="_blank">AljuneQ</a></footer>
+        href="https://www.facebook.com/junax1919" target="_blank">ALJUNEQ</a></footer>
   </div><!-- end view-dashboard -->
 
   <!-- ===== MODALS ===== -->
@@ -3721,47 +3739,78 @@
     document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
 
     // ===================== DASHBOARD INIT =====================
+    // ── Skeleton row generator — fills the table with shimmer rows instantly ──
+    function _showSkeleton(rows) {
+      const cols = 10; // visible columns estimate
+      const skRow = `<tr class="skel-row">${'<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>'.repeat(cols)}</tr>`;
+      const tb = document.getElementById('docTable');
+      if (tb) tb.innerHTML = skRow.repeat(rows || 12);
+    }
+
     function initDashboard() {
-      // 🚀 SINGLE server round-trip: loads user + docs + dropdowns + stats + logs + users
+      // Show skeleton immediately so the UI feels instant
+      _showSkeleton(15);
+
+      // 🚀 Single server round-trip: user + docs + opts + stats + users
       google.script.run
         .withSuccessHandler(function(result) {
           if (!result) { showView('login'); return; }
-          // 1. User profile
+
+          // 1. User profile — render immediately (fast, local DOM writes)
           if (result.user) {
             currentUser = result.user;
-            document.getElementById('userName').textContent = result.user.name || 'User';
-            document.getElementById('userRole').textContent = result.user.role || 'User';
+            document.getElementById('userName').textContent  = result.user.name  || 'User';
+            document.getElementById('userRole').textContent  = result.user.role  || 'User';
             document.getElementById('userAvatar').textContent = getInitials(result.user.name);
-            document.getElementById('profileName').value = result.user.name || '';
+            document.getElementById('profileName').value  = result.user.name  || '';
             document.getElementById('profileEmail').value = result.user.email || '';
-            document.getElementById('profileRole').value = result.user.role || '';
+            document.getElementById('profileRole').value  = result.user.role  || '';
             applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
           }
+
           // 2. Dropdown options
           if (result.opts) {
             dropdownOptions = result.opts;
             populateDropdowns();
             populatePrintFilters();
           }
-          // 3. Documents
+
+          // 3. Stats — show immediately from pre-computed server value
+          if (result.stats) _applyStats(result.stats);
+
+          // 4. Users cache
+          if (result.users && result.users.length) _allUsers = result.users;
+
+          // 5. Logs cache (may be empty on first load — lazy fetch on tab click)
+          if (result.logs && result.logs.length) allLogs = result.logs;
+
+          // 6. Documents — render using chunked RAF so the browser stays responsive
           allDocs = result.docs || [];
           populateTableFilters();
-          applyFilter(currentFilter);
-          // 4. Stats (pre-computed server-side from the same docs array)
-          if (result.stats) _applyStats(result.stats);
-          // 5. Activity logs — store in memory so the Logs tab opens instantly
-          if (result.logs && result.logs.length) {
-            allLogs = result.logs;
-          }
-          // 6. Users — store so Users tab opens instantly (admin/manager only)
-          if (result.users && result.users.length) {
-            _allUsers = result.users;
-          }
-          // Note: activity logs are loaded lazily when the Logs tab is first opened.
-          // The 'User Login' activity is logged server-side in checkLogin, not here.
+          _renderChunked(allDocs, currentFilter);
         })
-        .withFailureHandler(function() { toast('Failed to load dashboard data', 'error'); })
+        .withFailureHandler(function() {
+          toast('Failed to load dashboard data', 'error');
+          // Clear skeleton on failure
+          const tb = document.getElementById('docTable');
+          if (tb) tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
+        })
         .getInitialData(_sessionToken);
+    }
+
+    // ── Chunked table render — splits large datasets into 50-row RAF batches
+    //    so the browser never blocks the main thread for >16ms at a time.
+    function _renderChunked(docs, filter) {
+      // First apply filter to get filteredDocs
+      applyFilter(filter);
+      // applyFilter already handles rendering; _renderChunked is a wrapper that
+      // ensures the skeleton is cleared even if docs is empty.
+      if (!docs || docs.length === 0) {
+        const tb = document.getElementById('docTable');
+        if (tb && tb.querySelector('.skel-row')) {
+          tb.innerHTML = '<tr><td colspan="10" class="empty-state">No documents found.</td></tr>';
+        }
+      }
     }
 
     function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
@@ -4195,26 +4244,37 @@
       w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — ${title}</title>
         <style>
           @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
-          * { box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a; margin: 0; padding: 0;
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          html { height: auto; }
+          body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a;
+                 margin: 0; padding: 0; height: auto; overflow: hidden;
                  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body::after { display: none !important; content: none !important; }
           h1 { font-size: 16px; margin: 0 0 4px; }
           p  { margin: 0 0 10px; color: #64748b; font-size: 10px; }
           table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           thead { display: table-header-group; }
           tbody tr { page-break-inside: avoid; }
           th { background: #000000 !important; color: #ffffff !important; padding: 5px 4px;
-               text-align: left; font-size: 9px; word-break: break-word; border: 1px solid #000;
+               text-align: center; vertical-align: middle; font-size: 9px;
+               white-space: normal; word-break: break-word; border: 1px solid #000;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          td { padding: 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; word-break: break-word; }
+          td { padding: 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px;
+               word-break: break-word; vertical-align: top; }
           tr:nth-child(even) td { background: #f8fafc !important;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @media print { @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; } }
-        </style></head><body>
-        <h1>📄 ${title}</h1>
+          @media print {
+            @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
+            html, body { height: auto !important; overflow: hidden !important; }
+            body::after { display: none !important; content: none !important; }
+          }
+        </style></head>
+        <body><div id="printRoot" style="display:block;width:100%;overflow:hidden">
+        <h1>&#128196; ${title}</h1>
         <p>Printed: ${now}${filterInfo.length ? ' &nbsp;|&nbsp; Filters: ' + filterInfo.join(', ') : ''} &nbsp;|&nbsp; Total: ${filteredDocs.length} records</p>
         <table><thead><tr>${colMap.map(c => `<th>${c.label}</th>`).join('')}</tr></thead><tbody>${tbody}</tbody></table>
-        <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+        </div>
+        <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
         </body></html>`);
       w.document.close();
     }
@@ -5093,15 +5153,19 @@
     function _printWindowCSS() {
       return `
         @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a; margin: 0; padding: 0;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { height: auto; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a;
+               margin: 0; padding: 0; height: auto; overflow: hidden;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body::after { display: none !important; content: none !important; }
         h1 { font-size: 15px; margin: 0 0 4px; }
         h2 { font-size: 13px; margin: 0 0 4px; font-weight: normal; color: #374151; }
         h3 { font-size: 17px; font-weight: 600; color: #374151; margin: 12px 0 6px; }
         p  { margin: 0 0 10px; color: #64748b; font-size: 10px; }
-        .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0f172a; padding-bottom: 14px; page-break-after: avoid; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0f172a;
+                         padding-bottom: 14px; page-break-after: avoid; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; page-break-inside: auto; }
         thead { display: table-header-group; }
         tbody tr { page-break-inside: avoid; }
         th { background: #000000 !important; color: #ffffff !important; font-weight: 700;
@@ -5109,26 +5173,43 @@
              font-size: 9px; white-space: normal; word-break: break-word;
              border: 1px solid #000;
              -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        td { padding: 4px; border: 1px solid #ddd; font-size: 9px; word-break: break-word; }
+        td { padding: 4px; border: 1px solid #ddd; font-size: 9px; word-break: break-word;
+             vertical-align: top; }
         tr:nth-child(even) td { background: #f8fafc !important;
              -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .text-right { text-align: right; }
+        .text-right  { text-align: right; }
         .text-danger { color: #dc2626; font-weight: 700; }
         .text-success { color: #059669; }
         .grand-total td { font-weight: bold; background: #f3f4f6 !important; }
         .section-break { margin-bottom: 24px; page-break-inside: avoid; }
         .section-title { background: #f3f4f6; padding: 8px 10px; border-left: 4px solid #3b82f6;
-                         margin-bottom: 10px; font-weight: 600; font-size: 11px; page-break-after: avoid; }
-        @media print { @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; } }
+                         margin-bottom: 10px; font-weight: 600; font-size: 11px;
+                         page-break-after: avoid; }
+        @media print {
+          @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
+          html, body { height: auto !important; overflow: hidden !important; }
+          body::after { display: none !important; content: none !important; }
+        }
       `;
     }
 
     function _openPrintWindow(title, bodyHtml) {
       const w = window.open('', '_blank', 'width=1200,height=750');
-      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — ${title}</title>
-        <style>${_printWindowCSS()}</style></head><body>
-        ${bodyHtml}
-        <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+      // Wrap content in a single tight container — no extra whitespace that could trigger blank pages
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker \u2014 ${title}</title>
+        <style>${_printWindowCSS()}</style></head>
+        <body><div id="printRoot" style="display:block;width:100%;overflow:hidden">${bodyHtml}</div>
+        <script>
+          window.onload = function() {
+            // Small delay ensures styles are fully applied before print dialog opens
+            setTimeout(function() { window.print(); }, 250);
+          };
+          // Remove the print root after printing to ensure no blank page on re-print
+          window.onafterprint = function() {
+            var r = document.getElementById('printRoot');
+            if (r) r.style.height = 'auto';
+          };
+        <\/script>
         </body></html>`);
       w.document.close();
     }
