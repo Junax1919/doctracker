@@ -3427,11 +3427,10 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxwF6rC9DK12Bhj0b9UIzh7NhXqeLyE7XcaW87K-3wJNfRcbfXYuPZMaSLxvFOpoR-f/exec';
 
     (function () {
-      if (typeof google !== 'undefined' && google.script) return; // real GAS env → skip
-
-      // Session persistence: store the logged-in user's email in localStorage
+      if (typeof google !== 'undefined' && google.script) return; // real GAS env → skip shim
+      // Session persistence: store the logged-in user's session token in localStorage
       // so it survives page reloads. Every API call includes it so the backend
-      // can restore PropertiesService.getUserProperties() correctly.
+      // can restore the session correctly.
       const SESSION_KEY = 'docutracker_session_token';
 
       function getSessionToken() {
@@ -3657,13 +3656,48 @@
 
     // ===================== DASHBOARD INIT =====================
     function initDashboard() {
-      loadUserProfile(); loadDropdownOptions(); loadDocs();
-      try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
+      // 🚀 SINGLE server round-trip: loads user + docs + dropdowns + stats in ONE call
+      // Previously this was 5 separate google.script.run calls (getCurrentUser,
+      // getDropdownOptions, getAllDocuments, getDocumentStats x2) = ~6 s cold start.
+      // Now it's 1 call = ~1.5 s.
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result) { showView('login'); return; }
+          // 1. User profile
+          if (result.user) {
+            currentUser = result.user;
+            document.getElementById('userName').textContent = result.user.name || 'User';
+            document.getElementById('userRole').textContent = result.user.role || 'User';
+            document.getElementById('userAvatar').textContent = getInitials(result.user.name);
+            document.getElementById('profileName').value = result.user.name || '';
+            document.getElementById('profileEmail').value = result.user.email || '';
+            document.getElementById('profileRole').value = result.user.role || '';
+            applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
+          }
+          // 2. Dropdown options
+          if (result.opts) {
+            dropdownOptions = result.opts;
+            populateDropdowns();
+            populatePrintFilters();
+          }
+          // 3. Documents
+          allDocs = result.docs || [];
+          populateTableFilters();
+          applyFilter(currentFilter);
+          // 4. Stats (pre-computed server-side from the same docs array)
+          if (result.stats) {
+            _applyStats(result.stats);
+          }
+          try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
+        })
+        .withFailureHandler(function() { toast('Failed to load dashboard data', 'error'); })
+        .getInitialData(_sessionToken);
     }
 
     function getInitials(name) { if (!name) return 'AD'; const p = name.trim().split(' '); return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : name.substring(0, 2)).toUpperCase(); }
 
     function loadUserProfile() {
+      // Kept for compatibility (e.g., after saveProfile). Fetches fresh user data.
       google.script.run.withSuccessHandler(user => {
         if (!user) return;
         currentUser = user;
@@ -3702,6 +3736,52 @@
       google.script.run.withSuccessHandler(opts => { dropdownOptions = opts; populateDropdowns(); populatePrintFilters(); }).getDropdownOptions();
     }
 
+    // ===================== DOCUMENTS =====================
+    function loadDocs() {
+      document.getElementById('docTable').innerHTML = '<tr><td colspan="27" class="loading">Loading...</td></tr>';
+      google.script.run
+        .withSuccessHandler(d => {
+          allDocs = d || [];
+          populateTableFilters();
+          applyFilter(currentFilter);
+          // Compute stats locally — no extra server round-trip needed
+          _applyStats(_computeStats(allDocs));
+          updateBadges();
+        })
+        .withFailureHandler(() => toast('Failed to load', 'error'))
+        .getAllDocuments();
+    }
+
+    // Compute document statistics purely from the local allDocs array (0 ms, no server call)
+    function _computeStats(docs) {
+      const s = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
+      (docs || []).forEach(doc => {
+        s.total++;
+        const st = String(doc.Status || '').toLowerCase().trim();
+        if      (st.includes('forwarded'))                              s.outgoing++;
+        else if (st.includes('completed') || st.includes('complete'))  s.complete++;
+        else                                                            s.incoming++;
+        if (st.includes('received')) s.received++;
+        if (st.includes('hold'))     s.hold++;
+        if (doc.Overdue && doc.Overdue !== 'On time')                  s.overdue++;
+      });
+      return s;
+    }
+
+    // Apply a stats object to the stat cards in the UI
+    function _applyStats(s) {
+      if (!s) return;
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || 0; };
+      set('stat-total',    s.total);
+      set('stat-incoming', s.incoming);
+      set('stat-outgoing', s.outgoing);
+      set('stat-complete', s.complete);
+      set('stat-overdue',  s.overdue);
+      ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
+        const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k] || 0;
+      });
+    }
+
     function populateDropdowns() {
       const getVal = id => { const el = document.getElementById(id); return el ? el.value : null; };
       const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -3730,21 +3810,6 @@
       }
     }
 
-    // ===================== DOCUMENTS =====================
-    function loadDocs() {
-      document.getElementById('docTable').innerHTML = '<tr><td colspan="27" class="loading">Loading...</td></tr>';
-      google.script.run
-        .withSuccessHandler(d => {
-          allDocs = d || [];
-          populateTableFilters(); // rebuild filter dropdowns from real data
-          applyFilter(currentFilter);
-          updateStats();
-          updateBadges();
-        })
-        .withFailureHandler(() => toast('Failed to load', 'error'))
-        .getAllDocuments();
-    }
-
     // Populate the three toolbar filter dropdowns from the actual data
     function populateTableFilters() {
       const unique = (key) => [...new Set(allDocs.map(d => (d[key] || '').trim()).filter(Boolean))].sort();
@@ -3768,21 +3833,9 @@
       fill('filterEndUser', unique('EndUser'), 'All End Users');
     }
 
-    function updateStats() {
-      google.script.run.withSuccessHandler(s => {
-        document.getElementById('stat-total').textContent = s.total || 0;
-        document.getElementById('stat-incoming').textContent = s.incoming || 0;
-        document.getElementById('stat-outgoing').textContent = s.outgoing || 0;
-        document.getElementById('stat-complete').textContent = s.complete || 0;
-        document.getElementById('stat-overdue').textContent = s.overdue || 0;
-      }).getDocumentStats();
-    }
-
-    function updateBadges() {
-      google.script.run.withSuccessHandler(s => {
-        ['total', 'incoming', 'received', 'outgoing', 'hold', 'complete'].forEach(k => { document.getElementById('badge-' + k).textContent = s[k] || 0; });
-      }).getDocumentStats();
-    }
+    // updateStats / updateBadges — now compute from in-memory allDocs (instant, no server call)
+    function updateStats()  { _applyStats(_computeStats(allDocs)); }
+    function updateBadges() { _applyStats(_computeStats(allDocs)); }
 
     // applyTableFilters() — called by the toolbar dropdown onchange events.
     // Reads the three filter selects, updates activeFilters, then re-runs
@@ -4216,10 +4269,80 @@
       } else saveDocumentData(data);
     }
     function saveDocumentData(data) {
-      if (isEdit) { const id = document.getElementById('editId').value; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Updated!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Update failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).updateDocument(id, data); }
-      else { google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Added!'); closeModal(); loadDocs(); } else if (r.message === 'duplicate') { toast(`Document Number "${r.docNo}" already exists!`, 'error'); document.getElementById('docNoError').textContent = 'Value already exists'; document.getElementById('docNoError').style.display = 'block'; } else toast('Add failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).addDocument(data); }
+      if (isEdit) {
+        const id = document.getElementById('editId').value;
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              // Update local store instantly — no server round-trip for reload
+              const idx = allDocs.findIndex(d => d['ID/Barcode'] === id);
+              if (idx !== -1) {
+                // Merge the saved fields into the existing record
+                const existing = allDocs[idx];
+                allDocs[idx] = Object.assign({}, existing, {
+                  'Doc Type': data.docType, 'Doc No': data.docNo, 'Description': data.description,
+                  'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+                  'PR Date': data.prDate, 'EndUser': data.endUser, 'PO No': data.poNo,
+                  'PO Date': data.poDate,
+                  'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+                  'Supplier': data.supplier, 'Requisitioner': data.requisitioner,
+                  'Endorsed To': data.office, 'Status': data.status, 'Notes': data.notes,
+                  'Date Received From BAC': data.dateReceivedFromBAC,
+                  'Date Endorsed To Acctng': data.dateEndorsedToAcctng,
+                  'Date Endorsed From CMO': data.dateEndorsedFromCMO,
+                  'Delivery Status': data.deliveryStatus,
+                  'Date Endorse To COA': data.dateEndorseToCOA,
+                  'Date Endorse To CTO': data.dateEndorseToCTO,
+                  'PDF Link': data.pdfLink || existing['PDF Link'] || ''
+                });
+              }
+              toast('Updated!');
+              closeModal();
+              populateTableFilters();
+              applyFilter(currentFilter);
+              updateStats();
+            } else if (r.message === 'duplicate') {
+              toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              document.getElementById('docNoError').textContent = 'Value already exists';
+              document.getElementById('docNoError').style.display = 'block';
+            } else toast('Update failed', 'error');
+          })
+          .withFailureHandler(() => toast('Error', 'error'))
+          .updateDocument(id, data);
+      } else {
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              // Reload docs to get the server-generated ID/Barcode and timestamps
+              toast('Added! Refreshing...');
+              closeModal();
+              loadDocs();
+            } else if (r.message === 'duplicate') {
+              toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              document.getElementById('docNoError').textContent = 'Value already exists';
+              document.getElementById('docNoError').style.display = 'block';
+            } else toast('Add failed', 'error');
+          })
+          .withFailureHandler(() => toast('Error', 'error'))
+          .addDocument(data);
+      }
     }
-    function deleteDoc(id) { if (!confirm('Delete this document?')) return; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Deleted!'); loadDocs(); } else toast('Delete failed', 'error'); }).withFailureHandler(() => toast('Error', 'error')).deleteDocument(id); }
+    function deleteDoc(id) {
+      if (!confirm('Delete this document?')) return;
+      google.script.run
+        .withSuccessHandler(r => {
+          if (r.status === 'success') {
+            // Remove from local store instantly
+            allDocs = allDocs.filter(d => d['ID/Barcode'] !== id);
+            toast('Deleted!');
+            populateTableFilters();
+            applyFilter(currentFilter);
+            updateStats();
+          } else toast('Delete failed', 'error');
+        })
+        .withFailureHandler(() => toast('Error', 'error'))
+        .deleteDocument(id);
+    }
     function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
     function removeFile() { selectedFile = null; document.getElementById('pdfInput').value = ''; document.getElementById('fileUploadArea').classList.remove('has-file'); document.getElementById('fileInfo').style.display = 'none'; }
 
@@ -4267,43 +4390,44 @@
     }
 
     // ===================== ADMIN =====================
-    function openAdminSettings() { const r = currentUser ? (currentUser.role || '').toLowerCase() : ''; if (r !== 'admin' && r !== 'manager') { toast('Access restricted to Admin or Manager', 'error'); return; } google.script.run.withSuccessHandler(opts => { document.getElementById('adminDocTypes').value = opts.docTypes.join('\n'); document.getElementById('adminSuppliers').value = opts.suppliers.join('\n'); document.getElementById('adminOffices').value = opts.offices.join('\n'); document.getElementById('adminStatuses').value = opts.statuses.join('\n'); const euEl = document.getElementById('adminEndUsers'); if (euEl) euEl.value = (opts.endUsers || []).join('\n'); showModal('adminModal'); }).withFailureHandler(() => toast('Failed to load settings', 'error')).getDropdownOptions(); }
+    function openAdminSettings() {
+      const r = currentUser ? (currentUser.role || '').toLowerCase() : '';
+      if (r !== 'admin' && r !== 'manager') { toast('Access restricted to Admin or Manager', 'error'); return; }
+      // 🚀 Use already-loaded dropdownOptions — no server round-trip needed
+      const opts = dropdownOptions;
+      document.getElementById('adminDocTypes').value  = (opts.docTypes  || []).join('\n');
+      document.getElementById('adminSuppliers').value = (opts.suppliers || []).join('\n');
+      document.getElementById('adminOffices').value   = (opts.offices   || []).join('\n');
+      document.getElementById('adminStatuses').value  = (opts.statuses  || []).join('\n');
+      const euEl = document.getElementById('adminEndUsers');
+      if (euEl) euEl.value = (opts.endUsers || []).join('\n');
+      showModal('adminModal');
+    }
     function closeAdminModal() { hideModal('adminModal'); }
     function saveAdminSettings() {
-      const ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'];
-      const keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'];
-      let done = 0;
-      let hasError = false;
-      
-      keys.forEach((key, i) => {
-        const el = document.getElementById(ids[i]);
-        const vals = el ? el.value.split('\n').filter(l => l.trim()) : [];
-        
-        google.script.run
-          .withSuccessHandler((res) => {
-            if (res && res.status === 'error') {
-              if (!hasError) {
-                toast('Error saving ' + key + ': ' + res.message, 'error');
-                hasError = true;
-              }
-            }
-            if (++done === 5) {
-              if (!hasError) {
-                toast('All settings saved!');
-                closeAdminModal();
-              }
-              loadDropdownOptions();
-            }
-          })
-          .withFailureHandler((err) => {
-            if (!hasError) {
-              toast('Network error saving settings.', 'error');
-              hasError = true;
-            }
-            if (++done === 5) loadDropdownOptions();
-          })
-          .updateDropdownOptions(key, vals, _sessionToken);
+      // 🚀 ONE server call instead of 5 — saves all categories in a single round-trip
+      const ids  = ['adminDocTypes','adminSuppliers','adminOffices','adminStatuses','adminEndUsers'];
+      const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
+      const optionsObj = {};
+      ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        optionsObj[keys[i]] = el ? el.value.split('\n').map(l => l.trim()).filter(l => l) : [];
       });
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.status === 'success') {
+            toast('All settings saved!');
+            closeAdminModal();
+            // Update local cache so dropdowns reflect new values immediately
+            dropdownOptions = Object.assign({}, dropdownOptions, optionsObj);
+            populateDropdowns();
+            populatePrintFilters();
+          } else {
+            toast((res && res.message) || 'Save failed', 'error');
+          }
+        })
+        .withFailureHandler(() => toast('Network error saving settings.', 'error'))
+        .updateAllDropdownOptions(optionsObj, _sessionToken);
     }
 
     // ===================== TRACK =====================
@@ -4740,14 +4864,47 @@
       // Restore this browser's session token from localStorage
       try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
 
+      // If no session token stored, go straight to login without a server call
+      if (!_sessionToken) { showView('login'); return; }
+
+      // Show a loading indicator while we verify the session
+      // This prevents the blank-screen / flash-to-login experience on refresh
+      const loadingEl = document.createElement('div');
+      loadingEl.id = 'sessionLoader';
+      loadingEl.style.cssText = 'position:fixed;inset:0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:Inter,sans-serif';
+      loadingEl.innerHTML = `
+        <div style="width:48px;height:48px;border-radius:10px;background:#0f172a;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <span style="font-size:24px">📄</span>
+        </div>
+        <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:8px">DocuTracker</div>
+        <div style="font-size:14px;color:#64748b;margin-bottom:20px">Restoring your session…</div>
+        <div style="width:200px;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden">
+          <div style="height:100%;background:#3b82f6;border-radius:2px;animation:loadBar 1.5s ease-in-out infinite" id="loadBar"></div>
+        </div>
+        <style>@keyframes loadBar{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}</style>`;
+      document.body.appendChild(loadingEl);
+
       // Normal session check — pass THIS browser's token (never shared with other browsers)
       google.script.run
         .withSuccessHandler(function (user) {
+          const loader = document.getElementById('sessionLoader');
+          if (loader) loader.remove();
           if (user) { showView('dashboard'); initDashboard(); }
-          else { _sessionToken = ''; showView('login'); }
+          else { _sessionToken = ''; try { localStorage.removeItem('docutracker_session_token'); } catch(e){} showView('login'); }
         })
         .withFailureHandler(function () {
-          showView('login');
+          // On network failure don't silently kick to login — show a retry prompt
+          const loader = document.getElementById('sessionLoader');
+          if (loader) {
+            loader.innerHTML = `
+              <div style="text-align:center;padding:32px">
+                <div style="font-size:40px;margin-bottom:16px">⚠️</div>
+                <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
+                <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server. Please check your internet connection.</div>
+                <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
+                <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
+              </div>`;
+          } else { showView('login'); }
         })
         .getCurrentUser(_sessionToken);
     })();
