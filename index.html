@@ -1736,7 +1736,8 @@
     }
 
     .print-table th {
-      background: #f3f4f6;
+      background: #000000;
+      color: #ffffff;
       font-weight: 600
     }
 
@@ -2447,9 +2448,16 @@
        PRINT
     ============================================================ */
     @media print {
+      @page {
+        size: A4 landscape;
+        margin: 10mm 8mm 10mm 8mm;
+      }
+
       body {
         padding: 0;
         background: #fff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
 
       .sidebar,
@@ -2463,13 +2471,66 @@
         display: none !important;
       }
 
+      /* Hide everything except the report preview when printing from Print Report tab */
+      .view-dashboard > *:not(#mainContent) { display: none !important; }
+      #mainContent { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+      .page-content { padding: 0 !important; }
+      #documentsView, #trackView, #logsView, #usersView, #printView .print-header-bar,
+      #printView .config-panel { display: none !important; }
+      #printView { display: block !important; padding: 0 !important; }
+
       #reportPreview {
-        box-shadow: none;
-        padding: 20px;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        width: 100% !important;
       }
 
+      /* Fit table to page width; allow rows to break across pages */
       .print-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed;
+        page-break-inside: auto;
+      }
+
+      /* Repeat header row on every printed page */
+      .print-table thead {
+        display: table-header-group;
+      }
+
+      .print-table tbody tr {
         page-break-inside: avoid;
+      }
+
+      /* Black header, white text for all print tables */
+      .print-table th {
+        background: #000000 !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-size: 9px !important;
+        padding: 5px 4px !important;
+        word-break: break-word;
+      }
+
+      .print-table td {
+        font-size: 9px !important;
+        padding: 4px !important;
+        word-break: break-word;
+      }
+
+      /* Keep the org header from breaking */
+      #reportPreview > div:first-child {
+        page-break-after: avoid;
+      }
+
+      /* Zebra striping survives print */
+      .print-table tbody tr:nth-child(even) td {
+        background: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
     }
   </style>
@@ -2941,13 +3002,12 @@
                   <th>Action</th>
                   <th>User</th>
                   <th>Document ID</th>
-                  <th>Details</th>
-                  <th>IP Address</th>
+                  <th>Description</th>
                 </tr>
               </thead>
               <tbody id="logsBody">
                 <tr>
-                  <td colspan="6" class="empty-state">Load logs from Activity Logs menu.</td>
+                  <td colspan="5" class="empty-state">Load logs from Activity Logs menu.</td>
                 </tr>
               </tbody>
             </table>
@@ -3180,6 +3240,7 @@
           <div class="form-group">
             <label class="form-label">PO No</label>
             <input type="text" class="form-input" id="poNo" placeholder="e.g., PO-2025-001">
+            <span id="poNoError" style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span>
           </div>
 
           <!-- PO Date | PO Amount -->
@@ -4125,21 +4186,30 @@
 
       const now = new Date().toLocaleString();
       const title = document.getElementById('sectionTitle').textContent;
-      const w = window.open('', '_blank', 'width=1100,height=700');
+      const w = window.open('', '_blank', 'width=1200,height=750');
       w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — ${title}</title>
         <style>
-          body{font-family:Arial,sans-serif;font-size:12px;color:#0f172a;padding:20px}
-          h1{font-size:18px;margin:0 0 4px}p{margin:0 0 12px;color:#64748b;font-size:12px}
-          table{width:100%;border-collapse:collapse}
-          th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left;font-size:11px}
-          td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:12px}
-          tr:nth-child(even) td{background:#f8fafc}
-          @media print{body{padding:10px}}
+          @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a; margin: 0; padding: 0;
+                 -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          h1 { font-size: 16px; margin: 0 0 4px; }
+          p  { margin: 0 0 10px; color: #64748b; font-size: 10px; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          thead { display: table-header-group; }
+          tbody tr { page-break-inside: avoid; }
+          th { background: #000000 !important; color: #ffffff !important; padding: 5px 4px;
+               text-align: left; font-size: 9px; word-break: break-word; border: 1px solid #000;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          td { padding: 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; word-break: break-word; }
+          tr:nth-child(even) td { background: #f8fafc !important;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @media print { @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; } }
         </style></head><body>
         <h1>📄 ${title}</h1>
         <p>Printed: ${now}${filterInfo.length ? ' &nbsp;|&nbsp; Filters: ' + filterInfo.join(', ') : ''} &nbsp;|&nbsp; Total: ${filteredDocs.length} records</p>
-        <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-        <script>window.onload=function(){window.print();}<\/script>
+        <table><thead><tr>${colMap.map(c => `<th>${c.label}</th>`).join('')}</tr></thead><tbody>${tbody}</tbody></table>
+        <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
         </body></html>`);
       w.document.close();
     }
@@ -4178,6 +4248,7 @@
       const euEl = document.getElementById('endUser'); if (euEl) euEl.value = '';
       const statEl = document.getElementById('stat'); if (statEl) statEl.value = dropdownOptions.statuses[0] || 'Received';
       const errEl = document.getElementById('docNoError'); if (errEl) errEl.style.display = 'none';
+      const poErrEl = document.getElementById('poNoError'); if (poErrEl) poErrEl.style.display = 'none';
       // Set auto-generated timestamps for display
       const now = new Date();
       const tsStr = formatTimestampDisplay(now);
@@ -4223,28 +4294,79 @@
       const ptsEl = document.getElementById('poTimeStamp');
       if (ptsEl) ptsEl.value = formatTimestampDisplay(now) + '  (updates on save)';
       document.getElementById('docNoError').style.display = 'none';
+      const poErrEl2 = document.getElementById('poNoError'); if (poErrEl2) poErrEl2.style.display = 'none';
       removeFile();
       showModal('docModal');
     }
+    // ── Duplicate-check helpers ──────────────────────────────────────────────
+    // Returns true if value is already used by another document in allDocs.
+    function _isDuplicateDocNo(value, currentId) {
+      if (!value) return false;
+      const v = value.trim().toLowerCase();
+      return allDocs.some(d => d['Doc No'] && d['Doc No'].trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
+    }
+    function _isDuplicatePoNo(value, currentId) {
+      if (!value) return false;
+      const v = value.trim().toLowerCase();
+      return allDocs.some(d => d['PO No'] && d['PO No'].trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
+    }
+
+    function _showFieldError(elId, msg) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+      // Highlight the input above it
+      const input = el.previousElementSibling;
+      if (input) input.style.borderColor = msg ? 'var(--danger)' : '';
+    }
+    function _clearFieldError(elId) { _showFieldError(elId, ''); }
+
     function saveDoc() {
-      const docNo = document.getElementById('docNo').value.trim();
-      const prDate = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
+      const currentId = isEdit ? (document.getElementById('editId').value || '') : '';
+      const docNo  = document.getElementById('docNo').value.trim();
+      const poNo   = (document.getElementById('poNo') ? document.getElementById('poNo').value.trim() : '');
+      const prDate  = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
       const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
-      const poNo = document.getElementById('poNo') ? document.getElementById('poNo').value : '';
-      const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
+      const poDate  = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
+
+      // Clear previous errors
+      _clearFieldError('docNoError');
+      _clearFieldError('poNoError');
+
+      // Required field check
+      const docType = document.getElementById('docType').value;
+      const desc    = document.getElementById('desc').value;
+      const office  = document.getElementById('office').value;
+      if (!docType || !docNo || !desc || !prDate || !endUser || !office) {
+        toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
+        return;
+      }
+
+      // ── Client-side duplicate validation (instant, no server round-trip) ──
+      let hasError = false;
+      if (_isDuplicateDocNo(docNo, currentId)) {
+        _showFieldError('docNoError', `"${docNo}" is already used by another document.`);
+        hasError = true;
+      }
+      if (poNo && _isDuplicatePoNo(poNo, currentId)) {
+        _showFieldError('poNoError', `"${poNo}" is already used by another document.`);
+        hasError = true;
+      }
+      if (hasError) {
+        toast('Duplicate value detected — please use a unique Doc No / PO No.', 'error');
+        return;
+      }
+
       const data = {
-        docType: document.getElementById('docType').value,
-        docNo,
-        description: document.getElementById('desc').value,
+        docType, docNo,
+        description: desc,
         amount: document.getElementById('amt').value.replace(/,/g, ''),
-        prDate,
-        endUser,
-        poNo,
-        poDate,
+        prDate, endUser, poNo, poDate,
         poAmount: document.getElementById('poAmt') ? document.getElementById('poAmt').value.replace(/,/g, '') : '',
         supplier: document.getElementById('supp').value,
         requisitioner: document.getElementById('req').value,
-        office: document.getElementById('office').value,
+        office,
         status: document.getElementById('stat').value,
         notes: document.getElementById('note').value,
         dateReceived: new Date().toISOString(),
@@ -4255,10 +4377,6 @@
         dateEndorseToCOA: document.getElementById('dateEndorseToCOA') ? document.getElementById('dateEndorseToCOA').value : '',
         dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : ''
       };
-      if (!data.docType || !data.docNo || !data.description || !data.prDate || !data.endUser || !data.office) {
-        toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
-        return;
-      }
       if (selectedFile) {
         const reader = new FileReader();
         reader.onload = e => {
@@ -4314,7 +4432,11 @@
               // Roll back optimistic update
               if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
               populateTableFilters(); applyFilter(currentFilter); updateStats();
-              toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              if (r.field === 'poNo') {
+                toast(`PO Number "${r.poNo}" already exists!`, 'error');
+              } else {
+                toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              }
             } else {
               // Roll back
               if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
@@ -4381,7 +4503,11 @@
               // Roll back
               allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
               populateTableFilters(); applyFilter(currentFilter); updateStats();
-              toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              if (r.field === 'poNo') {
+                toast(`PO Number "${r.poNo}" already exists!`, 'error');
+              } else {
+                toast(`Document Number "${r.docNo}" already exists!`, 'error');
+              }
             } else {
               // Roll back
               allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
@@ -4650,17 +4776,17 @@
         applyLogFilters();
         return;
       }
-      document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>';
+      document.getElementById('logsBody').innerHTML = '<tr><td colspan="5" class="empty-state">Loading logs...</td></tr>';
       google.script.run
         .withSuccessHandler(function(logs) { allLogs = logs || []; applyLogFilters(); })
-        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
+        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load logs.</td></tr>'; })
         .getAllActivityLogs();
     }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
     function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
-    function renderLogsTable(logs) { const tbody = document.getElementById('logsBody'); if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No logs found.</td></tr>'; return; } tbody.innerHTML = logs.map(log => `<tr><td>${log.Timestamp}</td><td>${log.Action}</td><td>${log.User}</td><td>${log.DocumentID || '-'}</td><td>${log.Details}</td><td>${log.IPAddress}</td></tr>`).join(''); }
+    function renderLogsTable(logs) { const tbody = document.getElementById('logsBody'); if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No logs found.</td></tr>'; return; } tbody.innerHTML = logs.map(log => `<tr><td>${log.Timestamp}</td><td>${log.Action}</td><td>${log.User}</td><td>${log.DocumentID || '-'}</td><td>${log.Details || '-'}</td></tr>`).join(''); }
     function clearLogFilters() { ['logsSearch', 'logsFrom', 'logsTo'].forEach(id => document.getElementById(id).value = ''); document.getElementById('logsType').value = ''; applyLogFilters(); }
-    function exportLogsCSV() { const rows = [['Timestamp', 'Action', 'User', 'Document ID', 'Details', 'IP Address']]; allLogs.forEach(l => rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', l.Details.replace(/(\r\n|\n|\r)/gm, ' '), l.IPAddress])); const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`; a.click(); }
+    function exportLogsCSV() { const rows = [['Timestamp', 'Action', 'User', 'Document ID', 'Description']]; allLogs.forEach(l => rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', (l.Details || '').replace(/(\r\n|\n|\r)/gm, ' ')])); const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`; a.click(); }
     ['logsFrom', 'logsTo', 'logsType'].forEach(id => document.getElementById(id).addEventListener('change', applyLogFilters));
     document.getElementById('logsSearch').addEventListener('input', applyLogFilters);
   </script>
@@ -4790,7 +4916,148 @@
       return h;
     }
     function generatePreview() { const type = document.getElementById('reportType').value, data = getPrintFilteredData(); let h = ''; switch (type) { case 'summary': h = generateSummaryReport(data); break; case 'detailed': h = generateDetailedReport(data); break; case 'overdue': h = generateOverdueReport(data); break; case 'office': h = generateOfficeReport(data); break; case 'custom': h = generateCustomReport(data); break; }const prev = document.getElementById('reportPreview'); prev.innerHTML = h; prev.classList.add('show'); prev.scrollIntoView({ behavior: 'smooth' }); }
-    function printReport() { generatePreview(); setTimeout(() => window.print(), 500); }
+
+    // Shared CSS for all print windows — landscape, repeat headers, black header row
+    function _printWindowCSS() {
+      return `
+        @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #0f172a; margin: 0; padding: 0;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        h1 { font-size: 15px; margin: 0 0 4px; }
+        h2 { font-size: 13px; margin: 0 0 4px; font-weight: normal; color: #374151; }
+        h3 { font-size: 17px; font-weight: 600; color: #374151; margin: 12px 0 6px; }
+        p  { margin: 0 0 10px; color: #64748b; font-size: 10px; }
+        .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0f172a; padding-bottom: 14px; page-break-after: avoid; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead { display: table-header-group; }
+        tbody tr { page-break-inside: avoid; }
+        th { background: #000000 !important; color: #ffffff !important; font-weight: 700;
+             padding: 5px 4px; text-align: left; font-size: 9px; word-break: break-word;
+             border: 1px solid #000;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { padding: 4px; border: 1px solid #ddd; font-size: 9px; word-break: break-word; }
+        tr:nth-child(even) td { background: #f8fafc !important;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .text-right { text-align: right; }
+        .text-danger { color: #dc2626; font-weight: 700; }
+        .text-success { color: #059669; }
+        .grand-total td { font-weight: bold; background: #f3f4f6 !important; }
+        .section-break { margin-bottom: 24px; page-break-inside: avoid; }
+        .section-title { background: #f3f4f6; padding: 8px 10px; border-left: 4px solid #3b82f6;
+                         margin-bottom: 10px; font-weight: 600; font-size: 11px; page-break-after: avoid; }
+        @media print { @page { size: A4 landscape; margin: 10mm 8mm 10mm 8mm; } }
+      `;
+    }
+
+    function _openPrintWindow(title, bodyHtml) {
+      const w = window.open('', '_blank', 'width=1200,height=750');
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DocuTracker — ${title}</title>
+        <style>${_printWindowCSS()}</style></head><body>
+        ${bodyHtml}
+        <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+        </body></html>`);
+      w.document.close();
+    }
+
+    function printReport() {
+      generatePreview(); // also refreshes the in-page preview
+      const type = document.getElementById('reportType').value;
+      const data = getPrintFilteredData();
+      const now  = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const orgHeader = `<div class="report-header">
+        <div style="font-size:14px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</div>
+        <div style="font-size:12px;color:#374151;margin-top:2px">City of Ozamiz</div>`;
+
+      let html = '';
+      if (type === 'summary') {
+        let totalAmt = 0, totalPoAmt = 0;
+        const rows = data.map(d => {
+          const amt = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          totalAmt += amt; totalPoAmt += poAmt;
+          return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
+            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
+            <td>${d['PO Date']||'-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
+            <td>${d.Supplier||'-'}</td><td>${d.Notes||'-'}</td></tr>`;
+        }).join('');
+        html = orgHeader + `<h3>Summary Report</h3><p>As of ${now}</p></div>
+          <p>Total Documents: <strong>${data.length}</strong></p>
+          <table><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th></tr></thead>
+          <tbody>${rows}
+          <tr class="grand-total"><td colspan="2" class="text-right">GRAND TOTAL:</td>
+          <td class="text-right text-success">${fmtAmt(totalAmt)}</td><td colspan="2"></td>
+          <td class="text-right text-success">${fmtAmt(totalPoAmt)}</td><td colspan="4"></td></tr>
+          </tbody></table>`;
+
+      } else if (type === 'detailed') {
+        let totalAmt = 0, totalPoAmt = 0;
+        const rows = data.map(d => {
+          const amt = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          totalAmt += amt; totalPoAmt += poAmt;
+          return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
+            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
+            <td>${d['PO Date']||'-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
+            <td>${d.Supplier||'-'}</td><td>${d['Date Endorsed To Acctng']||'-'}</td>
+            <td>${d['Date Endorsed From CMO']||'-'}</td><td>${d['Delivery Status']||'-'}</td>
+            <td>${d['Date Endorse To COA']||'-'}</td><td>${d['Date Endorse To CTO']||'-'}</td>
+            <td>${d.Notes||'-'}</td></tr>`;
+        }).join('');
+        html = orgHeader + `<h3>Detailed Document List</h3><p>As of ${now}</p></div>
+          <p>Total Documents: <strong>${data.length}</strong></p>
+          <table><thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
+          <th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th>
+          <th>DATE END. TO COA</th><th>DATE END. TO CTO</th><th>NOTES</th></tr></thead>
+          <tbody>${rows}
+          <tr class="grand-total"><td colspan="2" class="text-right">GRAND TOTAL:</td>
+          <td class="text-right text-success">${fmtAmt(totalAmt)}</td><td colspan="2"></td>
+          <td class="text-right text-success">${fmtAmt(totalPoAmt)}</td><td colspan="9"></td></tr>
+          </tbody></table>`;
+
+      } else if (type === 'overdue') {
+        const od = data.filter(d => d.Overdue && d.Overdue !== 'On time');
+        const rows = od.map(d => `<tr><td style="font-family:monospace">${d['ID/Barcode']||'-'}</td>
+          <td>${d['Doc Type']||'-'}</td><td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
+          <td>${d.Requisitioner||'-'}</td><td>${d['Endorsed To']||'-'}</td><td>${d.Status||'-'}</td>
+          <td>${d['Date Received']||'-'}</td><td class="text-danger">${d.Overdue||'-'}</td></tr>`).join('');
+        html = orgHeader + `<h3>Overdue Documents Report</h3><p>As of ${now}</p></div>
+          <p style="color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>
+          ${od.length === 0 ? '<p style="text-align:center;padding:40px;color:#6b7280">&#10003; No overdue documents found!</p>' :
+          `<table><thead><tr><th>ID</th><th>TYPE</th><th>DOC NO</th><th>DESCRIPTION</th>
+          <th>REQUISITIONER</th><th>OFFICE</th><th>STATUS</th><th>DATE</th><th>DAYS OVERDUE</th></tr></thead>
+          <tbody>${rows}</tbody></table>`}`;
+
+      } else if (type === 'office') {
+        const groups = {};
+        data.forEach(d => { const o = d['Endorsed To']||'Unassigned'; if(!groups[o]) groups[o]=[]; groups[o].push(d); });
+        const sections = Object.keys(groups).sort().map(o => {
+          const docs = groups[o];
+          const rows = docs.map(d => `<tr><td>${d['Doc No']||'-'}</td><td>${d['Doc Type']||'-'}</td>
+            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td><td>${d['Date Received']||'-'}</td>
+            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td></tr>`).join('');
+          return `<div class="section-break"><div class="section-title">${o} (${docs.length} documents)</div>
+            <table><thead><tr><th>DOC NO</th><th>TYPE</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE</th><th>OVERDUE</th></tr></thead>
+            <tbody>${rows}</tbody></table></div>`;
+        }).join('');
+        html = orgHeader + `<h3>Office/Department Report</h3><p>As of ${now}</p></div>
+          <p>Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>
+          ${sections}`;
+
+      } else if (type === 'custom') {
+        // Reuse the in-page generateCustomReport but strip the wrapper (it generates table HTML)
+        const previewContent = document.getElementById('reportPreview').innerHTML;
+        html = previewContent; // already generated by generatePreview() above
+        _openPrintWindow('Custom Report', html);
+        return;
+      }
+
+      _openPrintWindow(document.getElementById('reportType').options[document.getElementById('reportType').selectedIndex].text, html);
+    }
 
     // ===================== EXPORT =====================
     function getExportFilename(ext) { const n = new Date(); return `DocuTracker_Export_${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, '0')}${String(n.getDate()).padStart(2, '0')}_${String(n.getHours()).padStart(2, '0')}${String(n.getMinutes()).padStart(2, '0')}.${ext}`; }
@@ -4920,7 +5187,23 @@
     }
 
     document.getElementById('searchInput').addEventListener('input', () => applyFilter(currentFilter));
-    document.getElementById('docNo').addEventListener('input', () => document.getElementById('docNoError').style.display = 'none');
+    document.getElementById('docNo').addEventListener('input', () => _clearFieldError('docNoError'));
+    document.getElementById('docNo').addEventListener('blur', () => {
+      const val = document.getElementById('docNo').value.trim();
+      const id  = isEdit ? (document.getElementById('editId').value || '') : '';
+      if (val && _isDuplicateDocNo(val, id)) _showFieldError('docNoError', `"${val}" is already used by another document.`);
+      else _clearFieldError('docNoError');
+    });
+    const poNoEl = document.getElementById('poNo');
+    if (poNoEl) {
+      poNoEl.addEventListener('input', () => _clearFieldError('poNoError'));
+      poNoEl.addEventListener('blur', () => {
+        const val = poNoEl.value.trim();
+        const id  = isEdit ? (document.getElementById('editId').value || '') : '';
+        if (val && _isDuplicatePoNo(val, id)) _showFieldError('poNoError', `"${val}" is already used by another document.`);
+        else _clearFieldError('poNoError');
+      });
+    }
     document.getElementById('sidebarToggle').addEventListener('click', () => { const s = document.getElementById('sidebar'), m = document.getElementById('mainContent'), f = document.getElementById('dashboardFooter'); s.classList.toggle('collapsed'); m.classList.toggle('sidebar-collapsed'); f.classList.toggle('sidebar-collapsed'); document.getElementById('sidebarToggle').querySelector('.material-symbols-outlined').textContent = s.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left'; });
     function closeMobileSidebar() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('mobileOverlay').classList.remove('show'); }
     document.getElementById('mobileMenuToggle').addEventListener('click', () => { document.getElementById('sidebar').classList.add('mobile-open'); document.getElementById('mobileOverlay').classList.add('show'); });

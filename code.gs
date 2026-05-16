@@ -566,7 +566,7 @@ function initializeActivityLogSheet() {
     let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!logSheet) {
       logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
-      logSheet.getRange(1, 1, 1, 6).setValues([['Timestamp','Action','User','Document ID','Details','IP Address']]);
+      logSheet.getRange(1, 1, 1, 6).setValues([['Timestamp','Action','User','Document ID','Details','Description']]);
       logSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
       logSheet.getRange(1, 1, 1, 6).setBackground('#f3f4f6');
       logSheet.setFrozenRows(1);
@@ -664,11 +664,11 @@ function _logBoth(docId, histAction, histStatus, histUser, histRemarks, actActio
     let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!logSheet) {
       logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
-      logSheet.getRange(1,1,1,6).setValues([['Timestamp','Action','User','Document ID','Details','IP Address']]);
+      logSheet.getRange(1,1,1,6).setValues([['Timestamp','Action','User','Document ID','Details','Description']]);
       logSheet.getRange(1,1,1,6).setFontWeight('bold').setBackground('#f3f4f6');
       logSheet.setFrozenRows(1);
     }
-    logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), String(actDetails||'').trim(), 'N/A']);
+    logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), String(actDetails||'').trim(), '']);
     // Invalidate activity cache
     try { CacheService.getScriptCache().remove('all_activity_logs'); } catch(e) {}
   } catch(e) { Logger.log('_logBoth error: ' + e); }
@@ -853,8 +853,12 @@ function addDocument(docData) {
   try {
     // Use cached docs for duplicate check — avoids a cold sheet read
     const cachedDocs = getAllDocuments();
-    if (cachedDocs.some(d => d['Doc No'] === docData.docNo)) {
-      return { status: 'error', message: 'duplicate', docNo: docData.docNo };
+    if (cachedDocs.some(d => d['Doc No'] && d['Doc No'].trim().toLowerCase() === (docData.docNo || '').trim().toLowerCase())) {
+      return { status: 'error', message: 'duplicate', field: 'docNo', docNo: docData.docNo };
+    }
+    if (docData.poNo && docData.poNo.trim() !== '' &&
+        cachedDocs.some(d => d['PO No'] && d['PO No'].trim().toLowerCase() === docData.poNo.trim().toLowerCase())) {
+      return { status: 'error', message: 'duplicate', field: 'poNo', poNo: docData.poNo };
     }
     const ss = _getSS();
     let sheet = ss.getSheetByName(DOCS_SHEET);
@@ -933,10 +937,16 @@ function updateDocument(docId, docData) {
   try {
     // Use cached docs for duplicate check — avoids a full sheet read
     const cachedDocs = getAllDocuments();
-    const dupExists = cachedDocs.some(d =>
-      d['Doc No'] === docData.docNo && d['ID/Barcode'] !== docId
+    const dupDocNo = cachedDocs.some(d =>
+      d['Doc No'] && d['Doc No'].trim().toLowerCase() === (docData.docNo || '').trim().toLowerCase() && d['ID/Barcode'] !== docId
     );
-    if (dupExists) return { status: 'error', message: 'duplicate', docNo: docData.docNo };
+    if (dupDocNo) return { status: 'error', message: 'duplicate', field: 'docNo', docNo: docData.docNo };
+    if (docData.poNo && docData.poNo.trim() !== '') {
+      const dupPoNo = cachedDocs.some(d =>
+        d['PO No'] && d['PO No'].trim().toLowerCase() === docData.poNo.trim().toLowerCase() && d['ID/Barcode'] !== docId
+      );
+      if (dupPoNo) return { status: 'error', message: 'duplicate', field: 'poNo', poNo: docData.poNo };
+    }
 
     const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
