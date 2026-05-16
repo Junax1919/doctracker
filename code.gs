@@ -22,6 +22,16 @@ const OVERDUE_THRESHOLD   = 5;
 // passed explicitly as a function argument.
 let _doPostToken = '';
 
+// Request-scoped spreadsheet handle — avoids repeated openById() calls within
+// a single GAS execution (each openById() adds ~200-400ms overhead).
+let _ssCache = null;
+function _getSS() {
+  if (!_ssCache) _ssCache = SpreadsheetApp.openById(SHEET_ID);
+  return _ssCache;
+}
+// Reset per-request cache (call at start of doPost)
+function _resetRequestCache() { _ssCache = null; }
+
 // =====================================================================
 //  MAIN ENTRY POINT  –  All pages served from one index.html (SPA)
 // =====================================================================
@@ -71,6 +81,7 @@ function doPost(e) {
     // Set the module-level token so internal helpers (getCurrentUser, logActivity, etc.)
     // work without needing an explicit token argument during this execution.
     _doPostToken = body.sessionToken || body.sessionEmail || '';
+    _resetRequestCache(); // reset per-request SS handle
 
     const allowedMethods = [
       'checkLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
@@ -109,7 +120,7 @@ function doPost(e) {
 //  CONFIG / DROPDOWN OPTIONS
 // =====================================================================
 function initializeConfigSheet() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = _getSS();
   let configSheet = ss.getSheetByName(CONFIG_SHEET);
   if (!configSheet) {
     configSheet = ss.insertSheet(CONFIG_SHEET);
@@ -148,7 +159,7 @@ function getDropdownOptions() {
   try {
     const hit = CacheService.getScriptCache().get('dropdown_opts');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
     const data = configSheet.getDataRange().getValues();
     const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
@@ -174,7 +185,7 @@ function updateDropdownOptions(type, values, tokenParam) {
     if (role !== 'admin' && role !== 'manager') {
       return { status: 'error', message: 'Access restricted to Admin or Manager' };
     }
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
     const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5 };
     const column = columnMap[type];
@@ -295,7 +306,7 @@ function getCurrentUser(tokenParam) {
       const hit = CacheService.getScriptCache().get(ck);
       if (hit) return JSON.parse(hit);
     } catch (e) {}
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(USERS_SHEET);
     if (!sheet) return null;
     _ensureUsersColumns(sheet);
@@ -330,7 +341,7 @@ function updateUserProfile(tokenParam, updates) {
     const token = tokenParam || _doPostToken;
     const email = _validateSession(token);
     if (!email) return { status: 'error', message: 'No user session found' };
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
     const data  = sheet.getDataRange().getValues();
@@ -349,7 +360,7 @@ function updateUserProfile(tokenParam, updates) {
 // =====================================================================
 function checkLogin(email, password) {
   if (!email || !password) return { status: 'invalid', message: 'Please enter email and password' };
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const ss    = _getSS();
   const sheet = ss.getSheetByName(USERS_SHEET);
   if (!sheet) return { status: 'invalid', message: 'System error' };
   _ensureUsersColumns(sheet);
@@ -373,7 +384,7 @@ function checkLogin(email, password) {
 // =====================================================================
 function sendResetEmail(email) {
   if (!email) return 'notfound';
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = _getSS();
   const sheet = ss.getSheetByName(USERS_SHEET);
   if (!sheet) return 'notfound';
   const data   = sheet.getDataRange().getValues();
@@ -424,7 +435,7 @@ function sendResetEmail(email) {
 
 function validateResetToken(token) {
   if (!token) return false;
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+  const sheet = _getSS().getSheetByName(USERS_SHEET);
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][4] === token && new Date(data[i][5]) > new Date()) return true;
@@ -434,7 +445,7 @@ function validateResetToken(token) {
 
 function setNewPassword(token, newPassword) {
   if (!token || !newPassword) return 'failed';
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+  const sheet = _getSS().getSheetByName(USERS_SHEET);
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][4] === token) {
@@ -450,7 +461,7 @@ function setNewPassword(token, newPassword) {
 //  DOCUMENT HISTORY
 // =====================================================================
 function initializeHistorySheet() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const ss = _getSS();
   let historySheet = ss.getSheetByName(HISTORY_SHEET);
   if (!historySheet) {
     historySheet = ss.insertSheet(HISTORY_SHEET);
@@ -477,7 +488,7 @@ function logDocumentHistory(docId, action, status, user, remarks) {
 
 function getDocumentHistory(docId) {
   try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     const historySheet = ss.getSheetByName(HISTORY_SHEET);
     if (!historySheet) return [];
     const data    = historySheet.getDataRange().getValues();
@@ -489,7 +500,13 @@ function getDocumentHistory(docId) {
           action:     data[i][1],
           status:     data[i][2],
           user:       data[i][3],
-          timestamp:  Utilities.formatDate(new Date(data[i][4]), Session.getScriptTimeZone(), 'MMM dd, yyyy hh:mm a'),
+          timestamp:  (function(d){
+            const dt = new Date(d);
+            if(isNaN(dt)) return String(d);
+            const p=n=>String(n).padStart(2,'0');
+            const h=dt.getHours()%12||12, ampm=dt.getHours()<12?'AM':'PM';
+            return `${dt.toLocaleString('en-US',{month:'short'})} ${String(dt.getDate()).padStart(2,'0')}, ${dt.getFullYear()} ${String(h).padStart(2,'0')}:${p(dt.getMinutes())} ${ampm}`;
+          })(data[i][4]),
           remarks:    data[i][5]
         });
       }
@@ -504,7 +521,7 @@ function getDocumentHistory(docId) {
 
 function getDocumentById(docId) {
   try {
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return null;
     const data    = sheet.getDataRange().getValues();
@@ -520,9 +537,9 @@ function getDocumentById(docId) {
           const h = headers[j];
           if (value instanceof Date) {
             if (h === 'Doc Time Stamp' || h === 'PO Time Stamp') {
-              doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+              doc[h] = _fmtTs(value);
             } else {
-              doc[h] = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+              doc[h] = _fmtDate(value);
             }
           } else if (value === '') {
             doc[h] = '';
@@ -545,7 +562,7 @@ function getDocumentById(docId) {
 // =====================================================================
 function initializeActivityLogSheet() {
   try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!logSheet) {
       logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
@@ -590,7 +607,7 @@ function getAllActivityLogs() {
     const hit   = cache.get('all_activity_logs');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
 
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!sheet) return [];
     const data = sheet.getDataRange().getValues();
@@ -623,8 +640,40 @@ function getAllActivityLogs() {
 }
 
 // =====================================================================
-//  DOCUMENT HELPERS
+//  BATCH LOG HELPER — writes Document History + Activity Log in a single
+//  sequence using the already-open request-scoped SS handle.
+//  This replaces two separate logDocumentHistory() + logActivity() calls
+//  (which were each opening sheets independently) with one fast pass.
 // =====================================================================
+function _logBoth(docId, histAction, histStatus, histUser, histRemarks, actAction, actDetails) {
+  try {
+    const ss = _getSS();
+    // --- Document History ---
+    let histSheet = ss.getSheetByName(HISTORY_SHEET);
+    if (!histSheet) {
+      histSheet = ss.insertSheet(HISTORY_SHEET);
+      histSheet.getRange(1,1,1,6).setValues([['Document ID','Action','Status','User','Timestamp','Remarks']]);
+      histSheet.getRange(1,1,1,6).setFontWeight('bold');
+    }
+    const cu = getCurrentUser();
+    const userName = cu ? cu.name : 'System';
+    const ts = new Date();
+    histSheet.appendRow([docId, histAction, histStatus || '', histUser || userName || 'System', ts, histRemarks || '']);
+
+    // --- Activity Log ---
+    let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
+    if (!logSheet) {
+      logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
+      logSheet.getRange(1,1,1,6).setValues([['Timestamp','Action','User','Document ID','Details','IP Address']]);
+      logSheet.getRange(1,1,1,6).setFontWeight('bold').setBackground('#f3f4f6');
+      logSheet.setFrozenRows(1);
+    }
+    logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), String(actDetails||'').trim(), 'N/A']);
+    // Invalidate activity cache
+    try { CacheService.getScriptCache().remove('all_activity_logs'); } catch(e) {}
+  } catch(e) { Logger.log('_logBoth error: ' + e); }
+}
+
 function calculateOverdueStatus(dateReceived, status) {
   const s = String(status || '').toLowerCase().trim();
   if (s.includes('forwarded') || s.includes('completed') || s.includes('complete')) return 'On time';
@@ -649,7 +698,7 @@ function formatAmount(amount) {
 
 function checkDuplicateDocNo(docNo, excludeId) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(DOCS_SHEET);
+    const sheet = _getSS().getSheetByName(DOCS_SHEET);
     if (!sheet) return false;
     const data    = sheet.getDataRange().getValues();
     if (data.length <= 1) return false;
@@ -754,7 +803,7 @@ function getAllDocuments() {
     const hit = _cacheGet('all_docs');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
 
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return [];
     // NOTE: ensureDocumentSheetHeaders() removed from here — it costs a full
@@ -807,7 +856,7 @@ function addDocument(docData) {
     if (cachedDocs.some(d => d['Doc No'] === docData.docNo)) {
       return { status: 'error', message: 'duplicate', docNo: docData.docNo };
     }
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     let sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
@@ -825,15 +874,14 @@ function addDocument(docData) {
       ensureDocumentSheetHeaders(sheet);
     }
     const now      = new Date();
-    const docId    = `DOC-${Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const docId    = `DOC-${_fmtTs(now).replace(/[-: ]/g,'').substring(0,14)}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     const dateRcvd = new Date(docData.dateReceived || now);
     const dueDate  = new Date(dateRcvd);
     dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
-    const cu = getCurrentUser();
     // Doc Time Stamp: auto-generated on create
-    const docTimeStamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const docTimeStamp = _fmtTs(now);
     // PO Time Stamp: auto-generated on create/update
-    const poTimeStamp  = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const poTimeStamp  = _fmtTs(now);
     sheet.appendRow([
       docTimeStamp,
       docId,
@@ -857,8 +905,8 @@ function addDocument(docData) {
       docData.deliveryStatus       || '',
       docData.dateEndorseToCOA     || '',
       docData.dateEndorseToCTO     || '',
-      Utilities.formatDate(dateRcvd, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
-      Utilities.formatDate(dueDate,  Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      _fmtDate(dateRcvd),
+      _fmtDate(dueDate),
       calculateOverdueStatus(dateRcvd, docData.status),
       docData.notes                || '',
       docData.pdfLink              || ''
@@ -871,8 +919,9 @@ function addDocument(docData) {
       docData.prDate    ? `PR Date: ${docData.prDate}`           : '',
       docData.supplier  ? `Supplier: ${docData.supplier}`        : ''
     ].filter(Boolean).join(' | ');
-    logDocumentHistory(docId, 'Document Created', docData.status || 'Received', cu ? cu.name : 'System', createRemarks);
-    logActivity('Create Document', docId, `Document created: ${docData.docType} - ${docData.docNo}`);
+    const cu = getCurrentUser();
+    _logBoth(docId, 'Document Created', docData.status || 'Received', cu ? cu.name : 'System', createRemarks,
+             'Create Document', `Document created: ${docData.docType} - ${docData.docNo}`);
     return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('addDocument error: ' + error);
@@ -889,7 +938,7 @@ function updateDocument(docId, docData) {
     );
     if (dupExists) return { status: 'error', message: 'duplicate', docNo: docData.docNo };
 
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
     // Skip ensureDocumentSheetHeaders() on update — headers never change mid-session
@@ -913,8 +962,8 @@ function updateDocument(docId, docData) {
     // Preserve original Doc Time Stamp; generate new PO Time Stamp on update
     const origRow      = data[rowIndex - 1];
     const docTsCol     = colIdx['Doc Time Stamp'];
-    const origDocTs    = (docTsCol !== undefined && origRow[docTsCol]) ? origRow[docTsCol] : Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-    const poTimeStamp  = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const origDocTs    = (docTsCol !== undefined && origRow[docTsCol]) ? (origRow[docTsCol] instanceof Date ? _fmtTs(origRow[docTsCol]) : origRow[docTsCol]) : _fmtTs(now);
+    const poTimeStamp  = _fmtTs(now);
     const pdfLinkCol   = colIdx['PDF Link'];
     const existingPdf  = (pdfLinkCol !== undefined) ? origRow[pdfLinkCol] : '';
     sheet.getRange(rowIndex, 1, 1, 27).setValues([[
@@ -940,8 +989,8 @@ function updateDocument(docId, docData) {
       docData.deliveryStatus       || '',
       docData.dateEndorseToCOA     || '',
       docData.dateEndorseToCTO     || '',
-      Utilities.formatDate(dateRcvd, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
-      Utilities.formatDate(dueDate,  Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      _fmtDate(dateRcvd),
+      _fmtDate(dueDate),
       calculateOverdueStatus(dateRcvd, docData.status),
       docData.notes                || '',
       docData.pdfLink              || existingPdf || ''
@@ -967,8 +1016,8 @@ function updateDocument(docId, docData) {
       docData.dateReceived ? `Date Received: ${docData.dateReceived}` : '',
       docData.poNo     ? `PO No: ${docData.poNo}`               : ''
     ].filter(Boolean).join(' | ');
-    logDocumentHistory(docId, actionName, docData.status || 'Received', cu ? cu.name : 'System', updateRemarks);
-    logActivity('Update Document', docId, `Document updated: Status changed to ${docData.status}`);
+    _logBoth(docId, actionName, docData.status || 'Received', cu ? cu.name : 'System', updateRemarks,
+             'Update Document', `Document updated: Status changed to ${docData.status}`);
     return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('updateDocument error: ' + error);
@@ -978,7 +1027,7 @@ function updateDocument(docId, docData) {
 
 function deleteDocument(docId) {
   try {
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
     const data = sheet.getDataRange().getValues();
@@ -990,10 +1039,13 @@ function deleteDocument(docId) {
     const cu   = getCurrentUser();
     for (let i = 1; i < data.length; i++) {
       if (data[i][idCol === -1 ? 0 : idCol] === docId) {
-        logDocumentHistory(docId, 'Document Deleted', stCol !== -1 ? data[i][stCol] : '', cu ? cu.name : 'System', 'Document permanently deleted');
-        logActivity('Delete Document', docId, `Document deleted: ${tyCol !== -1 ? data[i][tyCol] : ''} - ${noCol !== -1 ? data[i][noCol] : ''}`);
+        const delStatus = stCol !== -1 ? data[i][stCol] : '';
+        const delType   = tyCol !== -1 ? data[i][tyCol] : '';
+        const delNo     = noCol !== -1 ? data[i][noCol] : '';
         sheet.deleteRow(i + 1);
         _invalidateDocsCache();
+        _logBoth(docId, 'Document Deleted', delStatus, cu ? cu.name : 'System', 'Document permanently deleted',
+                 'Delete Document', `Document deleted: ${delType} - ${delNo}`);
         return { status: 'success' };
       }
     }
@@ -1052,7 +1104,7 @@ function getUsers(tokenParam) {
   try {
     const cu = getCurrentUser(tokenParam || _doPostToken);
     if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
     _ensureUsersColumns(sheet);
     const data  = sheet.getDataRange().getValues();
@@ -1075,7 +1127,7 @@ function addUser(tokenParam, userData) {
   try {
     const cu = getCurrentUser(tokenParam || _doPostToken);
     if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
     _ensureUsersColumns(sheet);
     const data = sheet.getDataRange().getValues();
@@ -1102,7 +1154,7 @@ function updateUser(tokenParam, targetEmail, userData) {
   try {
     const cu = getCurrentUser(tokenParam || _doPostToken);
     if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
     _ensureUsersColumns(sheet);
     const data = sheet.getDataRange().getValues();
@@ -1125,7 +1177,7 @@ function toggleUserStatus(tokenParam, targetEmail) {
     if (!cu || !cu.permissions.manageUsers) return { status: 'error', message: 'Access denied' };
     if (targetEmail.toLowerCase() === cu.email.toLowerCase())
       return { status: 'error', message: 'Cannot deactivate your own account' };
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(USERS_SHEET);
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
     if (!sheet) return { status: 'error', message: 'Users sheet not found' };
     _ensureUsersColumns(sheet);
     const data = sheet.getDataRange().getValues();
@@ -1150,7 +1202,14 @@ function getInitialData(token) {
     const user = getCurrentUser(token);
     const docs = getAllDocuments();
     const opts = getDropdownOptions();
-    const logs = getAllActivityLogs();          // preload — no extra sheet read (cached)
+    // Activity logs deferred — fetched on-demand when Logs tab is opened.
+    // This removes the heaviest read from the cold-start path.
+    // We only preload if already cached (fast, < 1 ms).
+    let logs = [];
+    try {
+      const cached = CacheService.getScriptCache().get('all_activity_logs');
+      if (cached) logs = JSON.parse(cached);
+    } catch(e) {}
 
     // Preload users list for admin/manager so the Users tab opens instantly
     let users = [];
@@ -1188,7 +1247,7 @@ function updateAllDropdownOptions(optionsObj, tokenParam) {
     if (role !== 'admin' && role !== 'manager') {
       return { status: 'error', message: 'Access restricted to Admin or Manager' };
     }
-    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
 
     const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
