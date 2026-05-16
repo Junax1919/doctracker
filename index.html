@@ -2928,7 +2928,7 @@
                 </select>
                 <div class="logs-actions">
                   <button class="btn btn-outline" onclick="clearLogFilters()">Clear</button>
-                  <button class="btn btn-outline" onclick="loadLogs()">Refresh</button>
+                  <button class="btn btn-outline" onclick="loadLogs(true)">Refresh</button>
                   <button class="btn btn-outline" onclick="exportLogsCSV()">Export CSV</button>
                   <button class="btn btn-primary" onclick="window.print()">Print</button>
                 </div>
@@ -2970,7 +2970,7 @@
                   <span class="material-symbols-outlined">person_add</span>
                   <span class="btn-label">Add User</span>
                 </button>
-                <button class="btn btn-outline" onclick="loadUsers()" title="Refresh users">
+                <button class="btn btn-outline" onclick="loadUsers(true)" title="Refresh users">
                   <span class="material-symbols-outlined">refresh</span>
                 </button>
               </div>
@@ -3656,10 +3656,7 @@
 
     // ===================== DASHBOARD INIT =====================
     function initDashboard() {
-      // 🚀 SINGLE server round-trip: loads user + docs + dropdowns + stats in ONE call
-      // Previously this was 5 separate google.script.run calls (getCurrentUser,
-      // getDropdownOptions, getAllDocuments, getDocumentStats x2) = ~6 s cold start.
-      // Now it's 1 call = ~1.5 s.
+      // 🚀 SINGLE server round-trip: loads user + docs + dropdowns + stats + logs + users
       google.script.run
         .withSuccessHandler(function(result) {
           if (!result) { showView('login'); return; }
@@ -3685,8 +3682,14 @@
           populateTableFilters();
           applyFilter(currentFilter);
           // 4. Stats (pre-computed server-side from the same docs array)
-          if (result.stats) {
-            _applyStats(result.stats);
+          if (result.stats) _applyStats(result.stats);
+          // 5. Activity logs — store in memory so the Logs tab opens instantly
+          if (result.logs && result.logs.length) {
+            allLogs = result.logs;
+          }
+          // 6. Users — store so Users tab opens instantly (admin/manager only)
+          if (result.users && result.users.length) {
+            _allUsers = result.users;
           }
           try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
         })
@@ -4313,10 +4316,42 @@
         google.script.run
           .withSuccessHandler(r => {
             if (r.status === 'success') {
-              // Reload docs to get the server-generated ID/Barcode and timestamps
-              toast('Added! Refreshing...');
+              // Add new doc to local store immediately using returned docId + form data
+              // This avoids a full server reload just to show the new row.
+              const now = new Date().toISOString().split('T')[0];
+              const newDoc = {
+                'ID/Barcode':            r.docId || '',
+                'Doc Type':              data.docType || '',
+                'Doc No':                data.docNo || '',
+                'Description':           data.description || '',
+                'Amount':                data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+                'PR Date':               data.prDate || '',
+                'EndUser':               data.endUser || '',
+                'PO No':                 data.poNo || '',
+                'PO Date':               data.poDate || '',
+                'PO Amount':             data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+                'Supplier':              data.supplier || '',
+                'Requisitioner':         data.requisitioner || '',
+                'Endorsed To':           data.office || '',
+                'Status':                data.status || 'Received',
+                'Notes':                 data.notes || '',
+                'Date Received':         now,
+                'Date Received From BAC':data.dateReceivedFromBAC || '',
+                'Date Endorsed To Acctng':data.dateEndorsedToAcctng || '',
+                'Date Endorsed From CMO':data.dateEndorsedFromCMO || '',
+                'Delivery Status':       data.deliveryStatus || '',
+                'Date Endorse To COA':   data.dateEndorseToCOA || '',
+                'Date Endorse To CTO':   data.dateEndorseToCTO || '',
+                'PDF Link':              data.pdfLink || '',
+                'Doc Time Stamp':        new Date().toISOString().replace('T',' ').substring(0,19),
+                'Overdue':               'On time'
+              };
+              allDocs.unshift(newDoc);   // prepend so it appears at top
+              toast('Added!');
               closeModal();
-              loadDocs();
+              populateTableFilters();
+              applyFilter(currentFilter);
+              updateStats();
             } else if (r.message === 'duplicate') {
               toast(`Document Number "${r.docNo}" already exists!`, 'error');
               document.getElementById('docNoError').textContent = 'Value already exists';
@@ -4561,8 +4596,20 @@
     }
 
     // ===================== LOGS =====================
-    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(); }
-    function loadLogs() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>'; google.script.run.withSuccessHandler(renderLogs).getAllActivityLogs(); }
+    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(false); }
+    // force=true → always refetch from server (Refresh button); force=false → use memory cache if available
+    function loadLogs(force) {
+      if (!force && allLogs && allLogs.length > 0) {
+        // Data already in memory from getInitialData — render immediately (0 ms)
+        applyLogFilters();
+        return;
+      }
+      document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>';
+      google.script.run
+        .withSuccessHandler(function(logs) { allLogs = logs || []; applyLogFilters(); })
+        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
+        .getAllActivityLogs();
+    }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
     function applyLogFilters() { const from = document.getElementById('logsFrom').value, to = document.getElementById('logsTo').value, type = document.getElementById('logsType').value.toLowerCase(), search = document.getElementById('logsSearch').value.toLowerCase().trim(); let filtered = allLogs.filter(log => { const ts = new Date(log.Timestamp), action = log.Action.toLowerCase(), details = (log.Details || '').toLowerCase(), user = (log.User || '').toLowerCase(), doc = (log.DocumentID || '').toLowerCase(); let m = true; if (from) m = m && ts >= new Date(from); if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; } if (type) m = m && action.includes(type); if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search)); return m; }); renderLogsTable(filtered); }
     function renderLogsTable(logs) { const tbody = document.getElementById('logsBody'); if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No logs found.</td></tr>'; return; } tbody.innerHTML = logs.map(log => `<tr><td>${log.Timestamp}</td><td>${log.Action}</td><td>${log.User}</td><td>${log.DocumentID || '-'}</td><td>${log.Details}</td><td>${log.IPAddress}</td></tr>`).join(''); }
@@ -4925,10 +4972,15 @@
       currentFilter = 'users';
       document.getElementById('pageTitle').textContent = 'User Management';
       if (window.innerWidth < 768) closeMobileSidebar();
-      loadUsers();
+      loadUsers(false);  // use memory cache if available
     }
 
-    function loadUsers() {
+    function loadUsers(force) {
+      if (!force && _allUsers && _allUsers.length > 0) {
+        // Already in memory from getInitialData — render instantly (0 ms)
+        renderUsersTable(_allUsers);
+        return;
+      }
       const tb = document.getElementById('usersTableBody');
       if (tb) tb.innerHTML = '<tr><td colspan="5" class="loading">Loading users...</td></tr>';
       google.script.run
@@ -5019,13 +5071,31 @@
       const ud = { name, email, role, status };
       if (pwd) ud.password = pwd;
       if (_isEditUser) {
+        const targetEmail = document.getElementById('editUserEmail').value;
         google.script.run
-          .withSuccessHandler(r => { if (r.status === 'success') { toast('User updated!'); closeUserModal(); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              toast('User updated!');
+              closeUserModal();
+              // Update local cache instantly
+              const idx = _allUsers.findIndex(u => u.email === targetEmail);
+              if (idx !== -1) _allUsers[idx] = Object.assign({}, _allUsers[idx], { name, role, status });
+              renderUsersTable(_allUsers);
+            } else toast(r.message || 'Failed', 'error');
+          })
           .withFailureHandler(() => toast('Error updating user', 'error'))
-          .updateUser(_sessionToken, document.getElementById('editUserEmail').value, ud);
+          .updateUser(_sessionToken, targetEmail, ud);
       } else {
         google.script.run
-          .withSuccessHandler(r => { if (r.status === 'success') { toast('User added!'); closeUserModal(); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              toast('User added!');
+              closeUserModal();
+              // Add to local cache instantly
+              _allUsers.push({ email, name, role, status: status || 'Active' });
+              renderUsersTable(_allUsers);
+            } else toast(r.message || 'Failed', 'error');
+          })
           .withFailureHandler(() => toast('Error adding user', 'error'))
           .addUser(_sessionToken, ud);
       }
@@ -5034,7 +5104,15 @@
     function toggleUser(email) {
       if (!confirm(`Change status for ${email}?`)) return;
       google.script.run
-        .withSuccessHandler(r => { if (r.status === 'success') { toast(`User ${r.newStatus.toLowerCase()}d`); loadUsers(); } else toast(r.message || 'Failed', 'error'); })
+        .withSuccessHandler(r => {
+          if (r.status === 'success') {
+            toast(`User ${r.newStatus.toLowerCase()}d`);
+            // Update local cache instantly
+            const u = _allUsers.find(u => u.email === email);
+            if (u) u.status = r.newStatus;
+            renderUsersTable(_allUsers);
+          } else toast(r.message || 'Failed', 'error');
+        })
         .withFailureHandler(() => toast('Error', 'error'))
         .toggleUserStatus(_sessionToken, email);
     }
