@@ -3691,7 +3691,8 @@
           if (result.users && result.users.length) {
             _allUsers = result.users;
           }
-          try { google.script.run.logActivity('User Login', '', 'User logged into the system'); } catch (e) { }
+          // Note: activity logs are loaded lazily when the Logs tab is first opened.
+          // The 'User Login' activity is logged server-side in checkLogin, not here.
         })
         .withFailureHandler(function() { toast('Failed to load dashboard data', 'error'); })
         .getInitialData(_sessionToken);
@@ -4274,91 +4275,126 @@
     function saveDocumentData(data) {
       if (isEdit) {
         const id = document.getElementById('editId').value;
+        // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────────
+        // Snapshot the original record in case we need to roll back on failure.
+        const idx = allDocs.findIndex(d => d['ID/Barcode'] === id);
+        const originalDoc = idx !== -1 ? Object.assign({}, allDocs[idx]) : null;
+
+        if (idx !== -1) {
+          const existing = allDocs[idx];
+          allDocs[idx] = Object.assign({}, existing, {
+            'Doc Type': data.docType, 'Doc No': data.docNo, 'Description': data.description,
+            'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+            'PR Date': data.prDate, 'EndUser': data.endUser, 'PO No': data.poNo,
+            'PO Date': data.poDate,
+            'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+            'Supplier': data.supplier, 'Requisitioner': data.requisitioner,
+            'Endorsed To': data.office, 'Status': data.status, 'Notes': data.notes,
+            'Date Received From BAC': data.dateReceivedFromBAC,
+            'Date Endorsed To Acctng': data.dateEndorsedToAcctng,
+            'Date Endorsed From CMO': data.dateEndorsedFromCMO,
+            'Delivery Status': data.deliveryStatus,
+            'Date Endorse To COA': data.dateEndorseToCOA,
+            'Date Endorse To CTO': data.dateEndorseToCTO,
+            'PDF Link': data.pdfLink || existing['PDF Link'] || ''
+          });
+        }
+        // Close modal and refresh UI immediately — don't wait for server
+        toast('Saving…');
+        closeModal();
+        populateTableFilters();
+        applyFilter(currentFilter);
+        updateStats();
+
         google.script.run
           .withSuccessHandler(r => {
             if (r.status === 'success') {
-              // Update local store instantly — no server round-trip for reload
-              const idx = allDocs.findIndex(d => d['ID/Barcode'] === id);
-              if (idx !== -1) {
-                // Merge the saved fields into the existing record
-                const existing = allDocs[idx];
-                allDocs[idx] = Object.assign({}, existing, {
-                  'Doc Type': data.docType, 'Doc No': data.docNo, 'Description': data.description,
-                  'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-                  'PR Date': data.prDate, 'EndUser': data.endUser, 'PO No': data.poNo,
-                  'PO Date': data.poDate,
-                  'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-                  'Supplier': data.supplier, 'Requisitioner': data.requisitioner,
-                  'Endorsed To': data.office, 'Status': data.status, 'Notes': data.notes,
-                  'Date Received From BAC': data.dateReceivedFromBAC,
-                  'Date Endorsed To Acctng': data.dateEndorsedToAcctng,
-                  'Date Endorsed From CMO': data.dateEndorsedFromCMO,
-                  'Delivery Status': data.deliveryStatus,
-                  'Date Endorse To COA': data.dateEndorseToCOA,
-                  'Date Endorse To CTO': data.dateEndorseToCTO,
-                  'PDF Link': data.pdfLink || existing['PDF Link'] || ''
-                });
-              }
               toast('Updated!');
-              closeModal();
-              populateTableFilters();
-              applyFilter(currentFilter);
-              updateStats();
             } else if (r.message === 'duplicate') {
+              // Roll back optimistic update
+              if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
+              populateTableFilters(); applyFilter(currentFilter); updateStats();
               toast(`Document Number "${r.docNo}" already exists!`, 'error');
-              document.getElementById('docNoError').textContent = 'Value already exists';
-              document.getElementById('docNoError').style.display = 'block';
-            } else toast('Update failed', 'error');
+            } else {
+              // Roll back
+              if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
+              populateTableFilters(); applyFilter(currentFilter); updateStats();
+              toast('Update failed: ' + (r.message || ''), 'error');
+            }
           })
-          .withFailureHandler(() => toast('Error', 'error'))
+          .withFailureHandler(() => {
+            // Roll back
+            if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
+            populateTableFilters(); applyFilter(currentFilter); updateStats();
+            toast('Network error — changes not saved', 'error');
+          })
           .updateDocument(id, data);
       } else {
+        // ── OPTIMISTIC ADD ────────────────────────────────────────────────────
+        // Show success immediately; the server confirms (or we roll back).
+        const tempId = 'TEMP-' + Date.now();
+        const now = new Date().toISOString().split('T')[0];
+        const optimisticDoc = {
+          'ID/Barcode':            tempId,
+          'Doc Type':              data.docType || '',
+          'Doc No':                data.docNo || '',
+          'Description':           data.description || '',
+          'Amount':                data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+          'PR Date':               data.prDate || '',
+          'EndUser':               data.endUser || '',
+          'PO No':                 data.poNo || '',
+          'PO Date':               data.poDate || '',
+          'PO Amount':             data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+          'Supplier':              data.supplier || '',
+          'Requisitioner':         data.requisitioner || '',
+          'Endorsed To':           data.office || '',
+          'Status':                data.status || 'Received',
+          'Notes':                 data.notes || '',
+          'Date Received':         now,
+          'Date Received From BAC':data.dateReceivedFromBAC || '',
+          'Date Endorsed To Acctng':data.dateEndorsedToAcctng || '',
+          'Date Endorsed From CMO':data.dateEndorsedFromCMO || '',
+          'Delivery Status':       data.deliveryStatus || '',
+          'Date Endorse To COA':   data.dateEndorseToCOA || '',
+          'Date Endorse To CTO':   data.dateEndorseToCTO || '',
+          'PDF Link':              data.pdfLink || '',
+          'Doc Time Stamp':        new Date().toISOString().replace('T',' ').substring(0,19),
+          'Overdue':               'On time'
+        };
+        allDocs.unshift(optimisticDoc);  // prepend so it appears at top
+        toast('Saving…');
+        closeModal();
+        populateTableFilters();
+        applyFilter(currentFilter);
+        updateStats();
+
         google.script.run
           .withSuccessHandler(r => {
             if (r.status === 'success') {
-              // Add new doc to local store immediately using returned docId + form data
-              // This avoids a full server reload just to show the new row.
-              const now = new Date().toISOString().split('T')[0];
-              const newDoc = {
-                'ID/Barcode':            r.docId || '',
-                'Doc Type':              data.docType || '',
-                'Doc No':                data.docNo || '',
-                'Description':           data.description || '',
-                'Amount':                data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-                'PR Date':               data.prDate || '',
-                'EndUser':               data.endUser || '',
-                'PO No':                 data.poNo || '',
-                'PO Date':               data.poDate || '',
-                'PO Amount':             data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-                'Supplier':              data.supplier || '',
-                'Requisitioner':         data.requisitioner || '',
-                'Endorsed To':           data.office || '',
-                'Status':                data.status || 'Received',
-                'Notes':                 data.notes || '',
-                'Date Received':         now,
-                'Date Received From BAC':data.dateReceivedFromBAC || '',
-                'Date Endorsed To Acctng':data.dateEndorsedToAcctng || '',
-                'Date Endorsed From CMO':data.dateEndorsedFromCMO || '',
-                'Delivery Status':       data.deliveryStatus || '',
-                'Date Endorse To COA':   data.dateEndorseToCOA || '',
-                'Date Endorse To CTO':   data.dateEndorseToCTO || '',
-                'PDF Link':              data.pdfLink || '',
-                'Doc Time Stamp':        new Date().toISOString().replace('T',' ').substring(0,19),
-                'Overdue':               'On time'
-              };
-              allDocs.unshift(newDoc);   // prepend so it appears at top
+              // Replace temp ID with real server-assigned ID
+              const tempIdx = allDocs.findIndex(d => d['ID/Barcode'] === tempId);
+              if (tempIdx !== -1) allDocs[tempIdx]['ID/Barcode'] = r.docId || tempId;
               toast('Added!');
-              closeModal();
               populateTableFilters();
               applyFilter(currentFilter);
-              updateStats();
             } else if (r.message === 'duplicate') {
+              // Roll back
+              allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
+              populateTableFilters(); applyFilter(currentFilter); updateStats();
               toast(`Document Number "${r.docNo}" already exists!`, 'error');
-              document.getElementById('docNoError').textContent = 'Value already exists';
-              document.getElementById('docNoError').style.display = 'block';
-            } else toast('Add failed', 'error');
+            } else {
+              // Roll back
+              allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
+              populateTableFilters(); applyFilter(currentFilter); updateStats();
+              toast('Add failed: ' + (r.message || ''), 'error');
+            }
           })
-          .withFailureHandler(() => toast('Error', 'error'))
+          .withFailureHandler(() => {
+            // Roll back
+            allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
+            populateTableFilters(); applyFilter(currentFilter); updateStats();
+            toast('Network error — document not saved', 'error');
+          })
           .addDocument(data);
       }
     }
@@ -4448,20 +4484,30 @@
         const el = document.getElementById(id);
         optionsObj[keys[i]] = el ? el.value.split('\n').map(l => l.trim()).filter(l => l) : [];
       });
+      // Optimistic: update local cache and close modal immediately
+      const prevOpts = Object.assign({}, dropdownOptions);
+      dropdownOptions = Object.assign({}, dropdownOptions, optionsObj);
+      populateDropdowns();
+      populatePrintFilters();
+      closeAdminModal();
+      toast('Saving settings…');
       google.script.run
         .withSuccessHandler(res => {
           if (res && res.status === 'success') {
             toast('All settings saved!');
-            closeAdminModal();
-            // Update local cache so dropdowns reflect new values immediately
-            dropdownOptions = Object.assign({}, dropdownOptions, optionsObj);
-            populateDropdowns();
-            populatePrintFilters();
           } else {
+            // Roll back
+            dropdownOptions = prevOpts;
+            populateDropdowns(); populatePrintFilters();
             toast((res && res.message) || 'Save failed', 'error');
           }
         })
-        .withFailureHandler(() => toast('Network error saving settings.', 'error'))
+        .withFailureHandler(() => {
+          // Roll back
+          dropdownOptions = prevOpts;
+          populateDropdowns(); populatePrintFilters();
+          toast('Network error saving settings.', 'error');
+        })
         .updateAllDropdownOptions(optionsObj, _sessionToken);
     }
 
