@@ -5317,7 +5317,7 @@
           <td colspan="6"></td>
         </tr>`;
 
-        h += `<div style="margin-bottom:28px;page-break-inside:avoid;">
+        h += `<div style="margin-bottom:28px;">
           <div style="background:#0f172a;color:#fff;padding:9px 14px;border-radius:6px 6px 0 0;
                       font-size:13px;font-weight:700;display:flex;justify-content:space-between;
                       align-items:center;page-break-after:avoid;">
@@ -5475,7 +5475,7 @@
         .text-danger { color: #dc2626; font-weight: 700; }
         .text-success { color: #059669; }
         .grand-total td { font-weight: bold; background: #f3f4f6 !important; }
-        .section-break { margin-bottom: 24px; page-break-inside: avoid; }
+        .section-break { margin-bottom: 24px; }
         .section-title { background: #f3f4f6; padding: 8px 10px; border-left: 4px solid #3b82f6;
                          margin-bottom: 10px; font-weight: 600; font-size: 11px;
                          page-break-after: avoid; }
@@ -5654,9 +5654,9 @@
             <td colspan="6"></td>
           </tr>`;
 
-          return `<div class="section-break" style="page-break-inside:avoid;">
-            <div style="background:#000;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;
-                        display:flex;justify-content:space-between;
+          return `<div class="section-break">
+            <div style="background:#000;color:#fff;padding:8px 10px;font-size:13px;font-weight:700;
+                        display:flex;justify-content:space-between;page-break-after:avoid;
                         -webkit-print-color-adjust:exact;print-color-adjust:exact;">
               <span>${office}</span>
               <span style="font-weight:400">${docs.length} document${docs.length!==1?'s':''}</span>
