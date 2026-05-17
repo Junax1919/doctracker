@@ -3182,7 +3182,7 @@
                     <option value="summary">Summary Report</option>
                     <option value="detailed">Detailed Document List</option>
                     <option value="overdue">Overdue Documents Report</option>
-                    <option value="office">Office/Department Report</option>
+                    <option value="office">PR/PO Status Report</option>
                     <option value="custom">Custom Report</option>
                   </select>
                 </div>
@@ -5154,8 +5154,8 @@
         { w: 8 }, { w: 7 }, { w: 8 }, { w: 7 }, { w: 22 }, { w: 10 }, { w: 10 }, { w: 8 }, { w: 10 }, { w: 10 }
       ],
       office: [
-        // DOC NO | DESCRIPTION | REQUISITIONER | STATUS | DATE RECEIVED | OVERDUE
-        { w: 10 }, { w: 30 }, { w: 18 }, { w: 12 }, { w: 16 }, { w: 14 }
+        // DOC NO | PR DATE | AMOUNT | PO NO | PO DATE | PO AMOUNT | DESCRIPTION | END USER | SUPPLIER | STATUS | DATE RECEIVED | OVERDUE
+        { w: 7 }, { w: 6 }, { w: 7 }, { w: 7 }, { w: 6 }, { w: 7 }, { w: 18 }, { w: 8 }, { w: 10 }, { w: 8 }, { w: 9 }, { w: 7 }
       ]
     };
 
@@ -5256,26 +5256,100 @@
     }
 
     function generateOfficeReport(data) {
+      // Group by Endorsed To / office
       const groups = {};
-      data.forEach(d => { const o = d['Endorsed To']||'Unassigned'; if(!groups[o]) groups[o]=[]; groups[o].push(d); });
-      let h = getReportHeader('Office/Department Report');
-      h += `<p style="margin-bottom:30px">Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>`;
-      const cg = _colgroup(_reportCols.office);
-      Object.keys(groups).sort().forEach(o => {
-        const docs = groups[o];
-        h += `<div style="margin-bottom:30px;page-break-inside:avoid">
-          <h3 style="background:#f3f4f6;padding:12px;border-left:4px solid #3b82f6;margin-bottom:16px">${o} (${docs.length} documents)</h3>
-          <table class="print-table">${cg}<thead><tr>
-            <th>DOC NO</th><th>DESCRIPTION</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th>
-          </tr></thead><tbody>`;
-        docs.forEach(d => {
-          h += `<tr><td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
-            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td>
-            <td>${d['Date Received']||'-'}</td>
-            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td></tr>`;
-        });
-        h += `</tbody></table></div>`;
+      const groupOrder = [];
+      data.forEach(d => {
+        const office = (d['Endorsed To'] || '').trim() || 'Unassigned';
+        if (!groups[office]) { groups[office] = []; groupOrder.push(office); }
+        groups[office].push(d);
       });
+      groupOrder.sort((a, b) => a.localeCompare(b));
+
+      let h = getReportHeader('PR/PO Status Report');
+      h += `<p style="margin-bottom:20px">
+        Total Offices/Departments: <strong>${groupOrder.length}</strong> &nbsp;|&nbsp;
+        Total Documents: <strong>${data.length}</strong>
+      </p>`;
+
+      const cg = _colgroup(_reportCols.office);
+      const colHeaders = `<thead><tr>
+        <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+        <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
+        <th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th>
+      </tr></thead>`;
+
+      let grandAmt = 0, grandPoAmt = 0;
+
+      groupOrder.forEach(office => {
+        const docs = groups[office];
+        let grpAmt = 0, grpPoAmt = 0;
+
+        const rows = docs.map(d => {
+          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          grpAmt += amt; grpPoAmt += poAmt;
+          grandAmt += amt; grandPoAmt += poAmt;
+          const overdueColor = d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669';
+          const overdueBold  = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
+          return `<tr>
+            <td>${d['Doc No']||'-'}</td>
+            <td>${d['PR Date']||'-'}</td>
+            <td style="text-align:right">${fmtAmt(d.Amount)}</td>
+            <td>${d['PO No']||'-'}</td>
+            <td>${d['PO Date']||'-'}</td>
+            <td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${d.Description||'-'}</td>
+            <td>${d.EndUser||d['End User']||'-'}</td>
+            <td>${d.Supplier||'-'}</td>
+            <td>${d.Status||'-'}</td>
+            <td>${d['Date Received']||'-'}</td>
+            <td style="color:${overdueColor};${overdueBold}">${d.Overdue||'On time'}</td>
+          </tr>`;
+        }).join('');
+
+        // Group subtotal row
+        const subtotalRow = `<tr style="font-weight:600;background:#f0f4ff;border-top:1px solid #c7d2fe;">
+          <td colspan="2" style="text-align:right;font-size:11px;color:#3730a3">SUBTOTAL (${docs.length} doc${docs.length !== 1 ? 's' : ''}):</td>
+          <td style="text-align:right;color:#059669;font-size:11px">${fmtAmt(grpAmt)}</td>
+          <td colspan="2"></td>
+          <td style="text-align:right;color:#059669;font-size:11px">${fmtAmt(grpPoAmt)}</td>
+          <td colspan="6"></td>
+        </tr>`;
+
+        h += `<div style="margin-bottom:28px;page-break-inside:avoid;">
+          <div style="background:#0f172a;color:#fff;padding:9px 14px;border-radius:6px 6px 0 0;
+                      font-size:13px;font-weight:700;display:flex;justify-content:space-between;
+                      align-items:center;page-break-after:avoid;">
+            <span>&#128198; ${office}</span>
+            <span style="font-weight:400;font-size:12px;opacity:.85">${docs.length} document${docs.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div style="overflow-x:auto;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 6px 6px;">
+            <table class="print-table" style="border-radius:0">${cg}${colHeaders}
+              <tbody>${rows}${subtotalRow}</tbody>
+            </table>
+          </div>
+        </div>`;
+      });
+
+      // Grand total row — standalone below all groups
+      h += `<div style="margin-top:8px;border:2px solid #0f172a;border-radius:6px;overflow:hidden;">
+        <table class="print-table" style="border-radius:0;margin:0">${cg}
+          <tbody>
+            <tr style="font-weight:700;background:#0f172a;color:#fff;">
+              <td colspan="2" style="text-align:right;color:#fff;
+                  -webkit-print-color-adjust:exact;print-color-adjust:exact">GRAND TOTAL (${data.length} docs):</td>
+              <td style="text-align:right;color:#86efac;
+                  -webkit-print-color-adjust:exact;print-color-adjust:exact">${fmtAmt(grandAmt)}</td>
+              <td colspan="2"></td>
+              <td style="text-align:right;color:#86efac;
+                  -webkit-print-color-adjust:exact;print-color-adjust:exact">${fmtAmt(grandPoAmt)}</td>
+              <td colspan="6"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+
       return h;
     }
     function generateCustomReport(data) {
@@ -5526,25 +5600,89 @@
                <tbody>${rows}</tbody></table>`}`;
 
       } else if (type === 'office') {
+        // Group by Endorsed To / office, sorted alphabetically
         const groups = {};
-        data.forEach(d => { const o = d['Endorsed To']||'Unassigned'; if(!groups[o]) groups[o]=[]; groups[o].push(d); });
-        const sections = Object.keys(groups).sort().map(o => {
-          const docs = groups[o];
-          const rows = docs.map(d => `<tr>
-            <td>${d['Doc No']||'-'}</td><td>${d.Description||'-'}</td>
-            <td>${d.Requisitioner||'-'}</td><td>${d.Status||'-'}</td>
-            <td>${d['Date Received']||'-'}</td>
-            <td style="color:${d.Overdue&&d.Overdue!=='On time'?'#dc2626':'#059669'}">${d.Overdue||'On time'}</td>
-          </tr>`).join('');
-          return `<div class="section-break">
-            <div class="section-title">${o} (${docs.length} documents)</div>
-            <table>${cg([10,30,18,12,16,14])}
-            <thead><tr><th>DOC NO</th><th>DESCRIPTION</th><th>REQUISITIONER</th><th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th></tr></thead>
-            <tbody>${rows}</tbody></table></div>`;
+        const groupOrder = [];
+        data.forEach(d => {
+          const office = (d['Endorsed To'] || '').trim() || 'Unassigned';
+          if (!groups[office]) { groups[office] = []; groupOrder.push(office); }
+          groups[office].push(d);
+        });
+        groupOrder.sort((a, b) => a.localeCompare(b));
+
+        const colW = cg([7,6,7,7,6,7,18,8,10,8,9,7]);
+        const colHeaders = `<thead><tr>
+          <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
+          <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
+          <th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th>
+        </tr></thead>`;
+
+        let grandAmt = 0, grandPoAmt = 0;
+
+        const sections = groupOrder.map(office => {
+          const docs = groups[office];
+          let grpAmt = 0, grpPoAmt = 0;
+
+          const rows = docs.map(d => {
+            const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
+            const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+            grpAmt += amt; grpPoAmt += poAmt;
+            grandAmt += amt; grandPoAmt += poAmt;
+            const overdueColor = d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669';
+            const overdueBold  = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
+            return `<tr>
+              <td>${d['Doc No']||'-'}</td>
+              <td>${d['PR Date']||'-'}</td>
+              <td class="text-right">${fmtAmt(d.Amount)}</td>
+              <td>${d['PO No']||'-'}</td>
+              <td>${d['PO Date']||'-'}</td>
+              <td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+              <td>${d.Description||'-'}</td>
+              <td>${d.EndUser||d['End User']||'-'}</td>
+              <td>${d.Supplier||'-'}</td>
+              <td>${d.Status||'-'}</td>
+              <td>${d['Date Received']||'-'}</td>
+              <td style="color:${overdueColor};${overdueBold}">${d.Overdue||'On time'}</td>
+            </tr>`;
+          }).join('');
+
+          const subtotalRow = `<tr style="font-weight:600;background:#f0f4ff;border-top:1px solid #c7d2fe;">
+            <td colspan="2" style="text-align:right;font-size:9px;color:#3730a3">SUBTOTAL (${docs.length} doc${docs.length!==1?'s':''}):</td>
+            <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpAmt)}</td>
+            <td colspan="2"></td>
+            <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpPoAmt)}</td>
+            <td colspan="6"></td>
+          </tr>`;
+
+          return `<div class="section-break" style="page-break-inside:avoid;">
+            <div style="background:#000;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;
+                        display:flex;justify-content:space-between;
+                        -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+              <span>${office}</span>
+              <span style="font-weight:400">${docs.length} document${docs.length!==1?'s':''}</span>
+            </div>
+            <table style="border:1px solid #e2e8f0;border-top:none">${colW}${colHeaders}
+              <tbody>${rows}${subtotalRow}</tbody>
+            </table></div>`;
         }).join('');
-        html = orgHeader + `<h3>Office/Department Report</h3><p>As of ${now}</p></div>
-          <p>Total Offices: <strong>${Object.keys(groups).length}</strong> | Total Documents: <strong>${data.length}</strong></p>
-          ${sections}`;
+
+        const grandTotalRow = `<div style="margin-top:8px;">
+          <table style="border:2px solid #000">${colW}
+            <tbody>
+              <tr style="font-weight:700;background:#000;color:#fff;
+                  -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                <td colspan="2" style="text-align:right;color:#fff;padding:5px 4px">GRAND TOTAL (${data.length} docs):</td>
+                <td class="text-right" style="color:#86efac;padding:5px 4px">${fmtAmt(grandAmt)}</td>
+                <td colspan="2"></td>
+                <td class="text-right" style="color:#86efac;padding:5px 4px">${fmtAmt(grandPoAmt)}</td>
+                <td colspan="6"></td>
+              </tr>
+            </tbody>
+          </table></div>`;
+
+        html = orgHeader + `<h3>PR/PO Status Report</h3><p>As of ${now}</p></div>
+          <p>Total Offices/Departments: <strong>${groupOrder.length}</strong> &nbsp;|&nbsp; Total Documents: <strong>${data.length}</strong></p>
+          ${sections}${grandTotalRow}`;
 
       } else if (type === 'custom') {
         const previewContent = document.getElementById('reportPreview').innerHTML;
