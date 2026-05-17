@@ -1576,7 +1576,11 @@
     /* ---- LOGS VIEW ---- */
     .logs-view {
       display: none;
-      padding: 32px
+      padding: 32px;
+      /* Must NOT have a fixed width — flex/grid child of main-content */
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 0          /* prevent flex blowout */
     }
 
     .logs-view.active {
@@ -1584,22 +1588,24 @@
     }
 
     .logs-container {
-      max-width: 1200px;
-      margin: 0 auto;
+      width: 100%;
+      max-width: 100%;       /* fill available space at every zoom level */
+      margin: 0;
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: var(--shadow);
-      overflow: hidden
+      overflow: visible;     /* was overflow:hidden — caused clipping on zoom */
+      box-sizing: border-box
     }
 
     .logs-header {
       padding: 20px 24px;
       border-bottom: 1px solid var(--border);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
       flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
       gap: 16px
     }
 
@@ -1608,14 +1614,17 @@
       font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 8px
+      gap: 8px;
+      white-space: nowrap
     }
 
     .logs-filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      align-items: center
+      gap: 8px;
+      align-items: center;
+      flex: 1 1 auto;         /* grow to fill available header space */
+      min-width: 0
     }
 
     .logs-filters input,
@@ -1625,13 +1634,72 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 12px;
-      background: #fff
+      background: #fff;
+      min-width: 0;           /* allow shrinking below content width */
+      flex: 1 1 140px;        /* grow and shrink fluidly */
+      box-sizing: border-box;
+      max-width: 220px
+    }
+
+    .logs-filters input[type="search"] {
+      flex: 2 1 180px;        /* search box gets more space */
+      max-width: 280px
     }
 
     .logs-actions {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap
+      flex-wrap: wrap;
+      align-items: center;
+      flex-shrink: 0
+    }
+
+    /* Scroll wrapper for the logs table — same pattern as .table-container */
+    .logs-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box
+    }
+
+    /* The logs table itself is fluid — no fixed min-width that forces horizontal scroll */
+    #logsTable {
+      width: 100%;
+      min-width: 600px;       /* only scroll when truly needed */
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: auto
+    }
+
+    #logsTable th {
+      white-space: nowrap;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 1
+    }
+
+    #logsTable td {
+      padding: 11px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      word-break: break-word;
+      vertical-align: top
+    }
+
+    #logsTable tbody tr:hover td {
+      background: var(--bg)
+    }
+
+    #logsTable tbody tr:last-child td {
+      border-bottom: none
     }
 
     /* ---- PRINT REPORT VIEW ---- */
@@ -1951,6 +2019,12 @@
 
       .logs-header {
         gap: 12px;
+        padding: 16px 18px;
+      }
+
+      .logs-filters input,
+      .logs-filters select {
+        max-width: 100%;
       }
 
       /* Print */
@@ -2253,13 +2327,14 @@
 
       /* Logs view */
       .logs-view {
-        padding: 14px;
+        padding: 12px;
       }
 
       .logs-header {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
+        padding: 14px 16px;
       }
 
       .logs-filters {
@@ -2270,16 +2345,25 @@
       .logs-filters input,
       .logs-filters select {
         width: 100%;
+        max-width: 100%;
+        flex: 1 1 auto;
         box-sizing: border-box;
       }
 
       .logs-actions {
         flex-wrap: wrap;
+        gap: 6px;
       }
 
       .logs-actions .btn {
         flex: 1 1 80px;
         justify-content: center;
+      }
+
+      #logsTable th,
+      #logsTable td {
+        padding: 9px 10px;
+        font-size: 12px;
       }
 
       /* Print/report view */
@@ -2489,7 +2573,9 @@
       .dashboard-footer,
       .logs-header,
       .logs-filters,
-      .logs-actions {
+      .logs-actions,
+      .logs-table-wrap,
+      #logsView {
         display: none !important;
       }
 
@@ -3013,10 +3099,11 @@
                   <button class="btn btn-outline" onclick="clearLogFilters()">Clear</button>
                   <button class="btn btn-outline" onclick="loadLogs(true)">Refresh</button>
                   <button class="btn btn-outline" onclick="exportLogsCSV()">Export CSV</button>
-                  <button class="btn btn-primary" onclick="window.print()">Print</button>
+                  <button class="btn btn-primary" onclick="printLogs()">Print</button>
                 </div>
               </div>
             </div>
+            <div class="logs-table-wrap">
             <table id="logsTable">
               <thead>
                 <tr>
@@ -3034,6 +3121,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
             <footer
               style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;font-size:12px;color:#94a3b8">
               &copy; 2025 DocuTracker | Activity Log System</footer>
@@ -4891,6 +4979,138 @@
       }).join('');
     }
     function clearLogFilters() { ['logsSearch', 'logsFrom', 'logsTo'].forEach(id => document.getElementById(id).value = ''); document.getElementById('logsType').value = ''; applyLogFilters(); }
+    function printLogs() {
+      // Build the same filtered set shown in the table right now
+      const docNoMap = {};
+      (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
+
+      const from   = document.getElementById('logsFrom').value;
+      const to     = document.getElementById('logsTo').value;
+      const type   = document.getElementById('logsType').value.toLowerCase();
+      const search = document.getElementById('logsSearch').value.toLowerCase().trim();
+      const filtered = allLogs.filter(log => {
+        const ts     = new Date(log.Timestamp);
+        const action = log.Action.toLowerCase();
+        const detail = (log.Details || '').toLowerCase();
+        const user   = (log.User || '').toLowerCase();
+        const doc    = (log.DocumentID || '').toLowerCase();
+        const docNo  = log.DocumentID ? (docNoMap[log.DocumentID] || '').toLowerCase() : '';
+        let m = true;
+        if (from) m = m && ts >= new Date(from);
+        if (to)   { const t2 = new Date(to); t2.setHours(23,59,59,999); m = m && ts <= t2; }
+        if (type)   m = m && action.includes(type);
+        if (search) m = m && (action.includes(search) || detail.includes(search) || user.includes(search) || doc.includes(search) || docNo.includes(search));
+        return m;
+      });
+
+      const now = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const filterParts = [];
+      if (from)   filterParts.push(`From: ${from}`);
+      if (to)     filterParts.push(`To: ${to}`);
+      if (type)   filterParts.push(`Type: ${type}`);
+      if (search) filterParts.push(`Search: "${search}"`);
+
+      const rows = filtered.map((log, i) => {
+        const docNo = log.DocumentID ? (docNoMap[log.DocumentID] || '-') : '-';
+        const bg = i % 2 === 1 ? ' style="background:#f8fafc"' : '';
+        return `<tr${bg}>
+          <td>${log.Timestamp || '-'}</td>
+          <td>${log.Action || '-'}</td>
+          <td>${log.User || '-'}</td>
+          <td style="font-family:monospace;font-size:9px">${log.DocumentID || '-'}</td>
+          <td>${docNo}</td>
+          <td>${log.Details || '-'}</td>
+        </tr>`;
+      }).join('');
+
+      const css = `
+        @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { height: auto; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #0f172a;
+               height: auto; overflow: hidden;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body::after { display: none !important; content: none !important; }
+
+        /* Header */
+        .ph { text-align: center; border-bottom: 2px solid #0f172a;
+              padding-bottom: 10px; margin-bottom: 14px; page-break-after: avoid; }
+        .ph-org  { font-size: 13px; font-weight: 700; }
+        .ph-sub  { font-size: 11px; color: #374151; margin-top: 2px; }
+        .ph-title{ font-size: 15px; font-weight: 700; margin-top: 6px; }
+        .ph-meta { font-size: 9px; color: #64748b; margin-top: 4px; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; table-layout: fixed;
+                page-break-inside: auto; }
+        thead { display: table-header-group; }
+        tbody tr { page-break-inside: avoid; }
+
+        /* Column widths — portrait A4 ~190mm usable */
+        col.c-ts   { width: 18%; }   /* Timestamp   ~34mm */
+        col.c-act  { width: 15%; }   /* Action      ~28mm */
+        col.c-user { width: 12%; }   /* User        ~23mm */
+        col.c-id   { width: 16%; }   /* Document ID ~30mm */
+        col.c-dno  { width: 12%; }   /* Doc No      ~23mm */
+        col.c-desc { width: 27%; }   /* Description ~51mm */
+
+        th { background: #000000 !important; color: #ffffff !important;
+             padding: 5px 5px; font-size: 9px; font-weight: 700;
+             text-align: center; vertical-align: middle;
+             white-space: normal; word-break: break-word;
+             border: 1px solid #000;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { padding: 4px 5px; border: 1px solid #d1d5db; font-size: 9px;
+             word-break: break-word; vertical-align: top; }
+
+        .summary { font-size: 9px; color: #374151; margin-bottom: 10px; }
+        .empty   { text-align: center; padding: 40px; color: #6b7280; font-style: italic; }
+
+        @media print {
+          @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
+          html, body { height: auto !important; overflow: hidden !important; }
+          body::after { display: none !important; content: none !important; }
+        }
+      `;
+
+      const body = `
+        <div class="ph">
+          <div class="ph-org">GENERAL SERVICES OFFICE</div>
+          <div class="ph-sub">City of Ozamiz</div>
+          <div class="ph-title">Activity Log Report</div>
+          <div class="ph-meta">Printed: ${now}${filterParts.length ? ' &nbsp;|&nbsp; Filters: ' + filterParts.join(', ') : ''}</div>
+        </div>
+        <div class="summary">Total Records: <strong>${filtered.length}</strong></div>
+        ${filtered.length === 0
+          ? '<div class="empty">No log entries match the current filters.</div>'
+          : `<table>
+              <colgroup>
+                <col class="c-ts"><col class="c-act"><col class="c-user">
+                <col class="c-id"><col class="c-dno"><col class="c-desc">
+              </colgroup>
+              <thead><tr>
+                <th>TIMESTAMP</th><th>ACTION</th><th>USER</th>
+                <th>DOCUMENT ID</th><th>DOC NO</th><th>DESCRIPTION</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>`
+        }
+      `;
+
+      const w = window.open('', '_blank', 'width=850,height=1100');
+      w.document.write(`<!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <title>DocuTracker \u2014 Activity Log Report</title>
+        <style>${css}</style>
+        </head><body>
+        <div id="printRoot" style="display:block;width:100%;overflow:hidden">${body}</div>
+        <script>
+          window.onload = function() { setTimeout(function() { window.print(); }, 250); };
+        <\/script>
+        </body></html>`);
+      w.document.close();
+    }
+
     function exportLogsCSV() {
       const docNoMap = {};
       (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
@@ -5538,28 +5758,46 @@
       document.body.appendChild(loadingEl);
 
       // Normal session check — pass THIS browser's token (never shared with other browsers)
-      google.script.run
-        .withSuccessHandler(function (user) {
-          const loader = document.getElementById('sessionLoader');
-          if (loader) loader.remove();
-          if (user) { showView('dashboard'); initDashboard(); }
-          else { _sessionToken = ''; try { localStorage.removeItem('docutracker_session_token'); } catch(e){} showView('login'); }
-        })
-        .withFailureHandler(function () {
-          // On network failure don't silently kick to login — show a retry prompt
-          const loader = document.getElementById('sessionLoader');
-          if (loader) {
-            loader.innerHTML = `
-              <div style="text-align:center;padding:32px">
-                <div style="font-size:40px;margin-bottom:16px">⚠️</div>
-                <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
-                <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server. Please check your internet connection.</div>
-                <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
-                <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
-              </div>`;
-          } else { showView('login'); }
-        })
-        .getCurrentUser(_sessionToken);
+      // Retry once on null result before giving up — guards against transient GAS errors
+      let _sessionCheckAttempts = 0;
+      function _attemptSessionCheck() {
+        _sessionCheckAttempts++;
+        google.script.run
+          .withSuccessHandler(function (user) {
+            const loader = document.getElementById('sessionLoader');
+            if (user) {
+              if (loader) loader.remove();
+              showView('dashboard');
+              initDashboard();
+            } else if (_sessionCheckAttempts < 2) {
+              // First attempt returned null — wait 1.2s and retry once
+              // (guards against transient PropertiesService / CacheService misses)
+              setTimeout(_attemptSessionCheck, 1200);
+            } else {
+              // Genuinely invalid or expired session
+              if (loader) loader.remove();
+              _sessionToken = '';
+              try { localStorage.removeItem('docutracker_session_token'); } catch(e) {}
+              showView('login');
+            }
+          })
+          .withFailureHandler(function () {
+            // On network failure don't silently kick to login — show a retry prompt
+            const loader = document.getElementById('sessionLoader');
+            if (loader) {
+              loader.innerHTML = `
+                <div style="text-align:center;padding:32px">
+                  <div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div>
+                  <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
+                  <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server. Please check your internet connection.</div>
+                  <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
+                  <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
+                </div>`;
+            } else { showView('login'); }
+          })
+          .getCurrentUser(_sessionToken);
+      }
+      _attemptSessionCheck();
     })();
   </script>
 

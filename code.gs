@@ -226,10 +226,16 @@ function _createSession(email) {
 function _validateSession(token) {
   if (!token) return null;
   try {
-    // CacheService first (fast, avoids ScriptProperties quota hits)
-    const ck = 'sv_' + token.replace(/-/g, '');
+    // CacheService first (fast path — avoids ScriptProperties quota hits)
+    const ck  = 'sv_' + token.replace(/-/g, '');
     const hit = CacheService.getScriptCache().get(ck);
-    if (hit) return hit;
+    if (hit) {
+      // Sliding renewal: refresh cache TTL on every successful hit so active
+      // users never get kicked out just because the 6-min cache window expired.
+      CacheService.getScriptCache().put(ck, hit, 600);
+      return hit;
+    }
+    // Slow path — read from ScriptProperties
     const raw = PropertiesService.getScriptProperties().getProperty('sess_' + token);
     if (!raw) return null;
     const sess = JSON.parse(raw);
@@ -238,10 +244,14 @@ function _validateSession(token) {
       PropertiesService.getScriptProperties().deleteProperty('sess_' + token);
       return null;
     }
-    const ttl = Math.min(300, Math.floor((sess.expires - now) / 1000));
-    if (ttl > 0) CacheService.getScriptCache().put(ck, sess.email, ttl);
+    // Sliding window: extend the session by another 24h on each successful validation
+    // (keeps the session alive as long as the user is active)
+    sess.expires = now + 24 * 60 * 60 * 1000;
+    PropertiesService.getScriptProperties().setProperty('sess_' + token, JSON.stringify(sess));
+    // Cache for 10 minutes — long enough to survive normal page interactions
+    CacheService.getScriptCache().put(ck, sess.email, 600);
     return sess.email;
-  } catch (e) { return null; }
+  } catch (e) { Logger.log('_validateSession error: ' + e); return null; }
 }
 
 function _destroySession(token) {
@@ -319,7 +329,7 @@ function getCurrentUser(tokenParam) {
       const perms  = _getDefaultPermissions(role);
       try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
       const user = { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms };
-      try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 60); } catch (e) {}
+      try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 300); } catch (e) {}
       return user;
     }
     return null;
