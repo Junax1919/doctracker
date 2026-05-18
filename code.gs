@@ -383,7 +383,11 @@ function checkLogin(email, password) {
     if (status.toLowerCase() === 'inactive')
       return { status: 'invalid', message: 'Account is deactivated. Contact your administrator.' };
     const token = _createSession(userEmail);
-    logActivity('Login', '', `User logged in: ${userEmail}`);
+    // Pass the user's display name explicitly — at login time there is no active
+    // session token yet, so getCurrentUser() inside logActivity would return null
+    // and fall back to 'System'. We pass the name directly to avoid that.
+    const userName = String(data[i][3] || '').trim() || userEmail;
+    logActivity('Login', '', `User logged in: ${userEmail}`, userName);
     return { status: 'success', token: token };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
@@ -576,10 +580,19 @@ function initializeActivityLogSheet() {
     let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
     if (!logSheet) {
       logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
-      logSheet.getRange(1, 1, 1, 6).setValues([['Timestamp','Action','User','Document ID','Details','Description']]);
-      logSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
-      logSheet.getRange(1, 1, 1, 6).setBackground('#f3f4f6');
+      logSheet.getRange(1, 1, 1, 7).setValues([['Timestamp','Action','User','Document ID','Doc No','Details','Description']]);
+      logSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+      logSheet.getRange(1, 1, 1, 7).setBackground('#f3f4f6');
       logSheet.setFrozenRows(1);
+    } else {
+      // Migrate existing sheet: check if Doc No column already exists (col 5 header)
+      const headers = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0];
+      if (!headers.includes('Doc No')) {
+        // Insert Doc No column at position 5 (after Document ID col 4)
+        logSheet.insertColumnAfter(4);
+        logSheet.getRange(1, 5).setValue('Doc No');
+        logSheet.getRange(1, 5).setFontWeight('bold').setBackground('#f3f4f6');
+      }
     }
     return logSheet;
   } catch (error) {
@@ -588,19 +601,25 @@ function initializeActivityLogSheet() {
   }
 }
 
-function logActivity(action, documentId, details) {
+// logActivity: action, documentId, details, [explicitUserName], [docNo]
+// explicitUserName: pass when getCurrentUser() would return null (e.g. during login)
+function logActivity(action, documentId, details, explicitUserName, docNo) {
   try {
     const logSheet = initializeActivityLogSheet();
     if (!logSheet) return false;
-    const cu       = getCurrentUser();
-    const userName = cu ? cu.name : 'System';
+    let userName = explicitUserName || '';
+    if (!userName) {
+      const cu = getCurrentUser();
+      userName = cu ? cu.name : 'System';
+    }
     logSheet.appendRow([
       new Date(),
-      String(action || '').trim(),
+      String(action    || '').trim(),
       userName,
       String(documentId || '').trim(),
-      String(details || '').trim(),
-      'N/A'
+      String(docNo      || '').trim(),
+      String(details    || '').trim(),
+      ''                                  // Description column (reserved)
     ]);
     CacheService.getScriptCache().remove('all_activity_logs');
     return true;
@@ -637,8 +656,9 @@ function getAllActivityLogs() {
         Action:     data[i][1] || '',
         User:       data[i][2] || '',
         DocumentID: data[i][3] || '',
-        Details:    data[i][4] || '',
-        IPAddress:  data[i][5] || 'N/A'
+        DocNo:      data[i][4] || '',   // Doc No — col 5 (index 4)
+        Details:    data[i][5] || '',   // Details — col 6 (index 5)
+        IPAddress:  data[i][6] || ''    // Description/reserved — col 7 (index 6)
       });
     }
     try {
@@ -670,15 +690,19 @@ function _logBoth(docId, histAction, histStatus, histUser, histRemarks, actActio
     const ts = new Date();
     histSheet.appendRow([docId, histAction, histStatus || '', histUser || userName || 'System', ts, histRemarks || '']);
 
-    // --- Activity Log ---
-    let logSheet = ss.getSheetByName(ACTIVITY_LOG_SHEET);
-    if (!logSheet) {
-      logSheet = ss.insertSheet(ACTIVITY_LOG_SHEET);
-      logSheet.getRange(1,1,1,6).setValues([['Timestamp','Action','User','Document ID','Details','Description']]);
-      logSheet.getRange(1,1,1,6).setFontWeight('bold').setBackground('#f3f4f6');
-      logSheet.setFrozenRows(1);
+    // --- Resolve Doc No from docId using cached docs (zero extra sheet read) ---
+    let docNo = '';
+    try {
+      const cachedDocs = getAllDocuments();
+      const match = cachedDocs.find(d => d['ID/Barcode'] === docId);
+      if (match) docNo = match['Doc No'] || '';
+    } catch(e) {}
+
+    // --- Activity Log (7 columns: Timestamp, Action, User, Document ID, Doc No, Details, Description) ---
+    const logSheet = initializeActivityLogSheet();
+    if (logSheet) {
+      logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), docNo, String(actDetails||'').trim(), '']);
     }
-    logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), String(actDetails||'').trim(), '']);
     // Invalidate activity cache
     try { CacheService.getScriptCache().remove('all_activity_logs'); } catch(e) {}
   } catch(e) { Logger.log('_logBoth error: ' + e); }
