@@ -6,11 +6,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DocuTracker</title>
-  <!-- Favicon: Base64-embedded SVG — works in GAS Web App (no static file needed) -->
+  <!-- Favicon: Flutter SVG from Material Symbols Outlined -->
   <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTcyYSIvPjxyZWN0IHg9IjciIHk9IjQiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIiIGZpbGw9IiNmZmZmZmYiLz48cG9seWdvbiBwb2ludHM9IjE2LDQgMjAsOCAxNiw4IiBmaWxsPSIjOTRhM2I4Ii8+PHJlY3QgeD0iOSIgeT0iMTEiIHdpZHRoPSI3IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMwZjE3MmEiIG9wYWNpdHk9IjAuMyIvPjxyZWN0IHg9IjkiIHk9IjE0IiB3aWR0aD0iOS41IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMwZjE3MmEiIG9wYWNpdHk9IjAuMyIvPjxyZWN0IHg9IjkiIHk9IjE3IiB3aWR0aD0iNSIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMGYxNzJhIiBvcGFjaXR5PSIwLjMiLz48Y2lyY2xlIGN4PSIyMiIgY3k9IjIzIiByPSI2IiBmaWxsPSIjMzM4NGY3Ii8+PGNpcmNsZSBjeD0iMjIiIGN5PSIyMyIgcj0iMy4yIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS44Ii8+PGxpbmUgeDE9IjI0LjIiIHkxPSIyNS4yIiB4Mj0iMjYuNSIgeTI9IjI3LjUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==">
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='32' viewBox='0 -960 960 960' width='32' fill='%230f172a'%3E%3Cpath d='M236-345 100-480l440-440h271L236-345ZM540-40 303-277l237-237h271L574-277 811-40H540Z'/%3E%3C/svg%3E">
   <link rel="shortcut icon"
-    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTcyYSIvPjxyZWN0IHg9IjciIHk9IjQiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIiIGZpbGw9IiNmZmZmZmYiLz48cG9seWdvbiBwb2ludHM9IjE2LDQgMjAsOCAxNiw4IiBmaWxsPSIjOTRhM2I4Ii8+PHJlY3QgeD0iOSIgeT0iMTEiIHdpZHRoPSI3IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMwZjE3MmEiIG9wYWNpdHk9IjAuMyIvPjxyZWN0IHg9IjkiIHk9IjE0IiB3aWR0aD0iOS41IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMwZjE3MmEiIG9wYWNpdHk9IjAuMyIvPjxyZWN0IHg9IjkiIHk9IjE3IiB3aWR0aD0iNSIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMGYxNzJhIiBvcGFjaXR5PSIwLjMiLz48Y2lyY2xlIGN4PSIyMiIgY3k9IjIzIiByPSI2IiBmaWxsPSIjMzM4NGY3Ii8+PGNpcmNsZSBjeD0iMjIiIGN5PSIyMyIgcj0iMy4yIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS44Ii8+PGxpbmUgeDE9IjI0LjIiIHkxPSIyNS4yIiB4Mj0iMjYuNSIgeTI9IjI3LjUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==">
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='32' viewBox='0 -960 960 960' width='32' fill='%230f172a'%3E%3Cpath d='M236-345 100-480l440-440h271L236-345ZM540-40 303-277l237-237h271L574-277 811-40H540Z'/%3E%3C/svg%3E">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0"
     rel="stylesheet">
@@ -1580,7 +1580,8 @@
       /* Must NOT have a fixed width — flex/grid child of main-content */
       width: 100%;
       box-sizing: border-box;
-      min-width: 0          /* prevent flex blowout */
+      min-width: 0
+        /* prevent flex blowout */
     }
 
     .logs-view.active {
@@ -1589,13 +1590,15 @@
 
     .logs-container {
       width: 100%;
-      max-width: 100%;       /* fill available space at every zoom level */
+      max-width: 100%;
+      /* fill available space at every zoom level */
       margin: 0;
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: var(--shadow);
-      overflow: visible;     /* was overflow:hidden — caused clipping on zoom */
+      overflow: visible;
+      /* was overflow:hidden — caused clipping on zoom */
       box-sizing: border-box
     }
 
@@ -1623,7 +1626,8 @@
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      flex: 1 1 auto;         /* grow to fill available header space */
+      flex: 1 1 auto;
+      /* grow to fill available header space */
       min-width: 0
     }
 
@@ -1635,14 +1639,17 @@
       border-radius: 8px;
       padding: 8px 12px;
       background: #fff;
-      min-width: 0;           /* allow shrinking below content width */
-      flex: 1 1 140px;        /* grow and shrink fluidly */
+      min-width: 0;
+      /* allow shrinking below content width */
+      flex: 1 1 140px;
+      /* grow and shrink fluidly */
       box-sizing: border-box;
       max-width: 220px
     }
 
     .logs-filters input[type="search"] {
-      flex: 2 1 180px;        /* search box gets more space */
+      flex: 2 1 180px;
+      /* search box gets more space */
       max-width: 280px
     }
 
@@ -1665,7 +1672,8 @@
     /* The logs table itself is fluid — no fixed min-width that forces horizontal scroll */
     #logsTable {
       width: 100%;
-      min-width: 600px;       /* only scroll when truly needed */
+      min-width: 600px;
+      /* only scroll when truly needed */
       border-collapse: separate;
       border-spacing: 0;
       table-layout: auto
@@ -1815,9 +1823,15 @@
 
     /* ── Skeleton shimmer for fast perceived load ── */
     @keyframes shimmer {
-      0%   { background-position: -600px 0 }
-      100% { background-position:  600px 0 }
+      0% {
+        background-position: -600px 0
+      }
+
+      100% {
+        background-position: 600px 0
+      }
     }
+
     .skel-row td {
       background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
       background-size: 600px 100%;
@@ -1826,20 +1840,33 @@
       color: transparent !important;
       user-select: none;
     }
-    .skel-row td * { visibility: hidden }
+
+    .skel-row td * {
+      visibility: hidden
+    }
 
     /* ── Print: prevent blank trailing page ── */
     @media print {
-      html, body { height: auto !important; overflow: hidden !important; }
-      body::after { display: none !important; content: none !important; }
+
+      html,
+      body {
+        height: auto !important;
+        overflow: hidden !important;
+      }
+
+      body::after {
+        display: none !important;
+        content: none !important;
+      }
     }
-      display: none;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 6px;
-      color: var(--text)
+
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    color: var(--text)
     }
 
     .mobile-overlay {
@@ -2580,12 +2607,33 @@
       }
 
       /* Hide everything except the report preview when printing from Print Report tab */
-      .view-dashboard > *:not(#mainContent) { display: none !important; }
-      #mainContent { margin: 0 !important; padding: 0 !important; width: 100% !important; }
-      .page-content { padding: 0 !important; }
-      #documentsView, #trackView, #logsView, #usersView, #printView .print-header-bar,
-      #printView .config-panel { display: none !important; }
-      #printView { display: block !important; padding: 0 !important; }
+      .view-dashboard>*:not(#mainContent) {
+        display: none !important;
+      }
+
+      #mainContent {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+
+      .page-content {
+        padding: 0 !important;
+      }
+
+      #documentsView,
+      #trackView,
+      #logsView,
+      #usersView,
+      #printView .print-header-bar,
+      #printView .config-panel {
+        display: none !important;
+      }
+
+      #printView {
+        display: block !important;
+        padding: 0 !important;
+      }
 
       #reportPreview {
         box-shadow: none !important;
@@ -2630,7 +2678,7 @@
       }
 
       /* Keep the org header from breaking */
-      #reportPreview > div:first-child {
+      #reportPreview>div:first-child {
         page-break-after: avoid;
       }
 
@@ -3104,23 +3152,23 @@
               </div>
             </div>
             <div class="logs-table-wrap">
-            <table id="logsTable">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Action</th>
-                  <th>User</th>
-                  <th>Document ID</th>
-                  <th>Doc No</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody id="logsBody">
-                <tr>
-                  <td colspan="6" class="empty-state">Load logs from Activity Logs menu.</td>
-                </tr>
-              </tbody>
-            </table>
+              <table id="logsTable">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>Document ID</th>
+                    <th>Doc No</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody id="logsBody">
+                  <tr>
+                    <td colspan="6" class="empty-state">Load logs from Activity Logs menu.</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <footer
               style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;font-size:12px;color:#94a3b8">
@@ -3323,7 +3371,10 @@
               <select class="form-select" id="endUser" style="flex:1;">
                 <option value="">Select end user...</option>
               </select>
-              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage End Users"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage End Users"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
             </div>
           </div>
           <div class="form-group">
@@ -3372,14 +3423,20 @@
               <select class="form-select" id="supp" style="flex:1;">
                 <option value="">Select supplier...</option>
               </select>
-              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Suppliers"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage Suppliers"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Office/Department (Endorsed To) *</label>
             <div style="display:flex;gap:8px;">
               <select class="form-select" id="office" style="flex:1;"></select>
-              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Offices"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage Offices"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
             </div>
           </div>
 
@@ -3388,7 +3445,10 @@
             <label class="form-label">Status *</label>
             <div style="display:flex;gap:8px;">
               <select class="form-select" id="stat" style="flex:1;"></select>
-              <button type="button" class="btn btn-outline" style="padding:0 12px;display:flex;align-items:center;justify-content:center;" onclick="openAdminSettings()" title="Add / Manage Statuses"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage Statuses"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
             </div>
           </div>
           <div class="form-group">
@@ -3841,18 +3901,18 @@
 
       // 🚀 Single server round-trip: user + docs + opts + stats + users
       google.script.run
-        .withSuccessHandler(function(result) {
+        .withSuccessHandler(function (result) {
           if (!result) { showView('login'); return; }
 
           // 1. User profile — render immediately (fast, local DOM writes)
           if (result.user) {
             currentUser = result.user;
-            document.getElementById('userName').textContent  = result.user.name  || 'User';
-            document.getElementById('userRole').textContent  = result.user.role  || 'User';
+            document.getElementById('userName').textContent = result.user.name || 'User';
+            document.getElementById('userRole').textContent = result.user.role || 'User';
             document.getElementById('userAvatar').textContent = getInitials(result.user.name);
-            document.getElementById('profileName').value  = result.user.name  || '';
+            document.getElementById('profileName').value = result.user.name || '';
             document.getElementById('profileEmail').value = result.user.email || '';
-            document.getElementById('profileRole').value  = result.user.role  || '';
+            document.getElementById('profileRole').value = result.user.role || '';
             applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
           }
 
@@ -3877,7 +3937,7 @@
           populateTableFilters();
           _renderChunked(allDocs, currentFilter);
         })
-        .withFailureHandler(function() {
+        .withFailureHandler(function () {
           toast('Failed to load dashboard data', 'error');
           // Clear skeleton on failure
           const tb = document.getElementById('docTable');
@@ -3961,16 +4021,16 @@
 
     // Compute document statistics purely from the local allDocs array (0 ms, no server call)
     function _computeStats(docs) {
-      const s = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
+      const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
       (docs || []).forEach(doc => {
         s.total++;
         const st = String(doc.Status || '').toLowerCase().trim();
-        if      (st.includes('forwarded'))                              s.outgoing++;
-        else if (st.includes('completed') || st.includes('complete'))  s.complete++;
-        else                                                            s.incoming++;
+        if (st.includes('forwarded')) s.outgoing++;
+        else if (st.includes('completed') || st.includes('complete')) s.complete++;
+        else s.incoming++;
         if (st.includes('received')) s.received++;
-        if (st.includes('hold'))     s.hold++;
-        if (doc.Overdue && doc.Overdue !== 'On time')                  s.overdue++;
+        if (st.includes('hold')) s.hold++;
+        if (doc.Overdue && doc.Overdue !== 'On time') s.overdue++;
       });
       return s;
     }
@@ -3979,12 +4039,12 @@
     function _applyStats(s) {
       if (!s) return;
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || 0; };
-      set('stat-total',    s.total);
+      set('stat-total', s.total);
       set('stat-incoming', s.incoming);
       set('stat-outgoing', s.outgoing);
       set('stat-complete', s.complete);
-      set('stat-overdue',  s.overdue);
-      ['total','incoming','received','outgoing','hold','complete'].forEach(k => {
+      set('stat-overdue', s.overdue);
+      ['total', 'incoming', 'received', 'outgoing', 'hold', 'complete'].forEach(k => {
         const el = document.getElementById('badge-' + k); if (el) el.textContent = s[k] || 0;
       });
     }
@@ -3992,23 +4052,23 @@
     function populateDropdowns() {
       const getVal = id => { const el = document.getElementById(id); return el ? el.value : null; };
       const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      
+
       const vDocType = getVal('docType');
       document.getElementById('docType').innerHTML = '<option value="">Select document type...</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join('');
       setVal('docType', vDocType);
-      
+
       const vSupp = getVal('supp');
       document.getElementById('supp').innerHTML = '<option value="">Select supplier...</option>' + dropdownOptions.suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
       setVal('supp', vSupp);
-      
+
       const vOffice = getVal('office');
       document.getElementById('office').innerHTML = '<option value="">Select office...</option>' + dropdownOptions.offices.map(o => `<option value="${o}">${o}</option>`).join('');
       setVal('office', vOffice);
-      
+
       const vStat = getVal('stat');
       document.getElementById('stat').innerHTML = dropdownOptions.statuses.map(s => `<option value="${s}">${s}</option>`).join('');
       setVal('stat', vStat);
-      
+
       const eu = document.getElementById('endUser');
       if (eu) {
         const vEu = eu.value;
@@ -4041,7 +4101,7 @@
     }
 
     // updateStats / updateBadges — now compute from in-memory allDocs (instant, no server call)
-    function updateStats()  { _applyStats(_computeStats(allDocs)); }
+    function updateStats() { _applyStats(_computeStats(allDocs)); }
     function updateBadges() { _applyStats(_computeStats(allDocs)); }
 
     // applyTableFilters() — called by the toolbar dropdown onchange events.
@@ -4477,11 +4537,11 @@
 
     function saveDoc() {
       const currentId = isEdit ? (document.getElementById('editId').value || '') : '';
-      const docNo  = document.getElementById('docNo').value.trim();
-      const poNo   = (document.getElementById('poNo') ? document.getElementById('poNo').value.trim() : '');
-      const prDate  = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
+      const docNo = document.getElementById('docNo').value.trim();
+      const poNo = (document.getElementById('poNo') ? document.getElementById('poNo').value.trim() : '');
+      const prDate = document.getElementById('prDate') ? document.getElementById('prDate').value : '';
       const endUser = document.getElementById('endUser') ? document.getElementById('endUser').value : '';
-      const poDate  = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
+      const poDate = document.getElementById('poDate') ? document.getElementById('poDate').value : '';
 
       // Clear previous errors
       _clearFieldError('docNoError');
@@ -4489,8 +4549,8 @@
 
       // Required field check
       const docType = document.getElementById('docType').value;
-      const desc    = document.getElementById('desc').value;
-      const office  = document.getElementById('office').value;
+      const desc = document.getElementById('desc').value;
+      const office = document.getElementById('office').value;
       if (!docType || !docNo || !desc || !prDate || !endUser || !office) {
         toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
         return;
@@ -4555,10 +4615,10 @@
           const existing = allDocs[idx];
           allDocs[idx] = Object.assign({}, existing, {
             'Doc Type': data.docType, 'Doc No': data.docNo, 'Description': data.description,
-            'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+            'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
             'PR Date': data.prDate, 'EndUser': data.endUser, 'PO No': data.poNo,
             'PO Date': data.poDate,
-            'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
+            'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
             'Supplier': data.supplier, 'Requisitioner': data.requisitioner,
             'Endorsed To': data.office, 'Status': data.status, 'Notes': data.notes,
             'Date Received From BAC': data.dateReceivedFromBAC,
@@ -4610,31 +4670,31 @@
         const tempId = 'TEMP-' + Date.now();
         const now = new Date().toISOString().split('T')[0];
         const optimisticDoc = {
-          'ID/Barcode':            tempId,
-          'Doc Type':              data.docType || '',
-          'Doc No':                data.docNo || '',
-          'Description':           data.description || '',
-          'Amount':                data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-          'PR Date':               data.prDate || '',
-          'EndUser':               data.endUser || '',
-          'PO No':                 data.poNo || '',
-          'PO Date':               data.poDate || '',
-          'PO Amount':             data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '',
-          'Supplier':              data.supplier || '',
-          'Requisitioner':         data.requisitioner || '',
-          'Endorsed To':           data.office || '',
-          'Status':                data.status || 'Received',
-          'Notes':                 data.notes || '',
-          'Date Received':         now,
-          'Date Received From BAC':data.dateReceivedFromBAC || '',
-          'Date Endorsed To Acctng':data.dateEndorsedToAcctng || '',
-          'Date Endorsed From CMO':data.dateEndorsedFromCMO || '',
-          'Delivery Status':       data.deliveryStatus || '',
-          'Date Endorse To COA':   data.dateEndorseToCOA || '',
-          'Date Endorse To CTO':   data.dateEndorseToCTO || '',
-          'PDF Link':              data.pdfLink || '',
-          'Doc Time Stamp':        new Date().toISOString().replace('T',' ').substring(0,19),
-          'Overdue':               'On time'
+          'ID/Barcode': tempId,
+          'Doc Type': data.docType || '',
+          'Doc No': data.docNo || '',
+          'Description': data.description || '',
+          'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
+          'PR Date': data.prDate || '',
+          'EndUser': data.endUser || '',
+          'PO No': data.poNo || '',
+          'PO Date': data.poDate || '',
+          'PO Amount': data.poAmount ? '₱' + parseFloat(data.poAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
+          'Supplier': data.supplier || '',
+          'Requisitioner': data.requisitioner || '',
+          'Endorsed To': data.office || '',
+          'Status': data.status || 'Received',
+          'Notes': data.notes || '',
+          'Date Received': now,
+          'Date Received From BAC': data.dateReceivedFromBAC || '',
+          'Date Endorsed To Acctng': data.dateEndorsedToAcctng || '',
+          'Date Endorsed From CMO': data.dateEndorsedFromCMO || '',
+          'Delivery Status': data.deliveryStatus || '',
+          'Date Endorse To COA': data.dateEndorseToCOA || '',
+          'Date Endorse To CTO': data.dateEndorseToCTO || '',
+          'PDF Link': data.pdfLink || '',
+          'Doc Time Stamp': new Date().toISOString().replace('T', ' ').substring(0, 19),
+          'Overdue': 'On time'
         };
         allDocs.unshift(optimisticDoc);  // prepend so it appears at top
         toast('Saving…');
@@ -4745,10 +4805,10 @@
       if (r !== 'admin' && r !== 'manager') { toast('Access restricted to Admin or Manager', 'error'); return; }
       // 🚀 Use already-loaded dropdownOptions — no server round-trip needed
       const opts = dropdownOptions;
-      document.getElementById('adminDocTypes').value  = (opts.docTypes  || []).join('\n');
+      document.getElementById('adminDocTypes').value = (opts.docTypes || []).join('\n');
       document.getElementById('adminSuppliers').value = (opts.suppliers || []).join('\n');
-      document.getElementById('adminOffices').value   = (opts.offices   || []).join('\n');
-      document.getElementById('adminStatuses').value  = (opts.statuses  || []).join('\n');
+      document.getElementById('adminOffices').value = (opts.offices || []).join('\n');
+      document.getElementById('adminStatuses').value = (opts.statuses || []).join('\n');
       const euEl = document.getElementById('adminEndUsers');
       if (euEl) euEl.value = (opts.endUsers || []).join('\n');
       showModal('adminModal');
@@ -4756,8 +4816,8 @@
     function closeAdminModal() { hideModal('adminModal'); }
     function saveAdminSettings() {
       // 🚀 ONE server call instead of 5 — saves all categories in a single round-trip
-      const ids  = ['adminDocTypes','adminSuppliers','adminOffices','adminStatuses','adminEndUsers'];
-      const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
+      const ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'];
+      const keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'];
       const optionsObj = {};
       ids.forEach((id, i) => {
         const el = document.getElementById(id);
@@ -4931,29 +4991,29 @@
       }
       document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>';
       google.script.run
-        .withSuccessHandler(function(logs) { allLogs = logs || []; applyLogFilters(); })
-        .withFailureHandler(function() { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
+        .withSuccessHandler(function (logs) { allLogs = logs || []; applyLogFilters(); })
+        .withFailureHandler(function () { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
         .getAllActivityLogs();
     }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
     function applyLogFilters() {
-      const from   = document.getElementById('logsFrom').value;
-      const to     = document.getElementById('logsTo').value;
-      const type   = document.getElementById('logsType').value.toLowerCase();
+      const from = document.getElementById('logsFrom').value;
+      const to = document.getElementById('logsTo').value;
+      const type = document.getElementById('logsType').value.toLowerCase();
       const search = document.getElementById('logsSearch').value.toLowerCase().trim();
       // Build ID→DocNo map for search
       const docNoMap = {};
       (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = (d['Doc No'] || '').toLowerCase(); });
       let filtered = allLogs.filter(log => {
-        const ts      = new Date(log.Timestamp);
-        const action  = log.Action.toLowerCase();
+        const ts = new Date(log.Timestamp);
+        const action = log.Action.toLowerCase();
         const details = (log.Details || '').toLowerCase();
-        const user    = (log.User || '').toLowerCase();
-        const doc     = (log.DocumentID || '').toLowerCase();
-        const docNo   = log.DocumentID ? (docNoMap[log.DocumentID] || '') : '';
+        const user = (log.User || '').toLowerCase();
+        const doc = (log.DocumentID || '').toLowerCase();
+        const docNo = (log.DocNo || (log.DocumentID ? (docNoMap[log.DocumentID] || '') : '')).toLowerCase();
         let m = true;
         if (from) m = m && ts >= new Date(from);
-        if (to) { const t2 = new Date(to); t2.setHours(23,59,59,999); m = m && ts <= t2; }
+        if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; }
         if (type) m = m && action.includes(type);
         if (search) m = m && (action.includes(search) || details.includes(search) || user.includes(search) || doc.includes(search) || docNo.includes(search));
         return m;
@@ -4967,7 +5027,7 @@
       const docNoMap = {};
       (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
       tbody.innerHTML = logs.map(log => {
-        const docNo = log.DocumentID ? (docNoMap[log.DocumentID] || '') : '';
+        const docNo = log.DocNo || (log.DocumentID ? (docNoMap[log.DocumentID] || '') : '');
         return `<tr>
           <td>${log.Timestamp}</td>
           <td>${log.Action}</td>
@@ -4984,34 +5044,34 @@
       const docNoMap = {};
       (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
 
-      const from   = document.getElementById('logsFrom').value;
-      const to     = document.getElementById('logsTo').value;
-      const type   = document.getElementById('logsType').value.toLowerCase();
+      const from = document.getElementById('logsFrom').value;
+      const to = document.getElementById('logsTo').value;
+      const type = document.getElementById('logsType').value.toLowerCase();
       const search = document.getElementById('logsSearch').value.toLowerCase().trim();
       const filtered = allLogs.filter(log => {
-        const ts     = new Date(log.Timestamp);
+        const ts = new Date(log.Timestamp);
         const action = log.Action.toLowerCase();
         const detail = (log.Details || '').toLowerCase();
-        const user   = (log.User || '').toLowerCase();
-        const doc    = (log.DocumentID || '').toLowerCase();
-        const docNo  = log.DocumentID ? (docNoMap[log.DocumentID] || '').toLowerCase() : '';
+        const user = (log.User || '').toLowerCase();
+        const doc = (log.DocumentID || '').toLowerCase();
+        const docNo = (log.DocNo || (log.DocumentID ? (docNoMap[log.DocumentID] || '') : '')).toLowerCase();
         let m = true;
         if (from) m = m && ts >= new Date(from);
-        if (to)   { const t2 = new Date(to); t2.setHours(23,59,59,999); m = m && ts <= t2; }
-        if (type)   m = m && action.includes(type);
+        if (to) { const t2 = new Date(to); t2.setHours(23, 59, 59, 999); m = m && ts <= t2; }
+        if (type) m = m && action.includes(type);
         if (search) m = m && (action.includes(search) || detail.includes(search) || user.includes(search) || doc.includes(search) || docNo.includes(search));
         return m;
       });
 
-      const now = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const filterParts = [];
-      if (from)   filterParts.push(`From: ${from}`);
-      if (to)     filterParts.push(`To: ${to}`);
-      if (type)   filterParts.push(`Type: ${type}`);
+      if (from) filterParts.push(`From: ${from}`);
+      if (to) filterParts.push(`To: ${to}`);
+      if (type) filterParts.push(`Type: ${type}`);
       if (search) filterParts.push(`Search: "${search}"`);
 
       const rows = filtered.map((log, i) => {
-        const docNo = log.DocumentID ? (docNoMap[log.DocumentID] || '-') : '-';
+        const docNo = log.DocNo || (log.DocumentID ? (docNoMap[log.DocumentID] || '-') : '-');
         const bg = i % 2 === 1 ? ' style="background:#f8fafc"' : '';
         return `<tr${bg}>
           <td>${log.Timestamp || '-'}</td>
@@ -5119,10 +5179,10 @@
         const docNo = l.DocumentID ? (docNoMap[l.DocumentID] || '') : '';
         rows.push([l.Timestamp, l.Action, l.User, l.DocumentID || '', docNo, (l.Details || '').replace(/(\r\n|\n|\r)/gm, ' ')]);
       });
-      const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const a    = document.createElement('a');
-      a.href     = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
       a.download = `DocuTracker_ActivityLogs_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
     }
@@ -5133,7 +5193,7 @@
     // ===================== PRINT REPORT =====================
     function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
     function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
-    function populatePrintFilters() { const eu = document.getElementById('printEndUserFilter'), dt = document.getElementById('printDocTypeFilter'); if(eu) eu.innerHTML = '<option value="all">All End Users</option>' + (dropdownOptions.endUsers || []).map(o => `<option value="${o}">${o}</option>`).join(''); if(dt) dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
+    function populatePrintFilters() { const eu = document.getElementById('printEndUserFilter'), dt = document.getElementById('printDocTypeFilter'); if (eu) eu.innerHTML = '<option value="all">All End Users</option>' + (dropdownOptions.endUsers || []).map(o => `<option value="${o}">${o}</option>`).join(''); if (dt) dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
     function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, eu = document.getElementById('printEndUserFilter') ? document.getElementById('printEndUserFilter').value : 'all', tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (eu !== 'all') d = d.filter(x => x.EndUser === eu || x['End User'] === eu); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
     function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 contenteditable="true" style="margin:0;font-size:16px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</h1><h2 contenteditable="true" style="margin:4px 0;font-size:14px;font-weight:normal;color:#374151">City of Ozamiz</h2><h3 style="margin:16px 0 8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h3><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
     function fmtAmt(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '&#8369;' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -5173,14 +5233,14 @@
         </tr></thead><tbody>`;
       let totalAmt = 0, totalPoAmt = 0;
       data.forEach(d => {
-        const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-        const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
-          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
-          <td>${d['PO Date']||'-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
-          <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
-          <td>${d.Supplier||'-'}</td><td>${d.Notes||'-'}</td></tr>`;
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
+          <td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
+          <td>${d.Supplier || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
       });
       h += `<tr style="font-weight:bold;background:#f3f4f6;">
           <td colspan="2" style="text-align:right">GRAND TOTAL:</td>
@@ -5204,17 +5264,17 @@
         </tr></thead><tbody>`;
       let totalAmt = 0, totalPoAmt = 0;
       data.forEach(d => {
-        const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-        const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+        const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+        const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
-          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
-          <td>${d['PO Date']||'-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
-          <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
-          <td>${d.Supplier||'-'}</td><td>${d['Date Endorsed To Acctng']||'-'}</td>
-          <td>${d['Date Endorsed From CMO']||'-'}</td><td>${d['Delivery Status']||'-'}</td>
-          <td>${d['Date Endorse To COA']||'-'}</td><td>${d['Date Endorse To CTO']||'-'}</td>
-          <td>${d.Notes||'-'}</td></tr>`;
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+          <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
+          <td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
+          <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
+          <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td>
+          <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
+          <td>${d.Notes || '-'}</td></tr>`;
       });
       h += `<tr style="font-weight:bold;background:#f3f4f6;">
           <td colspan="2" style="text-align:right">GRAND TOTAL:</td>
@@ -5239,16 +5299,16 @@
         </tr></thead><tbody>`;
       od.forEach(d => {
         h += `<tr>
-          <td>${d['Doc No']||'-'}</td>
-          <td>${d['PR Date']||'-'}</td>
-          <td>${d['PO No']||'-'}</td>
-          <td>${d['PO Date']||'-'}</td>
-          <td>${d.Description||'-'}</td>
-          <td>${d.EndUser||d['End User']||'-'}</td>
-          <td>${d['Endorsed To']||'-'}</td>
-          <td>${d.Status||'-'}</td>
-          <td>${d['Date Received']||'-'}</td>
-          <td style="color:#dc2626;font-weight:700">${d.Overdue||'-'}</td>
+          <td>${d['Doc No'] || '-'}</td>
+          <td>${d['PR Date'] || '-'}</td>
+          <td>${d['PO No'] || '-'}</td>
+          <td>${d['PO Date'] || '-'}</td>
+          <td>${d.Description || '-'}</td>
+          <td>${d.EndUser || d['End User'] || '-'}</td>
+          <td>${d['Endorsed To'] || '-'}</td>
+          <td>${d.Status || '-'}</td>
+          <td>${d['Date Received'] || '-'}</td>
+          <td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td>
         </tr>`;
       });
       h += `</tbody></table>`;
@@ -5286,25 +5346,25 @@
         let grpAmt = 0, grpPoAmt = 0;
 
         const rows = docs.map(d => {
-          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+          const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           grpAmt += amt; grpPoAmt += poAmt;
           grandAmt += amt; grandPoAmt += poAmt;
           const overdueColor = d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669';
-          const overdueBold  = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
+          const overdueBold = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
           return `<tr>
-            <td>${d['Doc No']||'-'}</td>
-            <td>${d['PR Date']||'-'}</td>
+            <td>${d['Doc No'] || '-'}</td>
+            <td>${d['PR Date'] || '-'}</td>
             <td style="text-align:right">${fmtAmt(d.Amount)}</td>
-            <td>${d['PO No']||'-'}</td>
-            <td>${d['PO Date']||'-'}</td>
+            <td>${d['PO No'] || '-'}</td>
+            <td>${d['PO Date'] || '-'}</td>
             <td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
-            <td>${d.Description||'-'}</td>
-            <td>${d.EndUser||d['End User']||'-'}</td>
-            <td>${d.Supplier||'-'}</td>
-            <td>${d.Status||'-'}</td>
-            <td>${d['Date Received']||'-'}</td>
-            <td style="color:${overdueColor};${overdueBold}">${d.Overdue||'On time'}</td>
+            <td>${d.Description || '-'}</td>
+            <td>${d.EndUser || d['End User'] || '-'}</td>
+            <td>${d.Supplier || '-'}</td>
+            <td>${d.Status || '-'}</td>
+            <td>${d['Date Received'] || '-'}</td>
+            <td style="color:${overdueColor};${overdueBold}">${d.Overdue || 'On time'}</td>
           </tr>`;
         }).join('');
 
@@ -5512,7 +5572,7 @@
       generatePreview();
       const type = document.getElementById('reportType').value;
       const data = getPrintFilteredData();
-      const now  = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const orgHeader = `<div class="report-header">
         <div style="font-size:14px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</div>
         <div style="font-size:12px;color:#374151;margin-top:2px">City of Ozamiz</div>`;
@@ -5527,18 +5587,18 @@
       if (type === 'summary') {
         let totalAmt = 0, totalPoAmt = 0;
         const rows = data.map(d => {
-          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+          const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           totalAmt += amt; totalPoAmt += poAmt;
-          return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
-            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
-            <td>${d['PO Date']||'-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
-            <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
-            <td>${d.Supplier||'-'}</td><td>${d.Notes||'-'}</td></tr>`;
+          return `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
+            <td>${d['PO Date'] || '-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
+            <td>${d.Supplier || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
         }).join('');
         html = orgHeader + `<h3>Summary Report</h3><p>As of ${now}</p></div>
           <p>Total Documents: <strong>${data.length}</strong></p>
-          <table>${cg([9,7,7,8,7,7,20,9,12,14])}
+          <table>${cg([9, 7, 7, 8, 7, 7, 20, 9, 12, 14])}
           <thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th><th>NOTES</th></tr></thead>
           <tbody>${rows}
@@ -5550,21 +5610,21 @@
       } else if (type === 'detailed') {
         let totalAmt = 0, totalPoAmt = 0;
         const rows = data.map(d => {
-          const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-          const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+          const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+          const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           totalAmt += amt; totalPoAmt += poAmt;
-          return `<tr><td>${d['Doc No']||'-'}</td><td>${d['PR Date']||'-'}</td>
-            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No']||'-'}</td>
-            <td>${d['PO Date']||'-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
-            <td>${d.Description||'-'}</td><td>${d.EndUser||d['End User']||'-'}</td>
-            <td>${d.Supplier||'-'}</td><td>${d['Date Endorsed To Acctng']||'-'}</td>
-            <td>${d['Date Endorsed From CMO']||'-'}</td><td>${d['Delivery Status']||'-'}</td>
-            <td>${d['Date Endorse To COA']||'-'}</td><td>${d['Date Endorse To CTO']||'-'}</td>
-            <td>${d.Notes||'-'}</td></tr>`;
+          return `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+            <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
+            <td>${d['PO Date'] || '-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
+            <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
+            <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td>
+            <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
+            <td>${d.Notes || '-'}</td></tr>`;
         }).join('');
         html = orgHeader + `<h3>Detailed Document List</h3><p>As of ${now}</p></div>
           <p>Total Documents: <strong>${data.length}</strong></p>
-          <table>${cg([6,5,6,6,5,6,13,7,8,7,7,7,6,6,9])}
+          <table>${cg([6, 5, 6, 6, 5, 6, 13, 7, 8, 7, 7, 7, 6, 6, 9])}
           <thead><tr><th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
           <th>DATE END. TO ACCTNG</th><th>DATE END. FROM CMO</th><th>DELIVERY STATUS</th>
@@ -5578,22 +5638,22 @@
       } else if (type === 'overdue') {
         const od = data.filter(d => d.Overdue && d.Overdue !== 'On time');
         const rows = od.map(d => `<tr>
-          <td>${d['Doc No']||'-'}</td>
-          <td>${d['PR Date']||'-'}</td>
-          <td>${d['PO No']||'-'}</td>
-          <td>${d['PO Date']||'-'}</td>
-          <td>${d.Description||'-'}</td>
-          <td>${d.EndUser||d['End User']||'-'}</td>
-          <td>${d['Endorsed To']||'-'}</td>
-          <td>${d.Status||'-'}</td>
-          <td>${d['Date Received']||'-'}</td>
-          <td class="text-danger">${d.Overdue||'-'}</td>
+          <td>${d['Doc No'] || '-'}</td>
+          <td>${d['PR Date'] || '-'}</td>
+          <td>${d['PO No'] || '-'}</td>
+          <td>${d['PO Date'] || '-'}</td>
+          <td>${d.Description || '-'}</td>
+          <td>${d.EndUser || d['End User'] || '-'}</td>
+          <td>${d['Endorsed To'] || '-'}</td>
+          <td>${d.Status || '-'}</td>
+          <td>${d['Date Received'] || '-'}</td>
+          <td class="text-danger">${d.Overdue || '-'}</td>
         </tr>`).join('');
         html = orgHeader + `<h3>Overdue Documents Report</h3><p>As of ${now}</p></div>
           <p style="color:#991b1b;font-weight:600">&#9888; Total Overdue: <strong>${od.length}</strong> documents</p>
           ${od.length === 0
             ? '<p style="text-align:center;padding:40px;color:#6b7280">&#10003; No overdue documents found!</p>'
-            : `<table>${cg([8,7,8,7,22,10,10,8,10,10])}
+            : `<table>${cg([8, 7, 8, 7, 22, 10, 10, 8, 10, 10])}
                <thead><tr><th>DOC NO</th><th>PR DATE</th><th>PO NO</th><th>PO DATE</th>
                <th>DESCRIPTION</th><th>END USER</th><th>ENDORSED TO</th>
                <th>STATUS</th><th>DATE RECEIVED</th><th>OVERDUE</th></tr></thead>
@@ -5610,7 +5670,7 @@
         });
         groupOrder.sort((a, b) => a.localeCompare(b));
 
-        const colW = cg([7,6,7,7,6,7,18,8,10,8,9,7]);
+        const colW = cg([7, 6, 7, 7, 6, 7, 18, 8, 10, 8, 9, 7]);
         const colHeaders = `<thead><tr>
           <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
@@ -5624,30 +5684,30 @@
           let grpAmt = 0, grpPoAmt = 0;
 
           const rows = docs.map(d => {
-            const amt   = parseFloat((d.Amount||'').toString().replace(/[^0-9.-]/g,''))||0;
-            const poAmt = parseFloat((d['PO Amount']||'').toString().replace(/[^0-9.-]/g,''))||0;
+            const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
+            const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
             grpAmt += amt; grpPoAmt += poAmt;
             grandAmt += amt; grandPoAmt += poAmt;
             const overdueColor = d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669';
-            const overdueBold  = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
+            const overdueBold = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
             return `<tr>
-              <td>${d['Doc No']||'-'}</td>
-              <td>${d['PR Date']||'-'}</td>
+              <td>${d['Doc No'] || '-'}</td>
+              <td>${d['PR Date'] || '-'}</td>
               <td class="text-right">${fmtAmt(d.Amount)}</td>
-              <td>${d['PO No']||'-'}</td>
-              <td>${d['PO Date']||'-'}</td>
+              <td>${d['PO No'] || '-'}</td>
+              <td>${d['PO Date'] || '-'}</td>
               <td class="text-right">${fmtAmt(d['PO Amount'])}</td>
-              <td>${d.Description||'-'}</td>
-              <td>${d.EndUser||d['End User']||'-'}</td>
-              <td>${d.Supplier||'-'}</td>
-              <td>${d.Status||'-'}</td>
-              <td>${d['Date Received']||'-'}</td>
-              <td style="color:${overdueColor};${overdueBold}">${d.Overdue||'On time'}</td>
+              <td>${d.Description || '-'}</td>
+              <td>${d.EndUser || d['End User'] || '-'}</td>
+              <td>${d.Supplier || '-'}</td>
+              <td>${d.Status || '-'}</td>
+              <td>${d['Date Received'] || '-'}</td>
+              <td style="color:${overdueColor};${overdueBold}">${d.Overdue || 'On time'}</td>
             </tr>`;
           }).join('');
 
           const subtotalRow = `<tr style="font-weight:600;background:#f0f4ff;border-top:1px solid #c7d2fe;">
-            <td colspan="2" style="text-align:right;font-size:9px;color:#3730a3">SUBTOTAL (${docs.length} doc${docs.length!==1?'s':''}):</td>
+            <td colspan="2" style="text-align:right;font-size:9px;color:#3730a3">SUBTOTAL (${docs.length} doc${docs.length !== 1 ? 's' : ''}):</td>
             <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpAmt)}</td>
             <td colspan="2"></td>
             <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpPoAmt)}</td>
@@ -5659,7 +5719,7 @@
                         display:flex;justify-content:space-between;page-break-after:avoid;
                         -webkit-print-color-adjust:exact;print-color-adjust:exact;">
               <span>${office}</span>
-              <span style="font-weight:400">${docs.length} document${docs.length!==1?'s':''}</span>
+              <span style="font-weight:400">${docs.length} document${docs.length !== 1 ? 's' : ''}</span>
             </div>
             <table style="border:1px solid #e2e8f0;border-top:none">${colW}${colHeaders}
               <tbody>${rows}${subtotalRow}</tbody>
@@ -5825,7 +5885,7 @@
     document.getElementById('docNo').addEventListener('input', () => _clearFieldError('docNoError'));
     document.getElementById('docNo').addEventListener('blur', () => {
       const val = document.getElementById('docNo').value.trim();
-      const id  = isEdit ? (document.getElementById('editId').value || '') : '';
+      const id = isEdit ? (document.getElementById('editId').value || '') : '';
       if (val && _isDuplicateDocNo(val, id)) _showFieldError('docNoError', `"${val}" is already used by another document.`);
       else _clearFieldError('docNoError');
     });
@@ -5834,7 +5894,7 @@
       poNoEl.addEventListener('input', () => _clearFieldError('poNoError'));
       poNoEl.addEventListener('blur', () => {
         const val = poNoEl.value.trim();
-        const id  = isEdit ? (document.getElementById('editId').value || '') : '';
+        const id = isEdit ? (document.getElementById('editId').value || '') : '';
         if (val && _isDuplicatePoNo(val, id)) _showFieldError('poNoError', `"${val}" is already used by another document.`);
         else _clearFieldError('poNoError');
       });
@@ -5885,7 +5945,7 @@
       loadingEl.style.cssText = 'position:fixed;inset:0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:Inter,sans-serif';
       loadingEl.innerHTML = `
         <div style="width:48px;height:48px;border-radius:10px;background:#0f172a;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
-          <span style="font-size:24px">📄</span>
+          <span class="material-symbols-outlined" style="font-size:28px;color:#fff">flutter</span>
         </div>
         <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:8px">DocuTracker</div>
         <div style="font-size:14px;color:#64748b;margin-bottom:20px">Restoring your session…</div>
@@ -5915,7 +5975,7 @@
               // Genuinely invalid or expired session
               if (loader) loader.remove();
               _sessionToken = '';
-              try { localStorage.removeItem('docutracker_session_token'); } catch(e) {}
+              try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
               showView('login');
             }
           })
