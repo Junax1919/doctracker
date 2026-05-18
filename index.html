@@ -5191,10 +5191,127 @@
   </script>
   <script>
     // ===================== PRINT REPORT =====================
-    function showPrintView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('printView').classList.add('active'); currentFilter = 'print'; updatePageTitle(); }
+    function showPrintView(evt) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt) evt.target.closest('.nav-link').classList.add('active');
+      ['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active'));
+      const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
+      document.getElementById('printView').classList.add('active');
+      currentFilter = 'print';
+      // Refresh print filter dropdowns from latest allDocs data every time the tab opens
+      populatePrintFilters();
+      updatePageTitle();
+    }
     function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
-    function populatePrintFilters() { const eu = document.getElementById('printEndUserFilter'), dt = document.getElementById('printDocTypeFilter'); if (eu) eu.innerHTML = '<option value="all">All End Users</option>' + (dropdownOptions.endUsers || []).map(o => `<option value="${o}">${o}</option>`).join(''); if (dt) dt.innerHTML = '<option value="all">All Types</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join(''); }
-    function getPrintFilteredData() { const df = document.getElementById('printDateFrom').value, dt = document.getElementById('printDateTo').value, sf = document.getElementById('printStatusFilter').value, eu = document.getElementById('printEndUserFilter') ? document.getElementById('printEndUserFilter').value : 'all', tf = document.getElementById('printDocTypeFilter').value; let d = [...allDocs]; if (df) d = d.filter(x => x['Date Received'] >= df); if (dt) d = d.filter(x => x['Date Received'] <= dt); if (sf !== 'all') d = d.filter(x => { const s = (x.Status || '').toLowerCase(); return s === sf || s === sf + 'd'; }); if (eu !== 'all') d = d.filter(x => x.EndUser === eu || x['End User'] === eu); if (tf !== 'all') d = d.filter(x => x['Doc Type'] === tf); return d; }
+    function populatePrintFilters() {
+      // Build End User list from actual document data (not just configured options)
+      // so filters are always in sync with what's really in allDocs.
+      const euEl = document.getElementById('printEndUserFilter');
+      const dtEl = document.getElementById('printDocTypeFilter');
+
+      if (euEl) {
+        // Merge configured end users + actual values found in documents
+        const euSet = new Set((dropdownOptions.endUsers || []).map(v => v.trim()).filter(Boolean));
+        (allDocs || []).forEach(d => {
+          const v = (d.EndUser || d['End User'] || '').trim();
+          if (v) euSet.add(v);
+        });
+        const euSorted = [...euSet].sort((a, b) => a.localeCompare(b));
+        euEl.innerHTML = '<option value="all">All End Users</option>' +
+          euSorted.map(o => `<option value="${o}">${o}</option>`).join('');
+      }
+
+      if (dtEl) {
+        // Merge configured doc types + actual values found in documents
+        const dtSet = new Set((dropdownOptions.docTypes || []).map(v => v.trim()).filter(Boolean));
+        (allDocs || []).forEach(d => {
+          const v = (d['Doc Type'] || '').trim();
+          if (v) dtSet.add(v);
+        });
+        const dtSorted = [...dtSet].sort((a, b) => a.localeCompare(b));
+        dtEl.innerHTML = '<option value="all">All Types</option>' +
+          dtSorted.map(t => `<option value="${t}">${t}</option>`).join('');
+      }
+
+      // Also reset date inputs and status/filter dropdowns to "all" defaults
+      // when called on initial load (not on refresh) — prevents stale filter state
+      // from hiding documents when the user first opens the Print Report tab.
+      // We do NOT reset if the user has already set filters (check for active filter state).
+      const hasActiveFilters =
+        (document.getElementById('printDateFrom') && document.getElementById('printDateFrom').value) ||
+        (document.getElementById('printDateTo')   && document.getElementById('printDateTo').value);
+      if (!hasActiveFilters) {
+        const sf = document.getElementById('printStatusFilter');
+        if (sf) sf.value = 'all';
+      }
+    }
+    function getPrintFilteredData() {
+      const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
+      const dtRaw = document.getElementById('printDateTo').value;     // 'YYYY-MM-DD' or ''
+      const sf    = document.getElementById('printStatusFilter').value;
+      const euEl  = document.getElementById('printEndUserFilter');
+      const eu    = euEl ? euEl.value : 'all';
+      const tf    = document.getElementById('printDocTypeFilter').value;
+
+      // Parse filter dates to midnight local time so comparisons are reliable
+      const dfMs = dfRaw ? new Date(dfRaw + 'T00:00:00').getTime() : null;
+      const dtMs = dtRaw ? new Date(dtRaw + 'T23:59:59').getTime() : null;
+
+      // Helper: parse a doc's Date Received field to a timestamp (handles Date objects,
+      // ISO strings, 'YYYY-MM-DD', 'Jan 15, 2025', and other formats)
+      function parseDateReceived(val) {
+        if (!val) return null;
+        if (val instanceof Date) return isNaN(val) ? null : val.getTime();
+        const s = String(val).trim();
+        if (!s) return null;
+        // Try direct parse (handles ISO, YYYY-MM-DD, full date strings)
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d.getTime();
+      }
+
+      let result = [...allDocs];
+
+      // 1. Date filter — only apply when the user has actually set a date value
+      if (dfMs !== null || dtMs !== null) {
+        result = result.filter(x => {
+          const ms = parseDateReceived(x['Date Received']);
+          if (ms === null) return true; // docs with no date pass through (don't exclude)
+          if (dfMs !== null && ms < dfMs) return false;
+          if (dtMs !== null && ms > dtMs) return false;
+          return true;
+        });
+      }
+
+      // 2. Status filter — case-insensitive, partial match so 'complete' matches 'Completed'
+      if (sf && sf !== 'all') {
+        const sfLow = sf.toLowerCase().trim();
+        result = result.filter(x => {
+          const s = (x.Status || '').toLowerCase().trim();
+          // Exact match first, then prefix match (e.g. 'complete' matches 'completed')
+          return s === sfLow || s.startsWith(sfLow);
+        });
+      }
+
+      // 3. End User filter — trim + case-insensitive
+      if (eu && eu !== 'all') {
+        const euLow = eu.toLowerCase().trim();
+        result = result.filter(x => {
+          const v = (x.EndUser || x['End User'] || '').toLowerCase().trim();
+          return v === euLow;
+        });
+      }
+
+      // 4. Doc Type filter — trim + case-insensitive
+      if (tf && tf !== 'all') {
+        const tfLow = tf.toLowerCase().trim();
+        result = result.filter(x => {
+          const v = (x['Doc Type'] || '').toLowerCase().trim();
+          return v === tfLow;
+        });
+      }
+
+      return result;
+    }
     function getReportHeader(title) { const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); return `<div style="text-align:center;margin-bottom:30px;border-bottom:3px solid #0f172a;padding-bottom:20px"><h1 contenteditable="true" style="margin:0;font-size:16px;font-weight:bold;color:#0f172a">GENERAL SERVICES OFFICE</h1><h2 contenteditable="true" style="margin:4px 0;font-size:14px;font-weight:normal;color:#374151">City of Ozamiz</h2><h3 style="margin:16px 0 8px 0;font-size:20px;font-weight:600;color:#374151">${title}</h3><p style="margin:4px 0;font-size:13px;color:#6b7280">As of ${now}</p></div>`; }
     function fmtAmt(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '&#8369;' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
     // ── Column-width style blocks per report type ─────────────────────────────
