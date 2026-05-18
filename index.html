@@ -4124,19 +4124,30 @@
       currentFilter = f;
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
 
-      // 1. Sidebar status filter (existing behaviour)
+      // 1. Sidebar status filter
       if (f === 'all') {
         filteredDocs = [...allDocs];
       } else {
         filteredDocs = allDocs.filter(d => {
-          const st = (d.Status || '').toLowerCase();
+          const st = (d.Status || '').toLowerCase().trim();
           switch (f) {
-            case 'incoming': return st === 'incoming';
-            case 'received': return st === 'received';
-            case 'outgoing': return st === 'outgoing' || st === 'forwarded';
-            case 'hold': return st === 'hold';
-            case 'complete': return st === 'complete' || st === 'completed';
-            default: return true;
+            case 'incoming':
+              // Same logic as _computeStats: everything that is NOT outgoing and NOT complete.
+              // This is the catch-all bucket matching the badge counter exactly.
+              return !st.includes('forwarded') &&
+                     !st.includes('completed') &&
+                     !st.includes('complete');
+            case 'received':
+              return st === 'received' || st.includes('received');
+            case 'outgoing':
+              return st === 'forwarded' || st.includes('forwarded');
+            case 'hold':
+              return st === 'hold' || st.includes('hold');
+            case 'complete':
+              return st === 'complete' || st === 'completed' ||
+                     st.includes('complete');
+            default:
+              return true;
           }
         });
       }
@@ -4152,10 +4163,10 @@
       }
       if (activeFilters.endUser) {
         filteredDocs = filteredDocs.filter(d =>
-          (d['EndUser'] || '').toLowerCase() === activeFilters.endUser.toLowerCase());
+          (d['EndUser'] || d['End User'] || '').toLowerCase() === activeFilters.endUser.toLowerCase());
       }
 
-      // 3. Free-text search (across all fields)
+      // 3. Free-text search (across all visible fields)
       if (search) {
         filteredDocs = filteredDocs.filter(d =>
           Object.values(d).join(' ').toLowerCase().includes(search));
