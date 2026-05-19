@@ -1936,11 +1936,9 @@
       cursor: pointer;
       transition: background 0.12s
     }
-
     #docTable tbody tr:hover td {
       background: #eff6ff !important
     }
-
     /* Action-button cell + attachment cell keep default cursor */
     #docTable tbody tr td:last-child,
     #docTable tbody tr td.col-attachment {
@@ -4151,8 +4149,8 @@
               // Same logic as _computeStats: everything that is NOT outgoing and NOT complete.
               // This is the catch-all bucket matching the badge counter exactly.
               return !st.includes('forwarded') &&
-                !st.includes('completed') &&
-                !st.includes('complete');
+                     !st.includes('completed') &&
+                     !st.includes('complete');
             case 'received':
               return st === 'received' || st.includes('received');
             case 'outgoing':
@@ -4161,7 +4159,7 @@
               return st === 'hold' || st.includes('hold');
             case 'complete':
               return st === 'complete' || st === 'completed' ||
-                st.includes('complete');
+                     st.includes('complete');
             default:
               return true;
           }
@@ -4291,23 +4289,23 @@
 
       // ── Formatters ───────────────────────────────────────────────────────────
       const fmtDate = v => v ? String(v).trim() || '—' : '—';
-      const fmtAmt = v => {
+      const fmtAmt  = v => {
         if (!v || v === '') return '—';
         const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
         return isNaN(n) ? (v || '—') : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       };
-      const fmtTs = v => v ? String(v).trim() || '—' : '—';
-      const val = k => {
+      const fmtTs   = v => v ? String(v).trim() || '—' : '—';
+      const val     = k => {
         const v = doc[k];
         return (v !== undefined && v !== null && String(v).trim() !== '') ? String(v).trim() : '—';
       };
 
-      const ov = doc.Overdue || 'On time';
-      const ovColor = ov !== 'On time' ? '#dc2626' : '#059669';
-      const ovBg = ov !== 'On time' ? '#fef2f2' : '#f0fdf4';
-      const sta = doc.Status || '—';
-      const sc = sta.toLowerCase().replace(/\s+/g, '-');
-      const pdf = (doc['PDF Link'] || '').trim();
+      const ov       = doc.Overdue || 'On time';
+      const ovColor  = ov !== 'On time' ? '#dc2626' : '#059669';
+      const ovBg     = ov !== 'On time' ? '#fef2f2' : '#f0fdf4';
+      const sta      = doc.Status || '—';
+      const sc       = sta.toLowerCase().replace(/\s+/g, '-');
+      const pdf      = (doc['PDF Link'] || '').trim();
 
       // ── Reusable cell helpers ────────────────────────────────────────────────
       // Two-column pair: label-value side-by-side in a subgrid
@@ -4402,10 +4400,10 @@
         <div class="det-section tinted">
           ${sectionHead('schedule', 'Timestamps')}
           ${pair('Doc Time Stamp',
-        `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`,
-        'PO Time Stamp',
-        `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`
-      )}
+              `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`,
+              'PO Time Stamp',
+              `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`
+          )}
           <div><div class="dl">ID / Barcode</div>
                <div class="dv" style="font-family:monospace;font-size:12px;color:var(--muted)">${val('ID/Barcode')}</div></div>
         </div>
@@ -5338,7 +5336,7 @@
       // We do NOT reset if the user has already set filters (check for active filter state).
       const hasActiveFilters =
         (document.getElementById('printDateFrom') && document.getElementById('printDateFrom').value) ||
-        (document.getElementById('printDateTo') && document.getElementById('printDateTo').value);
+        (document.getElementById('printDateTo')   && document.getElementById('printDateTo').value);
       if (!hasActiveFilters) {
         const sf = document.getElementById('printStatusFilter');
         if (sf) sf.value = 'all';
@@ -5347,10 +5345,10 @@
     function getPrintFilteredData() {
       const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
       const dtRaw = document.getElementById('printDateTo').value;     // 'YYYY-MM-DD' or ''
-      const sf = document.getElementById('printStatusFilter').value;
-      const euEl = document.getElementById('printEndUserFilter');
-      const eu = euEl ? euEl.value : 'all';
-      const tf = document.getElementById('printDocTypeFilter').value;
+      const sf    = document.getElementById('printStatusFilter').value;
+      const euEl  = document.getElementById('printEndUserFilter');
+      const eu    = euEl ? euEl.value : 'all';
+      const tf    = document.getElementById('printDocTypeFilter').value;
 
       // Parse filter dates to midnight local time so comparisons are reliable
       const dfMs = dfRaw ? new Date(dfRaw + 'T00:00:00').getTime() : null;
@@ -6254,11 +6252,23 @@
       const tb = document.getElementById('usersTableBody');
       if (!users || !users.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">No users found.</td></tr>'; return; }
       const roleCol = { Admin: '#6366f1', Manager: '#3b82f6', Staff: '#64748b' };
+      // Determine if the current user is an admin (only admins see the delete button)
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
       tb.innerHTML = users.map((u, idx) => {
         const active = (u.status || 'Active').toLowerCase() === 'active';
-        const nm = u.name || u.email || 'User';
+        const nm   = u.name || u.email || 'User';
         const init = nm.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-        const rc = roleCol[u.role] || '#64748b';
+        const rc   = roleCol[u.role] || '#64748b';
+        // Self-check: admins cannot delete themselves
+        const isSelf = currentUser && currentUser.email && u.email &&
+                       currentUser.email.toLowerCase() === u.email.toLowerCase();
+        const deleteBtn = isAdmin
+          ? `<button class="action-btn" title="${isSelf ? 'Cannot delete your own account' : 'Delete user'}"
+               style="color:var(--danger);opacity:${isSelf ? '0.35' : '1'}"
+               ${isSelf ? 'disabled' : `onclick="deleteUserByEmail(\`${u.email}\`, \`${(u.name || u.email).replace(/`/g, '')}\`)"`}>
+               <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+             </button>`
+          : '';
         return `<tr>
           <td><div style="display:flex;align-items:center;gap:10px">
             <div style="width:34px;height:34px;border-radius:50%;background:${rc};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${init}</div>
@@ -6268,11 +6278,33 @@
           <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role || 'Staff'}</span></td>
           <td><span class="status-badge ${active ? 'status-received' : 'status-hold'}">${u.status || 'Active'}</span></td>
           <td><div class="table-actions">
-            <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-            <button class="action-btn" title="${active ? 'Deactivate' : 'Activate'}" style="color:${active ? 'var(--danger)' : 'var(--success)'}" onclick='toggleUser(\`${u.email}\`)'><span class="material-symbols-outlined" style="font-size:18px">${active ? 'person_off' : 'person'}</span></button>
+            <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})">
+              <span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+            <button class="action-btn" title="${active ? 'Deactivate' : 'Activate'}"
+              style="color:${active ? 'var(--danger)' : 'var(--success)'}"
+              onclick='toggleUser(\`${u.email}\`)'>
+              <span class="material-symbols-outlined" style="font-size:18px">${active ? 'person_off' : 'person'}</span></button>
+            ${deleteBtn}
           </div></td>
         </tr>`;
       }).join('');
+    }
+
+    function deleteUserByEmail(email, displayName) {
+      if (!confirm(`⚠️ Permanently delete user "${displayName}" (${email})?\n\nThis action cannot be undone.`)) return;
+      google.script.run
+        .withSuccessHandler(r => {
+          if (r.status === 'success') {
+            toast(`User "${displayName}" deleted.`);
+            // Remove from local cache immediately — no server round-trip needed
+            _allUsers = _allUsers.filter(u => u.email.toLowerCase() !== email.toLowerCase());
+            renderUsersTable(_allUsers);
+          } else {
+            toast(r.message || 'Delete failed', 'error');
+          }
+        })
+        .withFailureHandler(() => toast('Network error — could not delete user', 'error'))
+        .deleteUser(_sessionToken, email);
     }
 
     function editUserByIdx(idx) { const u = _allUsers[idx]; if (u) openEditUserModal(u); }

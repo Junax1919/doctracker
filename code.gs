@@ -92,7 +92,7 @@ function doPost(e) {
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
       'uploadPDFToGoogleDrive', 'getScriptUrl',
-      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus',
+      'getUsers', 'addUser', 'updateUser', 'toggleUserStatus', 'deleteUser',
       'getInitialData'
     ];
 
@@ -340,7 +340,34 @@ function logout(tokenParam) {
   try {
     const token = tokenParam || _doPostToken;
     const email = _validateSession(token);
-    if (email) logActivity('Logout', '', `User logged out: ${email}`);
+    if (email) {
+      // Look up the user's display name so the Activity Log shows the real name,
+      // not 'System'. We use the cached user object first (fast), then fall back
+      // to a sheet read if not cached.
+      let displayName = email; // sensible fallback
+      try {
+        const ck  = 'cu_' + email.replace(/[^a-zA-Z0-9]/g, '_');
+        const hit = CacheService.getScriptCache().get(ck);
+        if (hit) {
+          const u = JSON.parse(hit);
+          displayName = u.name || email;
+        } else {
+          // Direct sheet lookup — only runs on cache miss
+          const ss    = _getSS();
+          const sheet = ss.getSheetByName(USERS_SHEET);
+          if (sheet) {
+            const data = sheet.getDataRange().getValues();
+            for (let i = 1; i < data.length; i++) {
+              if (String(data[i][0]).trim().toLowerCase() === email.toLowerCase()) {
+                displayName = String(data[i][3] || '').trim() || email;
+                break;
+              }
+            }
+          }
+        }
+      } catch(e) { Logger.log('logout name lookup error: ' + e); }
+      logActivity('Logout', '', `User logged out: ${email}`, displayName);
+    }
     _destroySession(token);
   } catch (error) { Logger.log('logout error: ' + error); }
   try { return ScriptApp.getService().getUrl(); } catch (e) { return ''; }
@@ -1234,6 +1261,30 @@ function toggleUserStatus(tokenParam, targetEmail) {
     }
     return { status: 'error', message: 'User not found' };
   } catch (e) { Logger.log('toggleUserStatus error: ' + e); return { status: 'error', message: e.toString() }; }
+}
+
+function deleteUser(tokenParam, targetEmail) {
+  try {
+    const cu = getCurrentUser(tokenParam || _doPostToken);
+    // Only admins can delete users
+    if (!cu || cu.role !== 'Admin') return { status: 'error', message: 'Access denied — Admin only' };
+    // Cannot delete yourself
+    if (targetEmail.toLowerCase() === cu.email.toLowerCase())
+      return { status: 'error', message: 'You cannot delete your own account' };
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Users sheet not found' };
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() !== targetEmail.toLowerCase()) continue;
+      const deletedName = String(data[i][3] || targetEmail).trim();
+      sheet.deleteRow(i + 1);
+      // Invalidate user cache for this email
+      try { CacheService.getScriptCache().remove('cu_' + targetEmail.replace(/[^a-zA-Z0-9]/g, '_')); } catch(e) {}
+      logActivity('Delete User', '', `User deleted: ${deletedName} (${targetEmail})`);
+      return { status: 'success', deletedEmail: targetEmail };
+    }
+    return { status: 'error', message: 'User not found' };
+  } catch (e) { Logger.log('deleteUser error: ' + e); return { status: 'error', message: e.toString() }; }
 }
 
 // =====================================================================
