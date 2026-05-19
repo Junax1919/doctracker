@@ -1931,6 +1931,22 @@
       display: block
     }
 
+    /* ── Clickable table rows ───────────────────────────────────── */
+    #docTable tbody tr {
+      cursor: pointer;
+      transition: background 0.12s
+    }
+
+    #docTable tbody tr:hover td {
+      background: #eff6ff !important
+    }
+
+    /* Action-button cell + attachment cell keep default cursor */
+    #docTable tbody tr td:last-child,
+    #docTable tbody tr td.col-attachment {
+      cursor: default
+    }
+
     .admin-btn {
       background: var(--warning);
       color: #fff
@@ -3560,7 +3576,7 @@
 
   <!-- View Document Details Modal -->
   <div class="modal" id="viewModal" style="display:none">
-    <div class="modal-content" style="max-width:680px">
+    <div class="modal-content" style="max-width:720px">
       <div class="modal-header" style="background:var(--primary);border-radius:12px 12px 0 0">
         <div style="display:flex;align-items:center;gap:10px">
           <span class="material-symbols-outlined" style="color:#94a3b8;font-size:22px">description</span>
@@ -4135,8 +4151,8 @@
               // Same logic as _computeStats: everything that is NOT outgoing and NOT complete.
               // This is the catch-all bucket matching the badge counter exactly.
               return !st.includes('forwarded') &&
-                     !st.includes('completed') &&
-                     !st.includes('complete');
+                !st.includes('completed') &&
+                !st.includes('complete');
             case 'received':
               return st === 'received' || st.includes('received');
             case 'outgoing':
@@ -4145,7 +4161,7 @@
               return st === 'hold' || st.includes('hold');
             case 'complete':
               return st === 'complete' || st === 'completed' ||
-                     st.includes('complete');
+                st.includes('complete');
             default:
               return true;
           }
@@ -4210,9 +4226,15 @@
       tb.innerHTML = pd.map(d => {
         const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
-        const att = pdf ? `<a href="${pdf}" target="_blank" style="color:var(--blue);text-decoration:none"><span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>` : '-';
+        const att = pdf
+          ? `<a href="${pdf}" target="_blank" onclick="event.stopPropagation()"
+               style="color:var(--blue);text-decoration:none">
+               <span class="material-symbols-outlined" style="font-size:20px">attachment</span></a>`
+          : '-';
         const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
-        return `<tr>
+        // Escape the id for safe inline use (ids contain only alphanumeric + hyphens, but be safe)
+        const safeId = id.replace(/`/g, '').replace(/\\/g, '');
+        return `<tr onclick="viewDoc(\`${safeId}\`)" title="Click to view details">
 <td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
 <td class="col-id" style="display:${disp('id')}"><span class="doc-id">${id}</span></td>
 <td class="hide-mobile col-docTs" style="display:${disp('docTs')};font-family:monospace;font-size:12px;color:var(--muted)">${docTs}</td>
@@ -4239,12 +4261,12 @@
 <td class="hide-mobile col-date" style="display:${disp('date')}">${dt}</td>
 <td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
-<td><div class="table-actions">
-<button class="action-btn" title="View details" onclick='viewDoc(\`${id}\`)' style="color:var(--blue)">
+<td onclick="event.stopPropagation()" style="cursor:default"><div class="table-actions">
+<button class="action-btn" title="View details" onclick='viewDoc(\`${safeId}\`)' style="color:var(--blue)">
   <span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
-<button class="action-btn" title="Edit" onclick='editDoc(\`${id}\`)'>
+<button class="action-btn" title="Edit" onclick='editDoc(\`${safeId}\`)'>
   <span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-<button class="action-btn" title="Delete" onclick='deleteDoc(\`${id}\`)' style="color:var(--danger)">
+<button class="action-btn" title="Delete" onclick='deleteDoc(\`${safeId}\`)' style="color:var(--danger)">
   <span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
 </div></td></tr>`;
       }).join('');
@@ -4267,94 +4289,160 @@
       if (!doc) { toast('Document not found', 'error'); return; }
       viewingDocId = id;
 
-      const fmtDate = v => v || '—';
+      // ── Formatters ───────────────────────────────────────────────────────────
+      const fmtDate = v => v ? String(v).trim() || '—' : '—';
       const fmtAmt = v => {
         if (!v || v === '') return '—';
         const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
-        return isNaN(n) ? v : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return isNaN(n) ? (v || '—') : '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       };
-      const fmtTs = v => v ? String(v) : '—';
+      const fmtTs = v => v ? String(v).trim() || '—' : '—';
+      const val = k => {
+        const v = doc[k];
+        return (v !== undefined && v !== null && String(v).trim() !== '') ? String(v).trim() : '—';
+      };
+
       const ov = doc.Overdue || 'On time';
       const ovColor = ov !== 'On time' ? '#dc2626' : '#059669';
-      const sta = doc.Status || '';
+      const ovBg = ov !== 'On time' ? '#fef2f2' : '#f0fdf4';
+      const sta = doc.Status || '—';
       const sc = sta.toLowerCase().replace(/\s+/g, '-');
-      const pdf = doc['PDF Link'] || '';
+      const pdf = (doc['PDF Link'] || '').trim();
 
-      const field = (label, value, icon = '') => `
-        <div style="display:flex;flex-direction:column;gap:3px">
-          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">${icon ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px">${icon}</span> ` : ''}${label}</span>
-          <span style="font-size:14px;color:var(--text);word-break:break-word">${value}</span>
+      // ── Reusable cell helpers ────────────────────────────────────────────────
+      // Two-column pair: label-value side-by-side in a subgrid
+      const pair = (l1, v1, l2, v2) => `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px">
+          <div><div class="dl">${l1}</div><div class="dv">${v1}</div></div>
+          <div><div class="dl">${l2}</div><div class="dv">${v2}</div></div>
         </div>`;
+      const single = (l, v) => `
+        <div><div class="dl">${l}</div><div class="dv">${v}</div></div>`;
+      const divider = `<hr style="border:none;border-top:1px solid var(--border);margin:14px 0">`;
+      const sectionHead = (icon, label) =>
+        `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+                     color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+           <span class="material-symbols-outlined" style="font-size:15px">${icon}</span>${label}
+         </div>`;
 
       document.getElementById('viewModalBody').innerHTML = `
-        <!-- Header strip -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <style>
+          .dl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;
+              color:var(--muted);margin-bottom:2px}
+          .dv{font-size:14px;color:var(--text);word-break:break-word;line-height:1.45}
+          .det-section{padding:16px;border:1px solid var(--border);border-radius:10px;
+                       display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+          .det-section.tinted{background:var(--bg)}
+        </style>
+
+        <!-- ① Header strip: Doc No + Status + Overdue + Doc Type -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                    margin-bottom:16px;flex-wrap:wrap;gap:10px">
           <div>
-            <div style="font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px">${doc['Doc No'] || '—'}</div>
-            <div style="font-size:13px;color:var(--muted)">${doc['Doc Type'] || '—'}</div>
+            <div style="font-size:22px;font-weight:800;color:var(--primary);line-height:1.15">
+              ${val('Doc No')}
+            </div>
+            <div style="font-size:13px;color:var(--muted);margin-top:2px">
+              ${val('Doc Type')}
+            </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span class="status-badge status-${sc}" style="font-size:13px;padding:5px 14px">${sta}</span>
-            <span style="font-weight:700;color:${ovColor};font-size:13px">${ov}</span>
+            <span class="status-badge status-${sc}"
+                  style="font-size:13px;padding:5px 14px">${sta}</span>
+            <span style="font-weight:700;font-size:13px;color:${ovColor};
+                         background:${ovBg};padding:4px 12px;border-radius:20px">
+              ${ov}
+            </span>
           </div>
         </div>
 
-        <!-- Grid of fields -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 24px;padding:20px;background:var(--bg);border-radius:10px;margin-bottom:16px">
-          ${field('ID / Barcode', `<span style="font-family:monospace;font-size:13px">${doc['ID/Barcode'] || '—'}</span>`, 'qr_code')}
-          ${field('Document Type', doc['Doc Type'] || '—', 'description')}
-          ${field('Document Number', doc['Doc No'] || '—', 'tag')}
-          ${field('Description', doc.Description || '—', 'notes')}
-          ${field('Amount', fmtAmt(doc.Amount), 'payments')}
-          ${field('Status', sta || '—', 'info')}
-          ${field('Overdue', `<span style="color:${ovColor};font-weight:600">${ov}</span>`, 'schedule')}
-          ${field('Date Received', fmtDate(doc['Date Received']), 'event')}
+        <!-- ② PR / Purchase Request section -->
+        <div class="det-section">
+          ${sectionHead('receipt_long', 'Purchase Request (PR)')}
+          ${pair('Doc No', val('Doc No'), 'PR Date', fmtDate(val('PR Date')))}
+          ${single('Description', val('Description'))}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px">
+            <div><div class="dl">Amount</div>
+                 <div class="dv" style="font-weight:700;color:var(--primary)">${fmtAmt(doc.Amount)}</div></div>
+            <div><div class="dl">End User</div>
+                 <div class="dv">${val('EndUser') !== '—' ? val('EndUser') : (val('End User') !== '—' ? val('End User') : '—')}</div></div>
+          </div>
+          ${single('Requisitioner', val('Requisitioner'))}
         </div>
 
-        <!-- Procurement section -->
-        <div style="padding:16px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:14px">📋 Procurement Details</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 24px">
-            ${field('PR Date', fmtDate(doc['PR Date']), 'calendar_today')}
-            ${field('End User', doc['EndUser'] || '—', 'person')}
-            ${field('Requisitioner', doc.Requisitioner || '—', 'badge')}
-            ${field('Supplier', doc.Supplier || '—', 'storefront')}
-            ${field('Endorsed To (Office)', doc['Endorsed To'] || '—', 'apartment')}
-            ${field('PO Number', doc['PO No'] || '—', 'receipt_long')}
-            ${field('PO Date', fmtDate(doc['PO Date']), 'event_note')}
+        <!-- ③ Procurement / PO section -->
+        <div class="det-section">
+          ${sectionHead('local_shipping', 'Procurement Details')}
+          ${pair('PO Number', val('PO No'), 'PO Date', fmtDate(val('PO Date')))}
+          <div>
+            <div class="dl">PO Amount</div>
+            <div class="dv" style="font-weight:700;color:var(--primary)">${fmtAmt(doc['PO Amount'])}</div>
+          </div>
+          ${single('Supplier', val('Supplier'))}
+          ${single('Delivery Status', val('Delivery Status'))}
+        </div>
+
+        <!-- ④ Endorsements section -->
+        <div class="det-section">
+          ${sectionHead('swap_horiz', 'Endorsements')}
+          ${pair('Endorsed To', val('Endorsed To'), 'Date Received', fmtDate(val('Date Received')))}
+          ${pair('Date End. to Acctng', fmtDate(val('Date Endorsed To Acctng')), 'Date End. from CMO', fmtDate(val('Date Endorsed From CMO')))}
+          ${pair('Date End. to COA', fmtDate(val('Date Endorse To COA')), 'Date End. to CTO', fmtDate(val('Date Endorse To CTO')))}
+        </div>
+
+        <!-- ⑤ Notes (always shown) -->
+        <div class="det-section">
+          ${sectionHead('notes', 'Notes')}
+          <div class="dv" style="white-space:pre-wrap;min-height:32px">
+            ${val('Notes') !== '—' ? val('Notes') : '<span style="color:var(--muted);font-style:italic">No notes</span>'}
           </div>
         </div>
 
-        <!-- Timestamps -->
-        <div style="padding:14px 16px;background:#f8fafc;border-radius:10px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 24px">
-          ${field('Doc Time Stamp', `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`, 'schedule')}
-          ${field('PO Time Stamp', `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`, 'update')}
+        <!-- ⑥ Timestamps -->
+        <div class="det-section tinted">
+          ${sectionHead('schedule', 'Timestamps')}
+          ${pair('Doc Time Stamp',
+        `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Doc Time Stamp'])}</span>`,
+        'PO Time Stamp',
+        `<span style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['PO Time Stamp'])}</span>`
+      )}
+          <div><div class="dl">ID / Barcode</div>
+               <div class="dv" style="font-family:monospace;font-size:12px;color:var(--muted)">${val('ID/Barcode')}</div></div>
         </div>
 
-        <!-- Notes -->
-        ${doc.Notes ? `<div style="padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">📝 Notes</div>
-          <div style="font-size:14px;color:var(--text);white-space:pre-wrap">${doc.Notes}</div>
-        </div>` : ''}
-
-        <!-- PDF Attachment -->
-        ${pdf ? `<div style="padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;display:flex;align-items:center;gap:12px">
-          <span class="material-symbols-outlined" style="color:var(--blue);font-size:28px">picture_as_pdf</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--blue)">PDF Attachment</div>
-            <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pdf}</div>
-          </div>
-          <a href="${pdf}" target="_blank" class="btn btn-primary" style="padding:8px 14px;font-size:13px;text-decoration:none">
-            <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>Open
-          </a>
-        </div>` : '<div style="padding:12px 16px;background:#f8fafc;border-radius:10px;color:var(--muted);font-size:13px;text-align:center"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">attachment</span> No PDF attachment</div>'}
+        <!-- ⑦ PDF Attachment -->
+        ${pdf
+          ? `<div style="padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;
+                         display:flex;align-items:center;gap:12px">
+               <span class="material-symbols-outlined" style="color:var(--blue);font-size:28px">picture_as_pdf</span>
+               <div style="flex:1;min-width:0">
+                 <div style="font-size:13px;font-weight:600;color:var(--blue)">PDF Attachment</div>
+                 <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;
+                             white-space:nowrap">${pdf}</div>
+               </div>
+               <a href="${pdf}" target="_blank" class="btn btn-primary"
+                  style="padding:8px 14px;font-size:13px;text-decoration:none">
+                 <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>Open
+               </a>
+             </div>`
+          : `<div style="padding:12px 16px;background:#f8fafc;border-radius:10px;
+                         color:var(--muted);font-size:13px;text-align:center">
+               <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">attachment</span>
+               No PDF attachment
+             </div>`
+        }
       `;
       showModal('viewModal');
     }
 
     function closeViewModal() { hideModal('viewModal'); viewingDocId = null; }
 
-    function editDocFromView() { closeViewModal(); if (viewingDocId) editDoc(viewingDocId); }
+    function editDocFromView() {
+      // Capture the id BEFORE closing the modal — closeViewModal() sets viewingDocId = null
+      const idToEdit = viewingDocId;
+      closeViewModal();
+      if (idToEdit) editDoc(idToEdit);
+    }
 
     // ===================== PRINT FUNCTIONS =====================
     // printTableView() — prints the current filtered/sorted table (respects visible columns)
@@ -5250,7 +5338,7 @@
       // We do NOT reset if the user has already set filters (check for active filter state).
       const hasActiveFilters =
         (document.getElementById('printDateFrom') && document.getElementById('printDateFrom').value) ||
-        (document.getElementById('printDateTo')   && document.getElementById('printDateTo').value);
+        (document.getElementById('printDateTo') && document.getElementById('printDateTo').value);
       if (!hasActiveFilters) {
         const sf = document.getElementById('printStatusFilter');
         if (sf) sf.value = 'all';
@@ -5259,10 +5347,10 @@
     function getPrintFilteredData() {
       const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
       const dtRaw = document.getElementById('printDateTo').value;     // 'YYYY-MM-DD' or ''
-      const sf    = document.getElementById('printStatusFilter').value;
-      const euEl  = document.getElementById('printEndUserFilter');
-      const eu    = euEl ? euEl.value : 'all';
-      const tf    = document.getElementById('printDocTypeFilter').value;
+      const sf = document.getElementById('printStatusFilter').value;
+      const euEl = document.getElementById('printEndUserFilter');
+      const eu = euEl ? euEl.value : 'all';
+      const tf = document.getElementById('printDocTypeFilter').value;
 
       // Parse filter dates to midnight local time so comparisons are reliable
       const dfMs = dfRaw ? new Date(dfRaw + 'T00:00:00').getTime() : null;
