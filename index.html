@@ -1224,6 +1224,13 @@
       justify-content: flex-end
     }
 
+    /* ---- Required field asterisk ---- */
+    .req-star {
+      color: #ef4444;
+      font-weight: 700;
+      margin-left: 2px
+    }
+
     /* ---- TOAST ---- */
     #toast {
       position: fixed;
@@ -1247,6 +1254,221 @@
 
     #toast.error {
       background: var(--danger)
+    }
+
+    /* ---- ALERT MODAL ---- */
+    #alertModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center
+    }
+
+    #alertModal.show {
+      display: flex
+    }
+
+    #alertModal .am-box {
+      background: #fff;
+      border-radius: 12px;
+      width: 92%;
+      max-width: 420px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, .18);
+      overflow: hidden;
+      animation: amPop .22s cubic-bezier(.34, 1.56, .64, 1) both
+    }
+
+    @keyframes amPop {
+      from {
+        transform: scale(.88);
+        opacity: 0
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    #alertModal .am-header {
+      padding: 18px 20px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    #alertModal .am-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    #alertModal .am-icon.error {
+      background: #fef2f2;
+      color: #ef4444
+    }
+
+    #alertModal .am-icon.success {
+      background: #f0fdf4;
+      color: #10b981
+    }
+
+    #alertModal .am-icon.info {
+      background: #eff6ff;
+      color: #3b82f6
+    }
+
+    #alertModal .am-icon.warning {
+      background: #fffbeb;
+      color: #f59e0b
+    }
+
+    #alertModal .am-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    #alertModal .am-body {
+      padding: 16px 20px;
+      font-size: 13.5px;
+      color: #374151;
+      line-height: 1.6
+    }
+
+    #alertModal .am-footer {
+      padding: 12px 20px 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px
+    }
+
+    /* ---- SYSTEM INFO MODAL ---- */
+    #sysInfoModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 2500;
+      align-items: center;
+      justify-content: center
+    }
+
+    #sysInfoModal.show {
+      display: flex
+    }
+
+    #sysInfoModal .si-box {
+      background: #fff;
+      border-radius: 12px;
+      width: 92%;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, .18);
+      overflow: hidden;
+      animation: amPop .22s cubic-bezier(.34, 1.56, .64, 1) both
+    }
+
+    #sysInfoModal .si-header {
+      background: var(--primary);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    #sysInfoModal .si-header-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    #sysInfoModal .si-header span.material-symbols-outlined {
+      color: #94a3b8;
+      font-size: 20px
+    }
+
+    #sysInfoModal .si-header h3 {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0
+    }
+
+    #sysInfoModal .si-close {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      border-radius: 6px;
+      opacity: .7
+    }
+
+    #sysInfoModal .si-close:hover {
+      opacity: 1
+    }
+
+    #sysInfoModal .si-body {
+      padding: 22px 20px 18px
+    }
+
+    #sysInfoModal .si-body .si-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text)
+    }
+
+    #sysInfoModal .si-body p {
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.65;
+      margin-bottom: 8px
+    }
+
+    #sysInfoModal .si-body .si-brand {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    #sysInfoModal .si-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0
+    }
+
+    #sysInfoModal .si-key {
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      letter-spacing: .3px;
+      margin-top: 6px
+    }
+
+    #sysInfoModal .si-footer {
+      padding: 10px 20px 16px;
+      display: flex;
+      justify-content: flex-end
     }
 
     /* ---- PAGINATION ---- */
@@ -2742,8 +2964,8 @@
       <div style="text-align:center;margin-top:10px"><a href="#" id="forgotLink"
           style="color:#0f172a;font-size:13px;font-weight:500">Forgot password?</a></div>
       <div id="loginNotif" class="notification"></div>
-      <div class="auth-footer">Copyright &copy; 2025 | <a href="https://aljuneq.pages.dev/"
-          target="_blank">AljuneQ</a></div>
+      <div class="auth-footer">Copyright &copy; 2025 | <a href="https://aljuneq.pages.dev/" target="_blank">AljuneQ</a>
+      </div>
     </div>
   </div>
 
@@ -2881,8 +3103,12 @@
               class="material-symbols-outlined">menu</span></button>
           <h1 class="page-title-top" id="pageTitle">All Documents</h1>
         </div>
-        <div class="topbar-right"><button class="notification-btn"><span
-              class="material-symbols-outlined">notifications</span></button></div>
+        <div class="topbar-right">
+          <button class="notification-btn" onclick="openSysInfoModal()" title="System Info" id="sysInfoBtn">
+            <span class="material-symbols-outlined">info</span>
+          </button>
+          <button class="notification-btn"><span class="material-symbols-outlined">notifications</span></button>
+        </div>
       </div>
       <div class="content-area">
 
@@ -3011,7 +3237,8 @@
                     <div class="dropdown-item"><input type="checkbox" id="col-office" checked
                         onchange="toggleColumn('office')"><label for="col-office">Endorsed To</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-endorsementTs" checked
-                        onchange="toggleColumn('endorsementTs')"><label for="col-endorsementTs">Endorsement TS</label></div>
+                        onchange="toggleColumn('endorsementTs')"><label for="col-endorsementTs">Endorsement TS</label>
+                    </div>
                     <div class="dropdown-item"><input type="checkbox" id="col-status" checked
                         onchange="toggleColumn('status')"><label for="col-status">Status</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndAcctng" checked
@@ -3074,7 +3301,8 @@
                     </th>
                     <th class="sortable hide-mobile col-office" data-column="office" onclick="sortTable('office')">
                       Endorsed To</th>
-                    <th class="sortable hide-mobile col-endorsementTs" data-column="endorsementTs" onclick="sortTable('endorsementTs')">Endorsement TS</th>
+                    <th class="sortable hide-mobile col-endorsementTs" data-column="endorsementTs"
+                      onclick="sortTable('endorsementTs')">Endorsement TS</th>
                     <th class="sortable col-status" data-column="status" onclick="sortTable('status')">Status</th>
                     <th class="sortable hide-mobile col-dateEndAcctng" data-column="dateEndAcctng"
                       onclick="sortTable('dateEndAcctng')">Date End. To Acctng</th>
@@ -3297,7 +3525,8 @@
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-poAmount"> PO Amount</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-endorsementTs"> Endorsement Time Stamp</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-endorsementTs"> Endorsement Time
+                    Stamp</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndAcctng"> Date End. To
                     Acctng</label>
@@ -3326,8 +3555,8 @@
 
       </div><!-- end content-area -->
     </div><!-- end main-content -->
-    <footer class="dashboard-footer" id="dashboardFooter">Copyright &copy; 2025 | <a
-        href="https://aljuneq.pages.dev/" target="_blank">ALJUNEQ</a></footer>
+    <footer class="dashboard-footer" id="dashboardFooter">Copyright &copy; 2025 | <a href="https://aljuneq.pages.dev/"
+        target="_blank">ALJUNEQ</a></footer>
   </div><!-- end view-dashboard -->
 
   <!-- ===== MODALS ===== -->
@@ -3358,24 +3587,24 @@
 
           <!-- Doc Type | Doc No -->
           <div class="form-group">
-            <label class="form-label">Document Type *</label>
+            <label class="form-label">Document Type <span class="req-star">*</span></label>
             <select class="form-select" id="docType"></select>
           </div>
           <div class="form-group">
-            <label class="form-label">Doc/PR Number *</label>
+            <label class="form-label">Doc/PR Number <span class="req-star">*</span></label>
             <input type="text" class="form-input" id="docNo" placeholder="e.g., PR-2025-001">
             <span id="docNoError" style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span>
           </div>
 
           <!-- Description (full-width) -->
           <div class="form-group form-group-full">
-            <label class="form-label">Description *</label>
+            <label class="form-label">Description <span class="req-star">*</span></label>
             <input type="text" class="form-input" id="desc" placeholder="Brief description">
           </div>
 
           <!-- PR Date | Amount -->
           <div class="form-group">
-            <label class="form-label">Doc/PR Date *</label>
+            <label class="form-label">Doc/PR Date <span class="req-star">*</span></label>
             <input type="date" class="form-input" id="prDate">
           </div>
           <div class="form-group">
@@ -3386,7 +3615,7 @@
 
           <!-- End User | Requisitioner -->
           <div class="form-group">
-            <label class="form-label">End User *</label>
+            <label class="form-label">End User <span class="req-star">*</span></label>
             <div style="display:flex;gap:8px;">
               <select class="form-select" id="endUser" style="flex:1;">
                 <option value="">Select end user...</option>
@@ -3450,7 +3679,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Office/Department (Endorsed To) *</label>
+            <label class="form-label">Office/Department (Endorsed To) <span class="req-star">*</span></label>
             <div style="display:flex;gap:8px;">
               <select class="form-select" id="office" style="flex:1;"></select>
               <button type="button" class="btn btn-outline"
@@ -3465,7 +3694,8 @@
             <label class="form-label" style="display:flex;align-items:center;gap:6px">
               <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted)">swap_horiz</span>
               Endorsement Time Stamp
-              <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-updated when Office/Department changes)</span>
+              <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(auto-updated when
+                Office/Department changes)</span>
             </label>
             <input type="text" class="form-input" id="endorsementTimeStamp" readonly
               style="background:#f8fafc;cursor:not-allowed;color:var(--muted);font-family:monospace;font-size:13px"
@@ -3474,7 +3704,7 @@
 
           <!-- Status | Delivery Status -->
           <div class="form-group">
-            <label class="form-label">Status *</label>
+            <label class="form-label">Status <span class="req-star">*</span></label>
             <div style="display:flex;gap:8px;">
               <select class="form-select" id="stat" style="flex:1;"></select>
               <button type="button" class="btn btn-outline"
@@ -4377,7 +4607,7 @@
         <div class="det-section">
           ${sectionHead('receipt_long', 'Purchase Request (PR)')}
           ${pair('Doc No', val('Doc No'), 'PR Date', fmtDate(val('PR Date')))}
-          ${single('Description', val('Description'))}
+          ${single('Description', `<strong>${val('Description')}</strong>`)}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px">
             <div><div class="dl">Amount</div>
                  <div class="dv" style="font-weight:700;color:var(--primary)">${fmtAmt(doc.Amount)}</div></div>
@@ -4396,14 +4626,14 @@
             <div class="dv" style="font-weight:700;color:var(--primary)">${fmtAmt(doc['PO Amount'])}</div>
           </div>
           ${single('Supplier', val('Supplier'))}
-          ${single('Delivery Status', val('Delivery Status'))}
+          ${single('Delivery Status', `<strong>${val('Delivery Status')}</strong>`)}
         </div>
 
         <!-- ④ Endorsements section -->
         <div class="det-section">
           ${sectionHead('swap_horiz', 'Endorsements')}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px">
-            <div><div class="dl">Endorsed To</div><div class="dv">${val('Endorsed To')}</div></div>
+            <div><div class="dl">Endorsed To</div><div class="dv"><strong>${val('Endorsed To')}</strong></div></div>
             <div><div class="dl">Endorsement Time Stamp</div>
                  <div class="dv" style="font-family:monospace;font-size:12px;color:var(--muted)">${fmtTs(doc['Endorsement Time Stamp'])}</div></div>
           </div>
@@ -4676,7 +4906,7 @@
       const desc = document.getElementById('desc').value;
       const office = document.getElementById('office').value;
       if (!docType || !docNo || !desc || !prDate || !endUser || !office) {
-        toast('Fill all required fields (Doc Type, Doc No, Description, PR Date, End User, Office)', 'error');
+        showAlertModal('Required Fields Missing', 'Please fill in all required fields:<br><br><strong>Document Type, Doc/PR Number, Description, Doc/PR Date, End User,</strong> and <strong>Office/Department (Endorsed To)</strong>.', 'error');
         return;
       }
 
@@ -4739,10 +4969,10 @@
           const existing = allDocs[idx];
           // Compute optimistic Endorsement Time Stamp: update only if office changed
           const _prevOffice = (existing['Endorsed To'] || '').trim();
-          const _newOffice  = (data.office || '').trim();
-          const _optEndTs   = (_newOffice !== _prevOffice && _newOffice !== '')
-                                ? formatTimestampDisplay(new Date())
-                                : (existing['Endorsement Time Stamp'] || '');
+          const _newOffice = (data.office || '').trim();
+          const _optEndTs = (_newOffice !== _prevOffice && _newOffice !== '')
+            ? formatTimestampDisplay(new Date())
+            : (existing['Endorsement Time Stamp'] || '');
           allDocs[idx] = Object.assign({}, existing, {
             'Doc Type': data.docType, 'Doc No': data.docNo, 'Description': data.description,
             'Amount': data.amount ? '₱' + parseFloat(data.amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '',
@@ -4871,20 +5101,21 @@
       }
     }
     function deleteDoc(id) {
-      if (!confirm('Delete this document?')) return;
-      google.script.run
-        .withSuccessHandler(r => {
-          if (r.status === 'success') {
-            // Remove from local store instantly
-            allDocs = allDocs.filter(d => d['ID/Barcode'] !== id);
-            toast('Deleted!');
-            populateTableFilters();
-            applyFilter(currentFilter);
-            updateStats();
-          } else toast('Delete failed', 'error');
-        })
-        .withFailureHandler(() => toast('Error', 'error'))
-        .deleteDocument(id);
+      showConfirmModal('Delete Document', 'Are you sure you want to <strong>permanently delete</strong> this document?<br><br>This action cannot be undone.', 'Delete', 'danger', function () {
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              // Remove from local store instantly
+              allDocs = allDocs.filter(d => d['ID/Barcode'] !== id);
+              toast('Deleted!');
+              populateTableFilters();
+              applyFilter(currentFilter);
+              updateStats();
+            } else toast('Delete failed', 'error');
+          })
+          .withFailureHandler(() => toast('Error', 'error'))
+          .deleteDocument(id);
+      }); // end showConfirmModal
     }
     function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
     function removeFile() { selectedFile = null; document.getElementById('pdfInput').value = ''; document.getElementById('fileUploadArea').classList.remove('has-file'); document.getElementById('fileInfo').style.display = 'none'; }
@@ -4895,41 +5126,42 @@
     function closeProfileModal() { hideModal('profileModal'); document.getElementById('profilePassword').value = ''; document.getElementById('profilePasswordConfirm').value = ''; }
     function saveProfile() { const name = document.getElementById('profileName').value.trim(), pwd = document.getElementById('profilePassword').value, cpwd = document.getElementById('profilePasswordConfirm').value; if (!name) { toast('Please enter your name', 'error'); return; } if (pwd || cpwd) { if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; } if (pwd !== cpwd) { toast('Passwords do not match', 'error'); return; } } const updates = { name }; if (pwd) updates.password = pwd; google.script.run.withSuccessHandler(r => { if (r.status === 'success') { toast('Profile updated!'); closeProfileModal(); loadUserProfile(); } else toast(r.message || 'Failed', 'error'); }).updateUserProfile(_sessionToken, updates); }
     function handleLogout() {
-      if (!confirm('Are you sure you want to logout?')) return;
+      showConfirmModal('Sign Out', 'Are you sure you want to sign out of DocuTracker?', 'Sign Out', 'danger', function () {
 
-      // ── Build the redirect URL from the BROWSER'S current location ──────────
-      // This is the only reliable approach across all environments:
-      //   • Custom domain   (https://doctracker.junaxdmly.workers.dev/)
-      //   • Cloudflare / CDN proxy
-      //   • Localhost       (http://localhost:3000/)
-      //   • GAS exec URL    (https://script.google.com/macros/s/.../exec)
-      // window.location.origin + pathname always reflects the real host the user
-      // is browsing from — no hardcoded URLs, no backend value needed.
-      const currentOrigin = window.location.origin + window.location.pathname;
+        // ── Build the redirect URL from the BROWSER'S current location ──────────
+        // This is the only reliable approach across all environments:
+        //   • Custom domain   (https://doctracker.junaxdmly.workers.dev/)
+        //   • Cloudflare / CDN proxy
+        //   • Localhost       (http://localhost:3000/)
+        //   • GAS exec URL    (https://script.google.com/macros/s/.../exec)
+        // window.location.origin + pathname always reflects the real host the user
+        // is browsing from — no hardcoded URLs, no backend value needed.
+        const currentOrigin = window.location.origin + window.location.pathname;
 
-      // Clear local session token immediately before the async call
-      const _logoutToken = _sessionToken;
-      currentUser = null;
-      _sessionToken = '';
-      try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
+        // Clear local session token immediately before the async call
+        const _logoutToken = _sessionToken;
+        currentUser = null;
+        _sessionToken = '';
+        try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
 
-      // Tell the backend to clear the server-side session (PropertiesService).
-      // We no longer use the returned URL for navigation — we already have the
-      // correct one from the browser itself.
-      google.script.run
-        .withSuccessHandler(function () {
-          // Redirect back to the same origin/path with ?logout=1 so checkSession()
-          // skips the session restore and shows the login view immediately.
-          window.location.href = currentOrigin + '?logout=1';
-        })
-        .withFailureHandler(function () {
-          // Even if the backend call fails, clear the UI and show login.
-          // The session will expire naturally on the server side.
-          document.getElementById('loginEmail').value = '';
-          document.getElementById('loginPassword').value = '';
-          showView('login');
-        })
-        .logout(_logoutToken);
+        // Tell the backend to clear the server-side session (PropertiesService).
+        // We no longer use the returned URL for navigation — we already have the
+        // correct one from the browser itself.
+        google.script.run
+          .withSuccessHandler(function () {
+            // Redirect back to the same origin/path with ?logout=1 so checkSession()
+            // skips the session restore and shows the login view immediately.
+            window.location.href = currentOrigin + '?logout=1';
+          })
+          .withFailureHandler(function () {
+            // Even if the backend call fails, clear the UI and show login.
+            // The session will expire naturally on the server side.
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            showView('login');
+          })
+          .logout(_logoutToken);
+      }); // end showConfirmModal
     }
 
     // ===================== ADMIN =====================
@@ -6429,21 +6661,134 @@
     }
 
     function toggleUser(email) {
-      if (!confirm(`Change status for ${email}?`)) return;
-      google.script.run
-        .withSuccessHandler(r => {
-          if (r.status === 'success') {
-            toast(`User ${r.newStatus.toLowerCase()}d`);
-            // Update local cache instantly
-            const u = _allUsers.find(u => u.email === email);
-            if (u) u.status = r.newStatus;
-            renderUsersTable(_allUsers);
-          } else toast(r.message || 'Failed', 'error');
-        })
-        .withFailureHandler(() => toast('Error', 'error'))
-        .toggleUserStatus(_sessionToken, email);
+      showConfirmModal('Change User Status', `Are you sure you want to change the status for <strong>${email}</strong>?`, 'Confirm', 'info', function () {
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              toast(`User ${r.newStatus.toLowerCase()}d`);
+              // Update local cache instantly
+              const u = _allUsers.find(u => u.email === email);
+              if (u) u.status = r.newStatus;
+              renderUsersTable(_allUsers);
+            } else toast(r.message || 'Failed', 'error');
+          })
+          .withFailureHandler(() => toast('Error', 'error'))
+          .toggleUserStatus(_sessionToken, email);
+      }); // end showConfirmModal
     }
   </script>
+
+  <!-- ===== ALERT MODAL ===== -->
+  <div id="alertModal">
+    <div class="am-box">
+      <div class="am-header">
+        <div class="am-icon" id="amIcon">
+          <span class="material-symbols-outlined" id="amIconSymbol" style="font-size:22px">error</span>
+        </div>
+        <div class="am-title" id="amTitle">Notification</div>
+      </div>
+      <div class="am-body" id="amBody"></div>
+      <div class="am-footer">
+        <button id="amCancelBtn" class="btn btn-outline" style="display:none"
+          onclick="closeAlertModal()">Cancel</button>
+        <button id="amOkBtn" class="btn btn-primary"
+          onclick="_amConfirmCb && _amConfirmCb(); closeAlertModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SYSTEM INFO MODAL ===== -->
+  <div id="sysInfoModal">
+    <div class="si-box">
+      <div class="si-header">
+        <div class="si-header-inner">
+          <span class="material-symbols-outlined">info</span>
+          <h3>System Information</h3>
+        </div>
+        <button class="si-close" onclick="closeSysInfoModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="si-body">
+        <div class="si-title">About DocuTracker</div>
+        <p><span class="si-brand">DocuTracker</span> is a modern web-based document management and tracking system
+          designed to streamline the monitoring, routing, and status tracking of office documents in real time. The
+          system features secure user authentication, responsive dashboard analytics, document history timelines,
+          searchable records, activity logs, printable reports, and mobile-friendly access for efficient document
+          monitoring anytime and anywhere.</p>
+        <p>Built with a clean and professional interface, DocuTracker helps organizations improve document
+          accountability, transparency, and workflow efficiency through centralized tracking and reporting capabilities.
+        </p>
+        <hr class="si-divider">
+        <p>Developed and Designed by <a href="https://aljuneq.pages.dev/" target="_blank"
+            style="color:var(--blue);font-weight:600;text-decoration:none">Aljune.Q</a></p>
+        <p>© 2025 All Rights Reserved.</p>
+        <div class="si-key">Product License Key: JXD984877589390</div>
+      </div>
+      <div class="si-footer">
+        <button class="btn btn-primary" onclick="closeSysInfoModal()"
+          style="padding:8px 20px;font-size:13px">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== ALERT / CONFIRM MODAL HELPERS =====================
+    let _amConfirmCb = null;
+
+    function showAlertModal(title, message, type) {
+      // type: 'error' | 'success' | 'info' | 'warning'
+      const t = type || 'info';
+      const iconMap = { error: 'error', success: 'check_circle', info: 'info', warning: 'warning', danger: 'delete' };
+      document.getElementById('amTitle').textContent = title;
+      document.getElementById('amBody').innerHTML = message;
+      document.getElementById('amIcon').className = 'am-icon ' + t;
+      document.getElementById('amIconSymbol').textContent = iconMap[t] || 'info';
+      document.getElementById('amCancelBtn').style.display = 'none';
+      document.getElementById('amOkBtn').textContent = 'OK';
+      document.getElementById('amOkBtn').className = 'btn btn-primary';
+      _amConfirmCb = null;
+      document.getElementById('alertModal').classList.add('show');
+    }
+
+    function showConfirmModal(title, message, confirmLabel, type, onConfirm) {
+      const t = type || 'danger';
+      const iconMap = { danger: 'warning', info: 'help', warning: 'warning', error: 'error' };
+      document.getElementById('amTitle').textContent = title;
+      document.getElementById('amBody').innerHTML = message;
+      document.getElementById('amIcon').className = 'am-icon ' + (t === 'danger' ? 'error' : t);
+      document.getElementById('amIconSymbol').textContent = iconMap[t] || 'warning';
+      document.getElementById('amCancelBtn').style.display = '';
+      document.getElementById('amOkBtn').textContent = confirmLabel || 'Confirm';
+      document.getElementById('amOkBtn').className = 'btn ' + (t === 'danger' ? 'btn-primary' : 'btn-primary');
+      document.getElementById('amOkBtn').style.background = t === 'danger' ? 'var(--danger)' : '';
+      _amConfirmCb = onConfirm || null;
+      document.getElementById('alertModal').classList.add('show');
+    }
+
+    function closeAlertModal() {
+      document.getElementById('alertModal').classList.remove('show');
+      document.getElementById('amOkBtn').style.background = '';
+      _amConfirmCb = null;
+    }
+
+    // Close alert modal on backdrop click
+    document.getElementById('alertModal').addEventListener('click', function (e) {
+      if (e.target === this) closeAlertModal();
+    });
+
+    // System Info modal
+    function openSysInfoModal() {
+      document.getElementById('sysInfoModal').classList.add('show');
+    }
+    function closeSysInfoModal() {
+      document.getElementById('sysInfoModal').classList.remove('show');
+    }
+    document.getElementById('sysInfoModal').addEventListener('click', function (e) {
+      if (e.target === this) closeSysInfoModal();
+    });
+  </script>
+
 </body>
 
 </html>
