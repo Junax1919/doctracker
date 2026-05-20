@@ -577,7 +577,7 @@ function getDocumentById(docId) {
           const value = data[i][j];
           const h = headers[j];
           if (value instanceof Date) {
-            if (h === 'Doc Time Stamp' || h === 'PO Time Stamp') {
+            if (h === 'Doc Time Stamp' || h === 'PO Time Stamp' || h === 'Endorsement Time Stamp') {
               doc[h] = _fmtTs(value);
             } else {
               doc[h] = _fmtDate(value);
@@ -787,7 +787,7 @@ function ensureDocumentSheetHeaders(sheet) {
     const EXPECTED_HEADERS = [
       'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
       'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
-      'Supplier','Requisitioner','Endorsed To','Status',
+      'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
       'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
       'Date Endorse To COA','Date Endorse To CTO',
       'Date Received','Due Date','Overdue','Notes','PDF Link'
@@ -878,7 +878,7 @@ function getAllDocuments() {
     const noCol      = headers.indexOf('Doc No');
     const statusCol  = headers.indexOf('Status');
     // Pre-build a set of timestamp column indices so we format them differently
-    const tsColSet   = new Set(['Doc Time Stamp','PO Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
+    const tsColSet   = new Set(['Doc Time Stamp','PO Time Stamp','Endorsement Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
     const documents  = [];
     const seenIds    = new Set();
 
@@ -925,15 +925,15 @@ function addDocument(docData) {
     let sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
-      sheet.getRange(1, 1, 1, 27).setValues([[
+      sheet.getRange(1, 1, 1, 28).setValues([[
         'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
         'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
-        'Supplier','Requisitioner','Endorsed To','Status',
+        'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
         'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
         'Date Endorse To COA','Date Endorse To CTO',
         'Date Received','Due Date','Overdue','Notes','PDF Link'
       ]]);
-      sheet.getRange(1, 1, 1, 27).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 28).setFontWeight('bold');
     } else {
       // Ensure new columns exist in existing sheets
       ensureDocumentSheetHeaders(sheet);
@@ -943,10 +943,12 @@ function addDocument(docData) {
     const dateRcvd = new Date(docData.dateReceived || now);
     const dueDate  = new Date(dateRcvd);
     dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
-    // Doc Time Stamp: auto-generated on create
+    // Doc Time Stamp: auto-generated once on create, never changes
     const docTimeStamp = _fmtTs(now);
-    // PO Time Stamp: auto-generated on create/update
-    const poTimeStamp  = _fmtTs(now);
+    // PO Time Stamp: recorded only when PO No. is first provided on creation
+    const poTimeStamp = (docData.poNo && docData.poNo.trim() !== '') ? _fmtTs(now) : '';
+    // Endorsement Time Stamp: recorded when Endorsed To (office) is set on creation
+    const endorsementTimeStamp = (docData.office && docData.office.trim() !== '') ? _fmtTs(now) : '';
     sheet.appendRow([
       docTimeStamp,
       docId,
@@ -964,6 +966,7 @@ function addDocument(docData) {
       docData.supplier             || '',
       docData.requisitioner        || '',
       docData.office               || '',
+      endorsementTimeStamp,
       docData.status               || 'Received',
       docData.dateEndorsedToAcctng || '',
       docData.dateEndorsedFromCMO  || '',
@@ -985,8 +988,16 @@ function addDocument(docData) {
       docData.supplier  ? `Supplier: ${docData.supplier}`        : ''
     ].filter(Boolean).join(' | ');
     const cu = getCurrentUser();
+    // Build a descriptive create log message
+    const createDetail = 'Created New Document: ' + (docData.description || '(no description)') +
+      (docData.docNo    ? ' | Doc No: '       + docData.docNo    : '') +
+      (docData.docType  ? ' | Type: '         + docData.docType  : '') +
+      (docData.endUser  ? ' | End User: '     + docData.endUser  : '') +
+      (docData.supplier ? ' | Supplier: '     + docData.supplier : '') +
+      (docData.office   ? ' | Endorsed To: '  + docData.office   : '') +
+      (docData.status   ? ' | Status: '       + docData.status   : '');
     _logBoth(docId, 'Document Created', docData.status || 'Received', cu ? cu.name : 'System', createRemarks,
-             'Create Document', `Document created: ${docData.docType} - ${docData.docNo}`);
+             'Create Document', createDetail);
     return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('addDocument error: ' + error);
@@ -1012,11 +1023,12 @@ function updateDocument(docId, docData) {
     const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
-    // Skip ensureDocumentSheetHeaders() on update — headers never change mid-session
-    // and it costs a full sheet read. Only needed on addDocument (new sheets).
+    // Migrate sheet headers first — ensures 'Endorsement Time Stamp' column exists
+    // before we read or write data. Safe to call every time (no-op if already migrated).
+    ensureDocumentSheetHeaders(sheet);
     const data    = sheet.getDataRange().getValues();
     const headers = data[0].map(h => h.toString().trim());
-    // Build column index map from actual headers (handles both old and new schemas)
+    // Build column index map from the (now-migrated) headers
     const colIdx = {};
     headers.forEach((h, i) => { colIdx[h] = i; });
     let rowIndex = -1;
@@ -1030,43 +1042,72 @@ function updateDocument(docId, docData) {
     dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
     const cu = getCurrentUser();
     const now = new Date();
-    // Preserve original Doc Time Stamp; generate new PO Time Stamp on update
+    // Preserve original Doc Time Stamp — never changes after creation
     const origRow      = data[rowIndex - 1];
     const docTsCol     = colIdx['Doc Time Stamp'];
     const origDocTs    = (docTsCol !== undefined && origRow[docTsCol]) ? (origRow[docTsCol] instanceof Date ? _fmtTs(origRow[docTsCol]) : origRow[docTsCol]) : _fmtTs(now);
-    const poTimeStamp  = _fmtTs(now);
+    // PO Time Stamp: preserve existing value; only set if it was blank and poNo is now provided
+    const poTsCol      = colIdx['PO Time Stamp'];
+    const origPoTs     = (poTsCol !== undefined && origRow[poTsCol])
+                          ? (origRow[poTsCol] instanceof Date ? _fmtTs(origRow[poTsCol]) : origRow[poTsCol])
+                          : '';
+    const poNoCol      = colIdx['PO No'];
+    const origPoNo     = (poNoCol !== undefined) ? String(origRow[poNoCol] || '').trim() : '';
+    const newPoNo      = String(docData.poNo || '').trim();
+    // Set PO TS only when: (a) existing PO TS is blank AND a new PO No. is now being entered
+    const poTimeStamp  = origPoTs
+                          ? origPoTs                                       // preserve existing
+                          : (newPoNo !== '' ? _fmtTs(now) : '');          // first-time entry only
+    // Endorsement Time Stamp: update only when Endorsed To value actually changes
+    const endTsCol     = colIdx['Endorsement Time Stamp'];
+    const origEndTs    = (endTsCol !== undefined && origRow[endTsCol])
+                          ? (origRow[endTsCol] instanceof Date ? _fmtTs(origRow[endTsCol]) : origRow[endTsCol])
+                          : '';
+    const officeCol    = colIdx['Endorsed To'];
+    const origOffice   = (officeCol !== undefined) ? String(origRow[officeCol] || '').trim() : '';
+    const newOffice    = String(docData.office || '').trim();
+    // Only stamp if office value changed, or if it's being set for the first time
+    const endorsementTimeStamp = (newOffice !== origOffice && newOffice !== '')
+                                  ? _fmtTs(now)
+                                  : origEndTs;
     const pdfLinkCol   = colIdx['PDF Link'];
     const existingPdf  = (pdfLinkCol !== undefined) ? origRow[pdfLinkCol] : '';
-    sheet.getRange(rowIndex, 1, 1, 27).setValues([[
-      origDocTs,
-      docId,
-      docData.docType              || '',
-      docData.docNo                || '',
-      docData.prDate               || '',
-      docData.description          || '',
-      formatAmount(docData.amount),
-      docData.endUser              || '',
-      poTimeStamp,
-      docData.dateReceivedFromBAC  || '',
-      docData.poNo                 || '',
-      docData.poDate               || '',
-      formatAmount(docData.poAmount),
-      docData.supplier             || '',
-      docData.requisitioner        || '',
-      docData.office               || '',
-      docData.status               || 'Received',
-      docData.dateEndorsedToAcctng || '',
-      docData.dateEndorsedFromCMO  || '',
-      docData.deliveryStatus       || '',
-      docData.dateEndorseToCOA     || '',
-      docData.dateEndorseToCTO     || '',
-      _fmtDate(dateRcvd),
-      _fmtDate(dueDate),
-      calculateOverdueStatus(dateRcvd, docData.status),
-      docData.notes                || '',
-      docData.pdfLink              || existingPdf || ''
-    ]]);
-    _invalidateDocsCache();
+    // ── Column-name-aware row write ────────────────────────────────────────────
+    // Builds the updated row from the original row data, overwriting only the
+    // fields that belong to this update. Works correctly with BOTH the old
+    // 27-column schema and the new 28-column schema — no positional assumptions.
+    const updatedRow = Array.from(origRow);
+    // Pad to header length in case this row predates the new column (old data)
+    while (updatedRow.length < headers.length) updatedRow.push('');
+    const _setF = (name, val) => { const ci = colIdx[name]; if (ci !== undefined) updatedRow[ci] = val; };
+    _setF('Doc Time Stamp',          origDocTs);
+    _setF('Doc Type',                docData.docType              || '');
+    _setF('Doc No',                  docData.docNo                || '');
+    _setF('PR Date',                 docData.prDate               || '');
+    _setF('Description',             docData.description          || '');
+    _setF('Amount',                  formatAmount(docData.amount));
+    _setF('EndUser',                 docData.endUser              || '');
+    _setF('PO Time Stamp',           poTimeStamp);
+    _setF('Date Received From BAC',  docData.dateReceivedFromBAC  || '');
+    _setF('PO No',                   docData.poNo                 || '');
+    _setF('PO Date',                 docData.poDate               || '');
+    _setF('PO Amount',               formatAmount(docData.poAmount));
+    _setF('Supplier',                docData.supplier             || '');
+    _setF('Requisitioner',           docData.requisitioner        || '');
+    _setF('Endorsed To',             docData.office               || '');
+    _setF('Endorsement Time Stamp',  endorsementTimeStamp);
+    _setF('Status',                  docData.status               || 'Received');
+    _setF('Date Endorsed To Acctng', docData.dateEndorsedToAcctng || '');
+    _setF('Date Endorsed From CMO',  docData.dateEndorsedFromCMO  || '');
+    _setF('Delivery Status',         docData.deliveryStatus       || '');
+    _setF('Date Endorse To COA',     docData.dateEndorseToCOA     || '');
+    _setF('Date Endorse To CTO',     docData.dateEndorseToCTO     || '');
+    _setF('Date Received',           _fmtDate(dateRcvd));
+    _setF('Due Date',                _fmtDate(dueDate));
+    _setF('Overdue',                 calculateOverdueStatus(dateRcvd, docData.status));
+    _setF('Notes',                   docData.notes                || '');
+    _setF('PDF Link',                docData.pdfLink              || existingPdf || '');
+    sheet.getRange(rowIndex, 1, 1, headers.length).setValues([updatedRow]);    _invalidateDocsCache();
     const statusActionMap = {
       'incoming':   'Status: Incoming',
       'received':   'Document Received',
@@ -1087,8 +1128,47 @@ function updateDocument(docId, docData) {
       docData.dateReceived ? `Date Received: ${docData.dateReceived}` : '',
       docData.poNo     ? `PO No: ${docData.poNo}`               : ''
     ].filter(Boolean).join(' | ');
+
+    // ── Field-level change detection ────────────────────────────────────────
+    // Compare each tracked field's old value (origRow) with the incoming new
+    // value (docData) and surface only the changed fields in the Activity Log.
+    const _fldDefs = [
+      { label: 'Doc No',              col: 'Doc No',                  nw: docData.docNo                },
+      { label: 'PR Date',             col: 'PR Date',                 nw: docData.prDate               },
+      { label: 'Description',         col: 'Description',             nw: docData.description          },
+      { label: 'Amount',              col: 'Amount',                  nw: formatAmount(docData.amount) },
+      { label: 'End User',            col: 'EndUser',                 nw: docData.endUser              },
+      { label: 'Date Rcvd From BAC',  col: 'Date Received From BAC',  nw: docData.dateReceivedFromBAC  },
+      { label: 'PO No',               col: 'PO No',                   nw: docData.poNo                 },
+      { label: 'PO Date',             col: 'PO Date',                 nw: docData.poDate               },
+      { label: 'PO Amount',           col: 'PO Amount',               nw: formatAmount(docData.poAmount) },
+      { label: 'Supplier',            col: 'Supplier',                nw: docData.supplier             },
+      { label: 'Requisitioner',       col: 'Requisitioner',           nw: docData.requisitioner        },
+      { label: 'Endorsed To',         col: 'Endorsed To',             nw: docData.office               },
+      { label: 'Status',              col: 'Status',                  nw: docData.status               },
+      { label: 'Date End. To Acctng', col: 'Date Endorsed To Acctng', nw: docData.dateEndorsedToAcctng },
+      { label: 'Date End. From CMO',  col: 'Date Endorsed From CMO',  nw: docData.dateEndorsedFromCMO  },
+      { label: 'Delivery Status',     col: 'Delivery Status',         nw: docData.deliveryStatus       },
+      { label: 'Date End. To COA',    col: 'Date Endorse To COA',     nw: docData.dateEndorseToCOA     },
+      { label: 'Date End. To CTO',    col: 'Date Endorse To CTO',     nw: docData.dateEndorseToCTO     },
+      { label: 'Notes',               col: 'Notes',                   nw: docData.notes                }
+    ];
+    const _fChanges = [];
+    _fldDefs.forEach(function(f) {
+      const ci = colIdx[f.col];
+      if (ci === undefined) return;
+      const raw    = origRow[ci];
+      const oldStr = String(raw instanceof Date ? _fmtDate(raw) : (raw || '')).trim();
+      const newStr = String(f.nw || '').trim();
+      if (oldStr !== newStr) {
+        _fChanges.push(f.label + ': "' + (oldStr || '—') + '" → "' + (newStr || '—') + '"');
+      }
+    });
+    const changeDetail = _fChanges.length > 0
+      ? 'Updated [' + (docData.docNo || docId) + ']: ' + _fChanges.join(' | ')
+      : 'Updated [' + (docData.docNo || docId) + ']: No field changes detected';
     _logBoth(docId, actionName, docData.status || 'Received', cu ? cu.name : 'System', updateRemarks,
-             'Update Document', `Document updated: Status changed to ${docData.status}`);
+             'Update Document', changeDetail);
     return { status: 'success', docId: docId };
   } catch (error) {
     Logger.log('updateDocument error: ' + error);
