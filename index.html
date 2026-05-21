@@ -692,6 +692,19 @@
       transition: all .2s
     }
 
+    .mobile-menu-toggle {
+      display: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      padding: 0;
+      width: 40px;
+      height: 40px;
+    }
+
     .content-area {
       flex: 1;
       padding: 24px;
@@ -3100,14 +3113,14 @@
       <div class="topbar">
         <div class="topbar-left">
           <button class="mobile-menu-toggle" id="mobileMenuToggle"><span
-              class="material-symbols-outlined">menu</span></button>
+              class="material-symbols-outlined">menu_open</span></button>
           <h1 class="page-title-top" id="pageTitle">All Documents</h1>
         </div>
         <div class="topbar-right">
+          <button class="notification-btn"><span class="material-symbols-outlined">notifications</span></button>
           <button class="notification-btn" onclick="openSysInfoModal()" title="System Info" id="sysInfoBtn">
             <span class="material-symbols-outlined">info</span>
           </button>
-          <button class="notification-btn"><span class="material-symbols-outlined">notifications</span></button>
         </div>
       </div>
       <div class="content-area">
@@ -5585,6 +5598,7 @@
         const euSorted = [...euSet].sort((a, b) => a.localeCompare(b));
         euEl.innerHTML = '<option value="all">All End Users</option>' +
           euSorted.map(o => `<option value="${o}">${o}</option>`).join('');
+        euEl.value = 'all';
       }
 
       if (dtEl) {
@@ -5597,19 +5611,17 @@
         const dtSorted = [...dtSet].sort((a, b) => a.localeCompare(b));
         dtEl.innerHTML = '<option value="all">All Types</option>' +
           dtSorted.map(t => `<option value="${t}">${t}</option>`).join('');
+        dtEl.value = 'all';
       }
 
-      // Also reset date inputs and status/filter dropdowns to "all" defaults
-      // when called on initial load (not on refresh) — prevents stale filter state
-      // from hiding documents when the user first opens the Print Report tab.
-      // We do NOT reset if the user has already set filters (check for active filter state).
-      const hasActiveFilters =
-        (document.getElementById('printDateFrom') && document.getElementById('printDateFrom').value) ||
-        (document.getElementById('printDateTo') && document.getElementById('printDateTo').value);
-      if (!hasActiveFilters) {
-        const sf = document.getElementById('printStatusFilter');
-        if (sf) sf.value = 'all';
-      }
+      // Also reset date inputs and status/filter dropdowns to defaults
+      const sf = document.getElementById('printStatusFilter');
+      if (sf) sf.value = 'all';
+
+      const df = document.getElementById('printDateFrom');
+      if (df) df.value = '';
+      const dt = document.getElementById('printDateTo');
+      if (dt) dt.value = '';
     }
     function getPrintFilteredData() {
       const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
@@ -6396,8 +6408,8 @@
     setupPwdToggle('togglePwd1', 'newPassword', 'eyeReset1');
     setupPwdToggle('togglePwd2', 'confirmPassword', 'eyeReset2');
 
-    // Init print date defaults when print view shown
-    window.addEventListener('load', () => { const now = new Date(); document.getElementById('printDateTo').value = now.toISOString().split('T')[0]; const first = new Date(now.getFullYear(), now.getMonth(), 1); document.getElementById('printDateFrom').value = first.toISOString().split('T')[0]; });
+    // Init print date defaults to empty when print view shown (ensures all documents show by default)
+    window.addEventListener('load', () => { document.getElementById('printDateTo').value = ''; document.getElementById('printDateFrom').value = ''; });
 
     // Check session on load — if logged in go to dashboard
     (function checkSession() {
