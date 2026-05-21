@@ -4493,7 +4493,7 @@
         const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
         // Escape the id for safe inline use (ids contain only alphanumeric + hyphens, but be safe)
         const safeId = id.replace(/`/g, '').replace(/\\/g, '');
-        return `<tr onclick="viewDoc(\`${safeId}\`)" title="Click to view details">
+        return `<tr ondblclick="viewDoc(\`${safeId}\`)" title="Double-click to view details">
 <td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
 <td class="col-id" style="display:${disp('id')}"><span class="doc-id">${id}</span></td>
 <td class="hide-mobile col-docTs" style="display:${disp('docTs')};font-family:monospace;font-size:12px;color:var(--muted)">${docTs}</td>
