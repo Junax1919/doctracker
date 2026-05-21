@@ -4957,20 +4957,11 @@
         dateEndorseToCOA: document.getElementById('dateEndorseToCOA') ? document.getElementById('dateEndorseToCOA').value : '',
         dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : ''
       };
-      if (selectedFile) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          const b64 = e.target.result.split(',')[1];
-          toast('Uploading PDF...');
-          google.script.run.withSuccessHandler(r => {
-            if (r.status === 'success') { data.pdfLink = r.fileUrl; saveDocumentData(data); }
-            else toast('PDF upload failed', 'error');
-          }).uploadPDFToGoogleDrive(b64, selectedFile.name, 'temp');
-        };
-        reader.readAsDataURL(selectedFile);
-      } else saveDocumentData(data);
+      // Capture selected file then save document immediately — PDF uploads in background
+      const fileToUpload = selectedFile;
+      saveDocumentData(data, fileToUpload);
     }
-    function saveDocumentData(data) {
+    function saveDocumentData(data, fileToUpload) {
       if (isEdit) {
         const id = document.getElementById('editId').value;
         // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────────
@@ -5015,6 +5006,8 @@
           .withSuccessHandler(r => {
             if (r.status === 'success') {
               toast('Updated!');
+              // Background PDF upload — does not block the save
+              if (fileToUpload) _uploadPdfBackground(fileToUpload, id);
             } else if (r.message === 'duplicate') {
               // Roll back optimistic update
               if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
@@ -5083,9 +5076,12 @@
           .withSuccessHandler(r => {
             if (r.status === 'success') {
               // Replace temp ID with real server-assigned ID
+              const realId = r.docId || tempId;
               const tempIdx = allDocs.findIndex(d => d['ID/Barcode'] === tempId);
-              if (tempIdx !== -1) allDocs[tempIdx]['ID/Barcode'] = r.docId || tempId;
+              if (tempIdx !== -1) allDocs[tempIdx]['ID/Barcode'] = realId;
               toast('Added!');
+              // Background PDF upload — does not block the save
+              if (fileToUpload) _uploadPdfBackground(fileToUpload, realId);
               populateTableFilters();
               applyFilter(currentFilter);
             } else if (r.message === 'duplicate') {
@@ -5132,6 +5128,45 @@
     }
     function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 10 * 1024 * 1024) { toast('File must be under 10MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
     function removeFile() { selectedFile = null; document.getElementById('pdfInput').value = ''; document.getElementById('fileUploadArea').classList.remove('has-file'); document.getElementById('fileInfo').style.display = 'none'; }
+
+    // ── Background PDF upload ─────────────────────────────────────────────
+    // Uploads the PDF to Drive AFTER the document is already saved.
+    // The modal is already closed and the UI is fully responsive.
+    // On success, calls updatePdfLink (single-cell sheet write) and refreshes
+    // the table row so the attachment icon appears instantly.
+    function _uploadPdfBackground(file, docId) {
+      if (!file || !docId) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const b64 = ev.target.result.split(',')[1];
+        google.script.run
+          .withSuccessHandler(function(uploadResult) {
+            if (uploadResult && uploadResult.status === 'success') {
+              // 1. Update local store so the icon shows without a full reload
+              const docIdx = allDocs.findIndex(function(d) { return d['ID/Barcode'] === docId; });
+              if (docIdx !== -1) allDocs[docIdx]['PDF Link'] = uploadResult.fileUrl;
+              // 2. Persist the link to the sheet (lightweight single-cell write)
+              google.script.run
+                .withSuccessHandler(function() {
+                  renderTable();
+                  toast('PDF attached ✔');
+                })
+                .withFailureHandler(function() {
+                  renderTable();
+                  toast('PDF uploaded but link not saved — please re-save the document', 'warning');
+                })
+                .updatePdfLink(docId, uploadResult.fileUrl);
+            } else {
+              toast('PDF upload failed — document was saved without attachment', 'warning');
+            }
+          })
+          .withFailureHandler(function() {
+            toast('PDF upload failed — document was saved without attachment', 'warning');
+          })
+          .uploadPDFToGoogleDrive(b64, file.name, docId);
+      };
+      reader.readAsDataURL(file);
+    }
 
     // ===================== USER PROFILE =====================
     function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); }
