@@ -987,6 +987,18 @@
       box-sizing: border-box
     }
 
+    .table-container,
+    .logs-table-wrap {
+      cursor: grab;
+    }
+
+    .table-container.dragging,
+    .logs-table-wrap.dragging {
+      cursor: grabbing !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
     table {
       width: 100%;
       border-collapse: separate;
@@ -5442,7 +5454,11 @@
       (allDocs || []).forEach(d => { if (d['ID/Barcode']) docNoMap[d['ID/Barcode']] = d['Doc No'] || ''; });
       tbody.innerHTML = logs.map(log => {
         const docNo = log.DocNo || (log.DocumentID ? (docNoMap[log.DocumentID] || '') : '');
-        return `<tr>
+        const docId = log.DocumentID || '';
+        const safeDocId = docId.replace(/`/g, '').replace(/\\/g, '').trim();
+        const hasDoc = safeDocId && safeDocId !== '-';
+        const dblClickAttr = hasDoc ? `ondblclick="viewDoc(\`${safeDocId}\`)" title="Double-click to view document details" style="cursor:pointer"` : '';
+        return `<tr ${dblClickAttr}>
           <td>${log.Timestamp}</td>
           <td>${log.Action}</td>
           <td>${log.User}</td>
@@ -6438,13 +6454,90 @@
     ['docModal', 'profileModal', 'adminModal', 'viewModal', 'userModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); else if (id === 'userModal') closeUserModal(); } }); });
     document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); });
 
+    function initDragToScroll() {
+      const containers = document.querySelectorAll('.table-container, .logs-table-wrap');
+      containers.forEach(container => {
+        let isDown = false;
+        let startX = 0;
+        let startY = 0;
+        let scrollLeftStart = 0;
+        let scrollTopStart = 0;
+        let hasDragged = false;
+
+        container.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          if (e.target.closest('button, a, input, select, textarea, option, label, .action-btn')) {
+            return;
+          }
+          isDown = true;
+          hasDragged = false;
+          container.classList.remove('dragging');
+          startX = e.pageX;
+          startY = e.pageY;
+          scrollLeftStart = container.scrollLeft;
+          scrollTopStart = container.scrollTop;
+        });
+
+        container.addEventListener('mouseleave', () => {
+          if (isDown) {
+            isDown = false;
+            container.classList.remove('dragging');
+            hasDragged = false;
+          }
+        });
+
+        container.addEventListener('mouseup', () => {
+          if (isDown) {
+            isDown = false;
+            container.classList.remove('dragging');
+            if (hasDragged) {
+              setTimeout(() => {
+                hasDragged = false;
+              }, 50);
+            }
+          }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+          if (!isDown) return;
+          const x = e.pageX;
+          const y = e.pageY;
+          const walkX = x - startX;
+          const walkY = y - startY;
+
+          if (!hasDragged && (Math.abs(walkX) > 5 || Math.abs(walkY) > 5)) {
+            hasDragged = true;
+            container.classList.add('dragging');
+          }
+
+          if (hasDragged) {
+            e.preventDefault();
+            container.scrollLeft = scrollLeftStart - walkX;
+            container.scrollTop = scrollTopStart - walkY;
+          }
+        });
+
+        container.addEventListener('click', (e) => {
+          if (hasDragged) {
+            e.preventDefault();
+            e.stopPropagation();
+            hasDragged = false;
+          }
+        }, true);
+      });
+    }
+
     // ===================== INIT =====================
     setupPwdToggle('toggleLoginPwd', 'loginPassword', 'eyeLogin');
     setupPwdToggle('togglePwd1', 'newPassword', 'eyeReset1');
     setupPwdToggle('togglePwd2', 'confirmPassword', 'eyeReset2');
 
     // Init print date defaults to empty when print view shown (ensures all documents show by default)
-    window.addEventListener('load', () => { document.getElementById('printDateTo').value = ''; document.getElementById('printDateFrom').value = ''; });
+    window.addEventListener('load', () => {
+      document.getElementById('printDateTo').value = '';
+      document.getElementById('printDateFrom').value = '';
+      initDragToScroll();
+    });
 
     // Check session on load — if logged in go to dashboard
     (function checkSession() {
