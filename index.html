@@ -3587,13 +3587,14 @@
                     <th>User</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Team</th>
                     <th>Status</th>
                     <th style="width:110px">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="usersTableBody">
                   <tr>
-                    <td colspan="5" class="empty-state">Click User Management to load users.</td>
+                    <td colspan="6" class="empty-state">Click User Management to load users.</td>
                   </tr>
                 </tbody>
               </table>
@@ -4019,6 +4020,7 @@
             <select class="form-select" id="uRole" onchange="_showRolePerms(this.value)">
               <option value="Staff">Staff</option>
               <option value="Manager">Manager</option>
+              <option value="Viewer">Viewer</option>
               <option value="Admin">Admin</option>
             </select>
           </div>
@@ -4030,12 +4032,45 @@
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Team / Department</label>
+          <input type="text" class="form-input" id="uTeam" placeholder="e.g. Finance, IT, Operations">
+        </div>
         <div style="background:var(--bg);border-radius:8px;padding:14px;border:1px solid var(--border)">
-          <div
-            style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
-            Role Permissions</div>
-          <div id="uRolePermsInfo" style="font-size:13px;color:var(--text-secondary);line-height:1.6">Select a role to
-            see default permissions.</div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+            Role Permissions
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px" id="uRolePermsHint"
+               >Permissions are pre-filled based on role. You may override individually.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-viewDoc" style="width:15px;height:15px;cursor:pointer"> View Documents
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-addDoc" style="width:15px;height:15px;cursor:pointer"> Add / Create
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-editDoc" style="width:15px;height:15px;cursor:pointer"> Edit Documents
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-deleteDoc" style="width:15px;height:15px;cursor:pointer"> Delete Documents
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-printExport" style="width:15px;height:15px;cursor:pointer"> Print &amp; Export
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-trackHistory" style="width:15px;height:15px;cursor:pointer"> Track History
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-viewAnalytics" style="width:15px;height:15px;cursor:pointer"> View Analytics
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-manageSettings" style="width:15px;height:15px;cursor:pointer"> Manage Settings
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="uperm-manageUsers" style="width:15px;height:15px;cursor:pointer"> Manage Users
+            </label>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -4487,6 +4522,7 @@
     // logged-in user is allowed to do.
     function applyPermissions(p, role) {
       const isAdmin = (role || '').toLowerCase() === 'admin';
+      const isViewer = (role || '').toLowerCase() === 'viewer';
       // Sidebar nav visibility
       document.getElementById('logsMenuLink').style.display = (isAdmin || p.viewAnalytics) ? 'block' : 'none';
       document.getElementById('adminMenuLink').style.display = (isAdmin || (role || '').toLowerCase() === 'manager' || p.manageSettings) ? 'block' : 'none';
@@ -4754,10 +4790,8 @@
 <td onclick="event.stopPropagation()" style="cursor:default"><div class="table-actions">
 <button class="action-btn" title="View details" onclick='viewDoc(\`${safeId}\`)' style="color:var(--blue)">
   <span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
-<button class="action-btn" title="Edit" onclick='editDoc(\`${safeId}\`)'>
-  <span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-<button class="action-btn" title="Delete" onclick='deleteDoc(\`${safeId}\`)' style="color:var(--danger)">
-  <span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+${(currentUser && currentUser.permissions && currentUser.permissions.editDoc !== false) ? `<button class="action-btn" title="Edit" onclick='editDoc(\`${safeId}\`)'><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>` : ''}
+${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !== false) ? `<button class="action-btn" title="Delete" onclick='deleteDoc(\`${safeId}\`)' style="color:var(--danger)"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>` : ''}
 </div></td></tr>`;
       }).join('');
       updatePageInfo(st + 1, en, tot); renderPageNums(tpg);
@@ -6884,8 +6918,8 @@
 
     function renderUsersTable(users) {
       const tb = document.getElementById('usersTableBody');
-      if (!users || !users.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">No users found.</td></tr>'; return; }
-      const roleCol = { Admin: '#6366f1', Manager: '#3b82f6', Staff: '#64748b' };
+      if (!users || !users.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">No users found.</td></tr>'; return; }
+      const roleCol = { Admin: '#6366f1', Manager: '#3b82f6', Staff: '#64748b', Viewer: '#10b981' };
       // Determine if the current user is an admin (only admins see the delete button)
       const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
       tb.innerHTML = users.map((u, idx) => {
@@ -6910,6 +6944,7 @@
           </div></td>
           <td style="color:var(--muted);font-size:13px">${u.email}</td>
           <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role || 'Staff'}</span></td>
+          <td>${u.team || '—'}</td>
           <td><span class="status-badge ${active ? 'status-received' : 'status-hold'}">${u.status || 'Active'}</span></td>
           <td><div class="table-actions">
             <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})">
@@ -6943,21 +6978,45 @@
 
     function editUserByIdx(idx) { const u = _allUsers[idx]; if (u) openEditUserModal(u); }
 
+    function _getDefaultPermsJS(role) {
+      const r = (role || 'Staff').toLowerCase();
+      if (r === 'admin')   return { addDoc: true,  editDoc: true,  deleteDoc: true,  viewDoc: true, printExport: true,  manageSettings: true,  manageUsers: true,  viewAnalytics: true,  trackHistory: true  };
+      if (r === 'manager') return { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: true,  trackHistory: true  };
+      if (r === 'viewer')  return { addDoc: false, editDoc: false, deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
+      return                       { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
+    }
+
+    function _setCheckboxes(perms) {
+      const ids = ['viewDoc', 'addDoc', 'editDoc', 'deleteDoc', 'printExport', 'trackHistory', 'viewAnalytics', 'manageSettings', 'manageUsers'];
+      ids.forEach(id => {
+        const el = document.getElementById('uperm-' + id);
+        if (el) el.checked = !!perms[id];
+      });
+    }
+
+    function _getCheckboxes() {
+      const ids = ['viewDoc', 'addDoc', 'editDoc', 'deleteDoc', 'printExport', 'trackHistory', 'viewAnalytics', 'manageSettings', 'manageUsers'];
+      const perms = {};
+      ids.forEach(id => {
+        const el = document.getElementById('uperm-' + id);
+        if (el) perms[id] = el.checked;
+      });
+      return perms;
+    }
+
     function _showRolePerms(role) {
-      const map = {
-        Admin: '✅ Full access — all features including user management, settings, delete, and analytics.',
-        Manager: '✅ Add/Edit docs, view analytics, export reports. ❌ Cannot delete docs, manage users or settings.',
-        Staff: '✅ Add/Edit docs and track document history. ❌ No delete, no export, no admin access.'
-      };
-      const el = document.getElementById('uRolePermsInfo');
-      if (el) el.textContent = map[role] || 'Standard access.';
+      const perms = _getDefaultPermsJS(role);
+      _setCheckboxes(perms);
     }
 
     function openAddUserModal() {
       _isEditUser = false;
       document.getElementById('userModalTitle').textContent = 'Add New User';
       document.getElementById('editUserEmail').value = '';
-      ['uFullName', 'uEmail', 'uPassword'].forEach(id => document.getElementById(id).value = '');
+      ['uFullName', 'uEmail', 'uPassword', 'uTeam'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       document.getElementById('uEmail').readOnly = false;
       document.getElementById('uRole').value = 'Staff';
       document.getElementById('uStatus').value = 'Active';
@@ -6974,10 +7033,13 @@
       document.getElementById('uEmail').value = u.email || '';
       document.getElementById('uEmail').readOnly = true;
       document.getElementById('uPassword').value = '';
+      document.getElementById('uTeam').value = u.team || '';
       document.getElementById('uRole').value = u.role || 'Staff';
       document.getElementById('uStatus').value = u.status || 'Active';
       document.getElementById('uPwdHint').textContent = '(leave blank to keep current)';
-      _showRolePerms(u.role || 'Staff');
+      // Merge defaults with custom permissions
+      const perms = Object.assign({}, _getDefaultPermsJS(u.role), u.permissions || {});
+      _setCheckboxes(perms);
       showModal('userModal');
     }
 
@@ -6989,38 +7051,52 @@
       const pwd = document.getElementById('uPassword').value;
       const role = document.getElementById('uRole').value;
       const status = document.getElementById('uStatus').value;
+      const team = document.getElementById('uTeam').value.trim();
+      const permissions = _getCheckboxes();
+
       if (!name || !email) { toast('Name and Email are required', 'error'); return; }
       if (!_isEditUser && !pwd) { toast('Password is required for new users', 'error'); return; }
       if (pwd && pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
-      const ud = { name, email, role, status };
+      const ud = { name, email, role, status, team, permissions };
       if (pwd) ud.password = pwd;
+      
+      // Optimistic UI updates for instant feedback
+      closeUserModal();
+      
       if (_isEditUser) {
         const targetEmail = document.getElementById('editUserEmail').value;
+        // Update local cache instantly
+        const idx = _allUsers.findIndex(u => u.email === targetEmail);
+        if (idx !== -1) _allUsers[idx] = Object.assign({}, _allUsers[idx], { name, role, status, team, permissions });
+        renderUsersTable(_allUsers);
+        toast('User updated!');
+
         google.script.run
           .withSuccessHandler(r => {
-            if (r.status === 'success') {
-              toast('User updated!');
-              closeUserModal();
-              // Update local cache instantly
-              const idx = _allUsers.findIndex(u => u.email === targetEmail);
-              if (idx !== -1) _allUsers[idx] = Object.assign({}, _allUsers[idx], { name, role, status });
-              renderUsersTable(_allUsers);
-            } else toast(r.message || 'Failed', 'error');
+            if (r.status !== 'success') toast(r.message || 'Failed to update user on server', 'error');
           })
-          .withFailureHandler(() => toast('Error updating user', 'error'))
+          .withFailureHandler(() => toast('Network error updating user', 'error'))
           .updateUser(_sessionToken, targetEmail, ud);
       } else {
+        // Add to local cache instantly
+        _allUsers.push({ email, name, role, status: status || 'Active', team, permissions });
+        renderUsersTable(_allUsers);
+        toast('User added!');
+
         google.script.run
           .withSuccessHandler(r => {
-            if (r.status === 'success') {
-              toast('User added!');
-              closeUserModal();
-              // Add to local cache instantly
-              _allUsers.push({ email, name, role, status: status || 'Active' });
+            if (r.status !== 'success') {
+              toast(r.message || 'Failed to add user on server', 'error');
+              // Optionally remove the optimistically added user if it fails
+              _allUsers = _allUsers.filter(u => u.email !== email);
               renderUsersTable(_allUsers);
-            } else toast(r.message || 'Failed', 'error');
+            }
           })
-          .withFailureHandler(() => toast('Error adding user', 'error'))
+          .withFailureHandler(() => {
+            toast('Network error adding user', 'error');
+            _allUsers = _allUsers.filter(u => u.email !== email);
+            renderUsersTable(_allUsers);
+          })
           .addUser(_sessionToken, ud);
       }
     }

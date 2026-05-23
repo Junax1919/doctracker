@@ -277,6 +277,7 @@ function _getDefaultPermissions(role) {
   const r = (role || 'Staff').toLowerCase();
   if (r === 'admin')   return { addDoc: true,  editDoc: true,  deleteDoc: true,  viewDoc: true, printExport: true,  manageSettings: true,  manageUsers: true,  viewAnalytics: true,  trackHistory: true  };
   if (r === 'manager') return { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: true,  trackHistory: true  };
+  if (r === 'viewer')  return { addDoc: false, editDoc: false, deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
   return                       { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
 }
 
@@ -285,7 +286,8 @@ function _ensureUsersColumns(sheet) {
     const lastCol = sheet.getLastColumn();
     const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
     const cols = [ { idx: 6, name: 'Status' }, { idx: 7, name: 'Permissions' },
-                   { idx: 8, name: 'CreatedAt' }, { idx: 9, name: 'LastLogin' } ];
+                   { idx: 8, name: 'CreatedAt' }, { idx: 9, name: 'LastLogin' },
+                   { idx: 10, name: 'Team' } ];
     cols.forEach(c => {
       if (!headers[c.idx] || headers[c.idx].toString().trim() === '') {
         sheet.getRange(1, c.idx + 1).setValue(c.name).setFontWeight('bold');
@@ -328,7 +330,7 @@ function getCurrentUser(tokenParam) {
       if (status.toLowerCase() === 'inactive') return null;
       const perms  = _getDefaultPermissions(role);
       try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
-      const user = { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms };
+      const user = { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms, team: String(data[i][10] || '').trim() };
       try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 300); } catch (e) {}
       return user;
     }
@@ -1315,11 +1317,16 @@ function getUsers(tokenParam) {
     const users = [];
     for (let i = 1; i < data.length; i++) {
       if (!data[i][0]) continue;
+      const rawPerms = data[i][7] ? (() => { try { return JSON.parse(data[i][7]); } catch(e) { return null; } })() : null;
+      const basePerms = _getDefaultPermissions(data[i][2] || 'Staff');
+      if (rawPerms) Object.assign(basePerms, rawPerms);
       users.push({
         email:       data[i][0],
         role:        data[i][2] || 'Staff',
         name:        data[i][3] || '',
         status:      data[i][6] || 'Active',
+        permissions: basePerms,
+        team:        String(data[i][10] || '').trim(),
         createdAt:   data[i][8] ? String(data[i][8]).split('T')[0] : ''
       });
     }
@@ -1339,6 +1346,11 @@ function addUser(tokenParam, userData) {
       if (String(data[i][0]).toLowerCase() === userData.email.toLowerCase())
         return { status: 'error', message: 'Email already exists' };
     }
+    // Serialize custom permissions if provided (non-default overrides)
+    let permJson = '';
+    if (userData.permissions && typeof userData.permissions === 'object') {
+      try { permJson = JSON.stringify(userData.permissions); } catch(e) {}
+    }
     sheet.appendRow([
       userData.email.toLowerCase().trim(),
       userData.password || 'changeme123',
@@ -1346,8 +1358,9 @@ function addUser(tokenParam, userData) {
       userData.name     || '',
       '', '',                              // ResetToken, ResetExpiry
       userData.status   || 'Active',
-      '',                                  // custom permissions (blank = use role defaults)
-      new Date(), ''
+      permJson,                            // custom permissions JSON
+      new Date(), '',                      // CreatedAt, LastLogin
+      userData.team     || ''              // Team (col K)
     ]);
     logActivity('Add User', '', `User added: ${userData.email} (${userData.role})`);
     return { status: 'success' };
@@ -1368,6 +1381,16 @@ function updateUser(tokenParam, targetEmail, userData) {
       if (userData.role     !== undefined) sheet.getRange(i + 1, 3).setValue(userData.role);
       if (userData.status   !== undefined) sheet.getRange(i + 1, 7).setValue(userData.status);
       if (userData.password)               sheet.getRange(i + 1, 2).setValue(userData.password);
+      if (userData.team     !== undefined) sheet.getRange(i + 1, 11).setValue(userData.team || '');
+      // Persist custom permissions JSON if provided
+      if (userData.permissions && typeof userData.permissions === 'object') {
+        try { sheet.getRange(i + 1, 8).setValue(JSON.stringify(userData.permissions)); } catch(e) {}
+      }
+      // Invalidate per-user cache so next request picks up new permissions/team
+      try {
+        const ck = 'cu_' + targetEmail.replace(/[^a-zA-Z0-9]/g, '_');
+        CacheService.getScriptCache().remove(ck);
+      } catch(e) {}
       logActivity('Update User', '', `User updated: ${targetEmail}`);
       return { status: 'success' };
     }
