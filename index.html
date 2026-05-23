@@ -3091,8 +3091,7 @@
           </svg>
           Facebook
         </button>
-
-        <!-- ========== HIDE APPLE LOGIN BUTTON
+       <!-- ========== HIDE APPLE LOGIN BUTTON ==========
         <button class="btn-social" onclick="handleSocialLogin('Apple')">
           <svg viewBox="0 0 24 24">
             <path fill="#000"
@@ -5417,29 +5416,27 @@
         // is browsing from — no hardcoded URLs, no backend value needed.
         const currentOrigin = window.location.origin + window.location.pathname;
 
-        // Clear local session token immediately before the async call
+        // 1. Capture token BEFORE wiping state
         const _logoutToken = _sessionToken;
+
+        // 2. Clear local session state immediately — this is instant
         currentUser = null;
         _sessionToken = '';
         try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
 
-        // Tell the backend to clear the server-side session (PropertiesService).
-        // We no longer use the returned URL for navigation — we already have the
-        // correct one from the browser itself.
-        google.script.run
-          .withSuccessHandler(function () {
-            // Redirect back to the same origin/path with ?logout=1 so checkSession()
-            // skips the session restore and shows the login view immediately.
-            window.location.href = currentOrigin + '?logout=1';
-          })
-          .withFailureHandler(function () {
-            // Even if the backend call fails, clear the UI and show login.
-            // The session will expire naturally on the server side.
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
-            showView('login');
-          })
-          .logout(_logoutToken);
+        // 3. Fire the backend session-invalidation as fire-and-forget.
+        //    We do NOT wait for its response — the server session will expire
+        //    naturally if this call fails, and the local state is already cleared.
+        try {
+          google.script.run
+            .withSuccessHandler(function () { /* server session cleared — nothing to do */ })
+            .withFailureHandler(function () { /* ignore — local session already cleared */ })
+            .logout(_logoutToken);
+        } catch (e) { /* ignore in local/shim mode */ }
+
+        // 4. Redirect immediately — no waiting for the backend round-trip.
+        //    ?logout=1 tells checkSession() to skip session restore and show login.
+        window.location.href = currentOrigin + '?logout=1';
       }); // end showConfirmModal
     }
 
@@ -5957,6 +5954,15 @@
           return v === tfLow;
         });
       }
+
+      // Sort by Doc No ascending (alphanumeric natural sort) so all report types
+      // always display records in Doc No order regardless of source order.
+      result.sort(function(a, b) {
+        const an = (a['Doc No'] || '').toString().trim();
+        const bn = (b['Doc No'] || '').toString().trim();
+        // Natural alphanumeric sort: split numeric and non-numeric segments
+        return an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
+      });
 
       return result;
     }
