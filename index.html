@@ -1035,6 +1035,8 @@
 
     .table-container {
       overflow-x: auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 200px);
       /* Smooth touch-scroll on mobile / zoomed views */
       -webkit-overflow-scrolling: touch;
       /* Make sure the container never blows past its parent */
@@ -1076,7 +1078,11 @@
       white-space: nowrap;
       cursor: pointer;
       user-select: none;
-      transition: background .15s
+      transition: background .15s;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg)
     }
 
     th:hover {
@@ -1963,10 +1969,12 @@
       flex-shrink: 0
     }
 
-    /* Scroll wrapper for the logs table — same pattern as .table-container */
+    /* Scroll wrapper for the logs table */
     .logs-table-wrap {
       width: 100%;
+      max-height: calc(100vh - 200px);
       overflow-x: auto;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       box-sizing: border-box
     }
@@ -1993,7 +2001,7 @@
       background: var(--bg);
       position: sticky;
       top: 0;
-      z-index: 1
+      z-index: 10
     }
 
     #logsTable td {
@@ -2001,7 +2009,23 @@
       font-size: 13px;
       border-bottom: 1px solid var(--border);
       word-break: break-word;
+      white-space: normal;
       vertical-align: top
+    }
+
+    #logsTable th:nth-child(3),
+    #logsTable td:nth-child(3) {
+      width: 12ch;
+      min-width: 12ch;
+      max-width: 12ch;
+    }
+
+    #logsTable th:nth-child(4),
+    #logsTable td:nth-child(4) {
+      width: 19ch;
+      min-width: 19ch;
+      max-width: 19ch;
+      word-break: break-all;
     }
 
     #logsTable tbody tr:hover td {
