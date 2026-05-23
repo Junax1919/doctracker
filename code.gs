@@ -84,14 +84,14 @@ function doPost(e) {
     _resetRequestCache(); // reset per-request SS handle
 
     const allowedMethods = [
-      'checkLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
+      'checkLogin', 'checkSocialLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
       'sendResetEmail', 'validateResetToken', 'setNewPassword',
       'getDropdownOptions', 'updateDropdownOptions', 'updateAllDropdownOptions',
       'getAllDocuments', 'getDocumentById', 'getDocumentStats',
       'addDocument', 'updateDocument', 'deleteDocument',
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
-      'uploadPDFToGoogleDrive', 'getScriptUrl',
+      'uploadPDFToGoogleDrive', 'updatePdfLink', 'getScriptUrl',
       'getUsers', 'addUser', 'updateUser', 'toggleUserStatus', 'deleteUser',
       'getInitialData'
     ];
@@ -418,6 +418,29 @@ function checkLogin(email, password) {
     return { status: 'success', token: token };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
+}
+
+function checkSocialLogin(email) {
+  if (!email) return { status: 'invalid', message: 'No email provided' };
+  const ss    = _getSS();
+  const sheet = ss.getSheetByName(USERS_SHEET);
+  if (!sheet) return { status: 'invalid', message: 'System error' };
+  _ensureUsersColumns(sheet);
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const userEmail = String(data[i][0]).trim().toLowerCase();
+    if (email.toLowerCase() !== userEmail) continue;
+    
+    const status = String(data[i][6] || 'Active');
+    if (status.toLowerCase() === 'inactive')
+      return { status: 'invalid', message: 'Account is deactivated. Contact your administrator.' };
+      
+    const token = _createSession(userEmail);
+    const userName = String(data[i][3] || '').trim() || userEmail;
+    logActivity('Login', '', `User logged in via Social: ${userEmail}`, userName);
+    return { status: 'success', token: token };
+  }
+  return { status: 'invalid', message: 'Social login email not found. Contact Admin for approval.' };
 }
 
 // =====================================================================
@@ -1234,16 +1257,46 @@ function getDocumentStats() {
 // =====================================================================
 function uploadPDFToGoogleDrive(base64Data, fileName, docId) {
   try {
-    const blob    = Utilities.newBlob(Utilities.base64Decode(base64Data), 'application/pdf', fileName);
-    const folders = DriveApp.getFoldersByName('DocuTracker_PDFs');
-    const folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('DocuTracker_PDFs');
-    const file    = folder.createFile(blob);
-    file.setName(`${docId}_${fileName}`);
+    const blob   = Utilities.newBlob(Utilities.base64Decode(base64Data), 'application/pdf', fileName);
+    // Always save to the configured DRIVE_FOLDER_ID — never create/search by name
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    const file   = folder.createFile(blob);
+    const safeName = (docId && docId !== 'temp') ? `${docId}_${fileName}` : fileName;
+    file.setName(safeName);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    logActivity('Upload PDF', docId, `PDF uploaded: ${fileName}`);
+    logActivity('Upload PDF', docId || '', `PDF uploaded: ${fileName}`);
     return { status: 'success', fileId: file.getId(), fileUrl: file.getUrl(), fileName: file.getName() };
   } catch (error) {
     Logger.log('uploadPDFToGoogleDrive error: ' + error);
+    return { status: 'error', message: error.toString() };
+  }
+}
+
+// =====================================================================
+//  UPDATE PDF LINK — lightweight single-cell write, no full row rewrite.
+//  Called from the frontend after a background PDF upload completes.
+// =====================================================================
+function updatePdfLink(docId, pdfUrl) {
+  try {
+    const ss    = _getSS();
+    const sheet = ss.getSheetByName(DOCS_SHEET);
+    if (!sheet) return { status: 'error', message: 'Documents sheet not found' };
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h => h.toString().trim());
+    const idCol   = headers.indexOf('ID/Barcode');
+    const pdfCol  = headers.indexOf('PDF Link');
+    if (pdfCol === -1) return { status: 'error', message: 'PDF Link column not found' };
+    for (let i = 1; i < data.length; i++) {
+      const rowId = idCol !== -1 ? data[i][idCol] : data[i][1];
+      if (String(rowId).trim() === String(docId).trim()) {
+        sheet.getRange(i + 1, pdfCol + 1).setValue(pdfUrl || '');
+        _invalidateDocsCache();
+        return { status: 'success' };
+      }
+    }
+    return { status: 'error', message: 'Document not found' };
+  } catch (error) {
+    Logger.log('updatePdfLink error: ' + error);
     return { status: 'error', message: error.toString() };
   }
 }
