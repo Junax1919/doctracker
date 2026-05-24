@@ -3115,7 +3115,7 @@
           </svg>
           Facebook
         </button>
-       <!-- ========== HIDE APPLE LOGIN BUTTON ==========
+        <!-- ========== HIDE APPLE LOGIN BUTTON ==========
         <button class="btn-social" onclick="handleSocialLogin('Apple')">
           <svg viewBox="0 0 24 24">
             <path fill="#000"
@@ -3971,8 +3971,9 @@
             id="adminDocTypes" placeholder="One per line..." style="min-height:120px"></textarea></div>
         <div class="form-group"><label class="form-label">Suppliers</label><textarea class="form-textarea"
             id="adminSuppliers" placeholder="One per line..." style="min-height:120px"></textarea></div>
-        <div class="form-group"><label class="form-label">Offices/Departments</label><textarea class="form-textarea"
-            id="adminOffices" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">Offices/Departments (Endorse To:)</label><textarea
+            class="form-textarea" id="adminOffices" placeholder="One per line..." style="min-height:120px"></textarea>
+        </div>
         <div class="form-group"><label class="form-label">Status Options</label><textarea class="form-textarea"
             id="adminStatuses" placeholder="One per line..." style="min-height:120px"></textarea></div>
         <div class="form-group"><label class="form-label">End Users</label><textarea class="form-textarea"
@@ -4061,11 +4062,12 @@
           <input type="text" class="form-input" id="uTeam" placeholder="e.g. Finance, IT, Operations">
         </div>
         <div style="background:var(--bg);border-radius:8px;padding:14px;border:1px solid var(--border)">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+          <div
+            style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
             Role Permissions
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:10px" id="uRolePermsHint"
-               >Permissions are pre-filled based on role. You may override individually.</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px" id="uRolePermsHint">Permissions are
+            pre-filled based on role. You may override individually.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px">
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
               <input type="checkbox" id="uperm-viewDoc" style="width:15px;height:15px;cursor:pointer"> View Documents
@@ -4077,19 +4079,24 @@
               <input type="checkbox" id="uperm-editDoc" style="width:15px;height:15px;cursor:pointer"> Edit Documents
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
-              <input type="checkbox" id="uperm-deleteDoc" style="width:15px;height:15px;cursor:pointer"> Delete Documents
+              <input type="checkbox" id="uperm-deleteDoc" style="width:15px;height:15px;cursor:pointer"> Delete
+              Documents
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
-              <input type="checkbox" id="uperm-printExport" style="width:15px;height:15px;cursor:pointer"> Print &amp; Export
+              <input type="checkbox" id="uperm-printExport" style="width:15px;height:15px;cursor:pointer"> Print &amp;
+              Export
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
-              <input type="checkbox" id="uperm-trackHistory" style="width:15px;height:15px;cursor:pointer"> Track History
+              <input type="checkbox" id="uperm-trackHistory" style="width:15px;height:15px;cursor:pointer"> Track
+              History
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
-              <input type="checkbox" id="uperm-viewAnalytics" style="width:15px;height:15px;cursor:pointer"> View Analytics
+              <input type="checkbox" id="uperm-viewAnalytics" style="width:15px;height:15px;cursor:pointer"> View
+              Analytics
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
-              <input type="checkbox" id="uperm-manageSettings" style="width:15px;height:15px;cursor:pointer"> Manage Settings
+              <input type="checkbox" id="uperm-manageSettings" style="width:15px;height:15px;cursor:pointer"> Manage
+              Settings
             </label>
             <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
               <input type="checkbox" id="uperm-manageUsers" style="width:15px;height:15px;cursor:pointer"> Manage Users
@@ -6015,7 +6022,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
       // Sort by Doc No ascending (alphanumeric natural sort) so all report types
       // always display records in Doc No order regardless of source order.
-      result.sort(function(a, b) {
+      result.sort(function (a, b) {
         const an = (a['Doc No'] || '').toString().trim();
         const bn = (b['Doc No'] || '').toString().trim();
         // Natural alphanumeric sort: split numeric and non-numeric segments
@@ -7004,10 +7011,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
     function _getDefaultPermsJS(role) {
       const r = (role || 'Staff').toLowerCase();
-      if (r === 'admin')   return { addDoc: true,  editDoc: true,  deleteDoc: true,  viewDoc: true, printExport: true,  manageSettings: true,  manageUsers: true,  viewAnalytics: true,  trackHistory: true  };
-      if (r === 'manager') return { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: true,  trackHistory: true  };
-      if (r === 'viewer')  return { addDoc: false, editDoc: false, deleteDoc: false, viewDoc: true, printExport: true,  manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
-      return                       { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
+      if (r === 'admin') return { addDoc: true, editDoc: true, deleteDoc: true, viewDoc: true, printExport: true, manageSettings: true, manageUsers: true, viewAnalytics: true, trackHistory: true };
+      if (r === 'manager') return { addDoc: true, editDoc: true, deleteDoc: false, viewDoc: true, printExport: true, manageSettings: false, manageUsers: false, viewAnalytics: true, trackHistory: true };
+      if (r === 'viewer') return { addDoc: false, editDoc: false, deleteDoc: false, viewDoc: true, printExport: true, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true };
+      return { addDoc: true, editDoc: true, deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true };
     }
 
     function _setCheckboxes(perms) {
@@ -7083,10 +7090,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (pwd && pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
       const ud = { name, email, role, status, team, permissions };
       if (pwd) ud.password = pwd;
-      
+
       // Optimistic UI updates for instant feedback
       closeUserModal();
-      
+
       if (_isEditUser) {
         const targetEmail = document.getElementById('editUserEmail').value;
         // Update local cache instantly
