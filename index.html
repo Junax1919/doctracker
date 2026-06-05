@@ -3413,6 +3413,10 @@
                     <div class="dropdown-item"><input type="checkbox" id="col-deliveryStatus" checked
                         onchange="toggleColumn('deliveryStatus')"><label for="col-deliveryStatus">Delivery
                         Status</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-airNo" checked
+                        onchange="toggleColumn('airNo')"><label for="col-airNo">AIR No.</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-airDate" checked
+                        onchange="toggleColumn('airDate')"><label for="col-airDate">AIR Date</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-dateEndCOA" checked
                         onchange="toggleColumn('dateEndCOA')"><label for="col-dateEndCOA">Date Endorse To COA</label>
                     </div>
@@ -3473,6 +3477,10 @@
                       onclick="sortTable('dateEndCMO')">Date End. From CMO</th>
                     <th class="sortable hide-mobile col-deliveryStatus" data-column="deliveryStatus"
                       onclick="sortTable('deliveryStatus')">Delivery Status</th>
+                    <th class="sortable hide-mobile col-airNo" data-column="airNo"
+                      onclick="sortTable('airNo')">AIR No.</th>
+                    <th class="sortable hide-mobile col-airDate" data-column="airDate"
+                      onclick="sortTable('airDate')">AIR Date</th>
                     <th class="sortable hide-mobile col-dateEndCOA" data-column="dateEndCOA"
                       onclick="sortTable('dateEndCOA')">Date End. To COA</th>
                     <th class="sortable hide-mobile col-dateEndCTO" data-column="dateEndCTO"
@@ -3698,6 +3706,8 @@
                     CMO</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-deliveryStatus"> Delivery
                     Status</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-airNo"> AIR No.</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-airDate"> AIR Date</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCOA"> Date End. To
                     COA</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCTO"> Date End. To
@@ -3884,6 +3894,16 @@
               <option value="For Delivery">For Delivery</option>
               <option value="Delivered">Delivered</option>
             </select>
+          </div>
+          <div class="form-group" style="display:flex; gap:16px;">
+            <div style="flex:1;">
+              <label class="form-label">AIR No.</label>
+              <input type="text" class="form-input" id="airNo" placeholder="AIR No.">
+            </div>
+            <div style="flex:1;">
+              <label class="form-label">AIR Date</label>
+              <input type="date" class="form-input" id="airDate">
+            </div>
           </div>
 
           <!-- DATE ENDORSED TO ACCTNG | DATE ENDORSED FROM CMO -->
@@ -4215,7 +4235,7 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = 'overdue', sortDirection = 'desc';
-    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
     // Per-browser session token (UUID issued by the backend on login).
@@ -4765,7 +4785,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO' || sortColumn === 'airDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -4780,7 +4800,7 @@
       if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="27" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf
           ? `<a href="${pdf}" target="_blank" onclick="event.stopPropagation()"
@@ -4813,6 +4833,8 @@
 <td class="hide-mobile col-dateEndAcctng" style="display:${disp('dateEndAcctng')}">${dateEndAcctng}</td>
 <td class="hide-mobile col-dateEndCMO" style="display:${disp('dateEndCMO')}">${dateEndCMO}</td>
 <td class="hide-mobile col-deliveryStatus" style="display:${disp('deliveryStatus')}">${dlvStatus}</td>
+<td class="hide-mobile col-airNo" style="display:${disp('airNo')}">${airNo}</td>
+<td class="hide-mobile col-airDate" style="display:${disp('airDate')}">${airDate}</td>
 <td class="hide-mobile col-dateEndCOA" style="display:${disp('dateEndCOA')}">${dateEndCOA}</td>
 <td class="hide-mobile col-dateEndCTO" style="display:${disp('dateEndCTO')}">${dateEndCTO}</td>
 <td class="hide-mobile col-date" style="display:${disp('date')}">${dt}</td>
@@ -4935,6 +4957,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           </div>
           ${single('Supplier', val('Supplier'))}
           ${single('Delivery Status', `<strong>${val('Delivery Status')}</strong>`)}
+          ${single('AIR No.', `<strong>${val('AIR No.')}</strong>`)}
+          ${single('AIR Date', `<strong>${val('AIR Date')}</strong>`)}
         </div>
 
         <!-- ④ Endorsements section -->
@@ -5158,6 +5182,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const detaEl = document.getElementById('dateEndorsedToAcctng'); if (detaEl) detaEl.value = doc['Date Endorsed To Acctng'] || '';
       const decmoEl = document.getElementById('dateEndorsedFromCMO'); if (decmoEl) decmoEl.value = doc['Date Endorsed From CMO'] || '';
       const dlvEl = document.getElementById('deliveryStatus'); if (dlvEl) dlvEl.value = doc['Delivery Status'] || '';
+      const airNoEl = document.getElementById('airNo'); if (airNoEl) airNoEl.value = doc['AIR No.'] || '';
+      const airDateEl = document.getElementById('airDate'); if (airDateEl) airDateEl.value = doc['AIR Date'] || '';
       const decoaEl = document.getElementById('dateEndorseToCOA'); if (decoaEl) decoaEl.value = doc['Date Endorse To COA'] || '';
       const dectoEl = document.getElementById('dateEndorseToCTO'); if (dectoEl) dectoEl.value = doc['Date Endorse To CTO'] || '';
       // Timestamps: show existing values (all read-only)
@@ -5249,6 +5275,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         dateEndorsedToAcctng: document.getElementById('dateEndorsedToAcctng') ? document.getElementById('dateEndorsedToAcctng').value : '',
         dateEndorsedFromCMO: document.getElementById('dateEndorsedFromCMO') ? document.getElementById('dateEndorsedFromCMO').value : '',
         deliveryStatus: document.getElementById('deliveryStatus') ? document.getElementById('deliveryStatus').value : '',
+        airNo: document.getElementById('airNo') ? document.getElementById('airNo').value : '',
+        airDate: document.getElementById('airDate') ? document.getElementById('airDate').value : '',
         dateEndorseToCOA: document.getElementById('dateEndorseToCOA') ? document.getElementById('dateEndorseToCOA').value : '',
         dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : ''
       };
@@ -5285,6 +5313,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             'Date Endorsed To Acctng': data.dateEndorsedToAcctng,
             'Date Endorsed From CMO': data.dateEndorsedFromCMO,
             'Delivery Status': data.deliveryStatus,
+            'AIR No.': data.airNo,
+            'AIR Date': data.airDate,
             'Date Endorse To COA': data.dateEndorseToCOA,
             'Date Endorse To CTO': data.dateEndorseToCTO,
             'PDF Link': data.pdfLink || existing['PDF Link'] || ''
@@ -5354,6 +5384,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'Date Endorsed To Acctng': data.dateEndorsedToAcctng || '',
           'Date Endorsed From CMO': data.dateEndorsedFromCMO || '',
           'Delivery Status': data.deliveryStatus || '',
+          'AIR No.': data.airNo || '',
+          'AIR Date': data.airDate || '',
           'Date Endorse To COA': data.dateEndorseToCOA || '',
           'Date Endorse To CTO': data.dateEndorseToCTO || '',
           'PDF Link': data.pdfLink || '',
@@ -6108,7 +6140,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           <td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
           <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
           <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
-          <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td>
+          <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${d['AIR Date'] || '-'}</td>
           <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
           <td>${d.Notes || '-'}</td></tr>`;
       });
@@ -6271,6 +6303,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         dateEndAcctng: document.getElementById('pcol-dateEndAcctng') ? document.getElementById('pcol-dateEndAcctng').checked : false,
         dateEndCMO: document.getElementById('pcol-dateEndCMO') ? document.getElementById('pcol-dateEndCMO').checked : false,
         deliveryStatus: document.getElementById('pcol-deliveryStatus') ? document.getElementById('pcol-deliveryStatus').checked : false,
+        airNo: document.getElementById('pcol-airNo') ? document.getElementById('pcol-airNo').checked : false,
+        airDate: document.getElementById('pcol-airDate') ? document.getElementById('pcol-airDate').checked : false,
         dateEndCOA: document.getElementById('pcol-dateEndCOA') ? document.getElementById('pcol-dateEndCOA').checked : false,
         dateEndCTO: document.getElementById('pcol-dateEndCTO') ? document.getElementById('pcol-dateEndCTO').checked : false,
         date: document.getElementById('pcol-date').checked,
@@ -6300,6 +6334,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (cols.dateEndAcctng) h += `<th>Date Endorsed To Acctng</th>`;
       if (cols.dateEndCMO) h += `<th>Date Endorsed From CMO</th>`;
       if (cols.deliveryStatus) h += `<th>Delivery Status</th>`;
+      if (cols.airNo) h += `<th>AIR No.</th>`;
+      if (cols.airDate) h += `<th>AIR Date</th>`;
       if (cols.dateEndCOA) h += `<th>Date Endorse To COA</th>`;
       if (cols.dateEndCTO) h += `<th>Date Endorse To CTO</th>`;
       if (cols.date) h += `<th>Date Received</th>`;
@@ -6328,6 +6364,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         if (cols.dateEndAcctng) h += `<td>${d['Date Endorsed To Acctng'] || '-'}</td>`;
         if (cols.dateEndCMO) h += `<td>${d['Date Endorsed From CMO'] || '-'}</td>`;
         if (cols.deliveryStatus) h += `<td>${d['Delivery Status'] || '-'}</td>`;
+        if (cols.airNo) h += `<td>${d['AIR No.'] || '-'}</td>`;
+        if (cols.airDate) h += `<td>${d['AIR Date'] || '-'}</td>`;
         if (cols.dateEndCOA) h += `<td>${d['Date Endorse To COA'] || '-'}</td>`;
         if (cols.dateEndCTO) h += `<td>${d['Date Endorse To CTO'] || '-'}</td>`;
         if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`;
@@ -6454,7 +6492,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             <td>${d['PO Date'] || '-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
             <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
             <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
-            <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td>
+            <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${d['AIR Date'] || '-'}</td>
             <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
             <td>${d.Notes || '-'}</td></tr>`;
         }).join('');
@@ -6615,6 +6653,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (visibleColumns.dateEndAcctng) { cols.push('Date Endorsed To Acctng'); hdrs.push('Date Endorsed To Acctng'); }
       if (visibleColumns.dateEndCMO) { cols.push('Date Endorsed From CMO'); hdrs.push('Date Endorsed From CMO'); }
       if (visibleColumns.deliveryStatus) { cols.push('Delivery Status'); hdrs.push('Delivery Status'); }
+      if (visibleColumns.airNo) { cols.push('AIR No.'); hdrs.push('AIR No.'); }
+      if (visibleColumns.airDate) { cols.push('AIR Date'); hdrs.push('AIR Date'); }
       if (visibleColumns.dateEndCOA) { cols.push('Date Endorse To COA'); hdrs.push('Date Endorse To COA'); }
       if (visibleColumns.dateEndCTO) { cols.push('Date Endorse To CTO'); hdrs.push('Date Endorse To CTO'); }
       if (visibleColumns.date) { cols.push('Date Received'); hdrs.push('Date Received'); }
