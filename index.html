@@ -4239,10 +4239,34 @@
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
     // Per-browser session token (UUID issued by the backend on login).
-    // Stored in localStorage so it persists across refreshes but is NEVER
-    // shared between browsers/devices — each gets its own unique token.
     let _sessionToken = '';
-    try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
+
+    // Set or clear the session globally
+    function setAppSession(token) {
+      _sessionToken = token || '';
+      try { 
+        if (token) localStorage.setItem('docutracker_session_token', token);
+        else localStorage.removeItem('docutracker_session_token');
+      } catch (e) { }
+      // Push token to URL so it survives iframe subdomain changes on page refresh in native GAS
+      if (typeof google !== 'undefined' && google.script && google.script.history) {
+        google.script.history.replace(null, null, token ? '?session=' + token : '?');
+      }
+    }
+
+    // Initialize session on load. Read from injected GAS params first (survives subdomain changes),
+    // fallback to URL params, fallback to localStorage.
+    (function() {
+      const gasParams = (typeof window.__GAS_PARAMS__ !== 'undefined') ? window.__GAS_PARAMS__ : {};
+      const urlParams = new URLSearchParams(window.location.search);
+      let t = gasParams.session || urlParams.get('session') || '';
+      if (!t) { try { t = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { } }
+      _sessionToken = t;
+      if (t && typeof google !== 'undefined' && google.script && google.script.history) {
+         // Re-push to URL in case it was only loaded from localStorage
+         google.script.history.replace(null, null, '?session=' + t);
+      }
+    })();
     // Active toolbar filter values
     let activeFilters = { docType: '', status: '', endUser: '' };
 
@@ -4290,8 +4314,7 @@
       google.script.run.withSuccessHandler(r => {
         if (r.status === 'success') {
           // Store the server-issued token for this browser session
-          _sessionToken = r.token || '';
-          try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
+          setAppSession(r.token);
           showNotif('loginNotif', 'Login successful!', 'success');
           setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
         }
@@ -4323,8 +4346,7 @@
         }
         google.script.run.withSuccessHandler(r => {
           if (r.status === 'success') {
-            _sessionToken = r.token || '';
-            try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
+            setAppSession(r.token);
             showNotif('loginNotif', `${provider} Login successful!`, 'success');
             setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
           } else {
@@ -4586,9 +4608,11 @@
       if (prtBtn) prtBtn.style.display = p.printExport !== false ? '' : 'none';
       const expBtn = document.getElementById('exportBtn');
       if (expBtn) expBtn.style.display = p.printExport !== false ? '' : 'none';
-      // Stats grid (analytics)
+      // Stats grid — always visible for ALL authenticated users regardless of role.
+      // Basic counts (Total, Incoming, etc.) are fundamental dashboard information,
+      // not restricted analytics. The viewAnalytics flag only gates the Logs tab.
       const sg = document.querySelector('.stats-grid');
-      if (sg) sg.style.display = (isAdmin || p.viewAnalytics) ? '' : 'none';
+      if (sg) sg.style.display = '';
     }
 
     function loadDropdownOptions() {
@@ -5540,8 +5564,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
         // 2. Clear local session state immediately — this is instant
         currentUser = null;
-        _sessionToken = '';
-        try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
+        setAppSession('');
 
         // 3. Fire the backend session-invalidation as fire-and-forget.
         //    We do NOT wait for its response — the server session will expire
@@ -6907,8 +6930,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       // If the user just logged out, skip session check and show login immediately
       if (isLogout) { showView('login'); return; }
 
-      // Restore this browser's session token from localStorage
-      try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
+      // (Session token initialization is handled in the STATE section)
 
       // If no session token stored, go straight to login without a server call
       if (!_sessionToken) { showView('login'); return; }
@@ -6930,32 +6952,37 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         <style>@keyframes loadBar{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}</style>`;
       document.body.appendChild(loadingEl);
 
-      // Normal session check — pass THIS browser's token (never shared with other browsers)
-      // Retry once on null result before giving up — guards against transient GAS errors
+      // Normal session check — pass THIS browser's token (never shared with other browsers).
+      // Retry up to 3 times with progressive delays before giving up — guards against
+      // transient GAS PropertiesService / CacheService misses that can cause false
+      // session invalidation on page refresh.
       let _sessionCheckAttempts = 0;
+      const _sessionRetryDelays = [1200, 2000]; // ms between retries (attempts 1→2, 2→3)
       function _attemptSessionCheck() {
         _sessionCheckAttempts++;
         google.script.run
           .withSuccessHandler(function (user) {
             const loader = document.getElementById('sessionLoader');
             if (user) {
+              // Session valid — proceed to dashboard
               if (loader) loader.remove();
               showView('dashboard');
               initDashboard();
-            } else if (_sessionCheckAttempts < 2) {
-              // First attempt returned null — wait 1.2s and retry once
-              // (guards against transient PropertiesService / CacheService misses)
-              setTimeout(_attemptSessionCheck, 1200);
+            } else if (_sessionCheckAttempts < 3) {
+              // Null result — wait and retry (transient GAS backend issue)
+              const delay = _sessionRetryDelays[_sessionCheckAttempts - 1] || 2000;
+              setTimeout(_attemptSessionCheck, delay);
             } else {
-              // Genuinely invalid or expired session
+              // All 3 attempts returned null — genuinely invalid/expired session
               if (loader) loader.remove();
-              _sessionToken = '';
-              try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
+              setAppSession('');
               showView('login');
             }
           })
           .withFailureHandler(function () {
-            // On network failure don't silently kick to login — show a retry prompt
+            // On network/GAS failure — show a Retry prompt rather than silently
+            // redirecting to login. This prevents accidental logouts on transient
+            // connectivity issues (e.g., brief network blip during page load).
             const loader = document.getElementById('sessionLoader');
             if (loader) {
               loader.innerHTML = `
