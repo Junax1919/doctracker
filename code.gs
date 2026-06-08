@@ -813,7 +813,7 @@ function ensureDocumentSheetHeaders(sheet) {
       'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
       'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
       'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
-      'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
+      'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
       'Date Endorse To COA','Date Endorse To CTO',
       'Date Received','Due Date','Overdue','Notes','PDF Link'
     ];
@@ -950,15 +950,15 @@ function addDocument(docData) {
     let sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
-      sheet.getRange(1, 1, 1, 28).setValues([[
+      sheet.getRange(1, 1, 1, 30).setValues([[
         'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
         'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
         'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
-        'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status',
+        'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
         'Date Endorse To COA','Date Endorse To CTO',
         'Date Received','Due Date','Overdue','Notes','PDF Link'
       ]]);
-      sheet.getRange(1, 1, 1, 28).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 30).setFontWeight('bold');
     } else {
       // Ensure new columns exist in existing sheets
       ensureDocumentSheetHeaders(sheet);
@@ -996,6 +996,8 @@ function addDocument(docData) {
       docData.dateEndorsedToAcctng || '',
       docData.dateEndorsedFromCMO  || '',
       docData.deliveryStatus       || '',
+      docData.airNo                || '',
+      docData.airDate              || '',
       docData.dateEndorseToCOA     || '',
       docData.dateEndorseToCTO     || '',
       _fmtDate(dateRcvd),
@@ -1125,6 +1127,8 @@ function updateDocument(docId, docData) {
     _setF('Date Endorsed To Acctng', docData.dateEndorsedToAcctng || '');
     _setF('Date Endorsed From CMO',  docData.dateEndorsedFromCMO  || '');
     _setF('Delivery Status',         docData.deliveryStatus       || '');
+    _setF('AIR No.',                 docData.airNo                || '');
+    _setF('AIR Date',                docData.airDate              || '');
     _setF('Date Endorse To COA',     docData.dateEndorseToCOA     || '');
     _setF('Date Endorse To CTO',     docData.dateEndorseToCTO     || '');
     _setF('Date Received',           _fmtDate(dateRcvd));
@@ -1232,22 +1236,22 @@ function deleteDocument(docId) {
   }
 }
 
-function getDocumentStats() {
+// getDocumentStats(tokenParam?) — accepts an optional session token so the
+// returned "incoming" count is scoped to the caller's team, matching the
+// same logic used in getInitialData / _computeStatsGAS.
+function getDocumentStats(tokenParam) {
   try {
     // Reuse the cached getAllDocuments result — no extra sheet read needed
     const docs = getAllDocuments();
-    const stats = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
-    docs.forEach(doc => {
-      stats.total++;
-      const st = String(doc.Status || '').toLowerCase().trim();
-      if      (st.includes('forwarded'))                                  stats.outgoing++;
-      else if (st.includes('completed') || st.includes('complete'))      stats.complete++;
-      else                                                                stats.incoming++;
-      if (st.includes('received')) stats.received++;
-      if (st.includes('hold'))     stats.hold++;
-      if (doc.Overdue && doc.Overdue !== 'On time')                      stats.overdue++;
-    });
-    return stats;
+    // Resolve the calling user's team when a token is available
+    let userTeam = '';
+    if (tokenParam || _doPostToken) {
+      try {
+        const u = getCurrentUser(tokenParam || _doPostToken);
+        if (u && u.team) userTeam = u.team;
+      } catch(e) {}
+    }
+    return _computeStatsGAS(docs, userTeam);
   } catch (error) {
     Logger.log('getDocumentStats error: ' + error);
     return { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
@@ -1469,7 +1473,7 @@ function getInitialData(token) {
         if (user.permissions && user.permissions.manageUsers) {
           try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
         }
-        const stats = _computeStatsGAS(docs);
+        const stats = _computeStatsGAS(docs, user.team);
         return { user, docs, opts, stats, logs, users };
       } catch(e) {
         // Cache parse error — fall through to cold path
@@ -1521,7 +1525,7 @@ function getInitialData(token) {
       try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
     }
 
-    const stats = _computeStatsGAS(docs);
+    const stats = _computeStatsGAS(docs, user.team);
     return { user, docs, opts, stats, logs, users };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
@@ -1529,19 +1533,45 @@ function getInitialData(token) {
   }
 }
 
-// Pure-GAS stats computation (mirrors client-side _computeStats)
-function _computeStatsGAS(docs) {
-  const s = { total:0, incoming:0, received:0, outgoing:0, hold:0, complete:0, overdue:0 };
-  (docs || []).forEach(doc => {
+// Pure-GAS stats computation (server-side mirror of client _computeStats).
+// Rules:
+//   All Documents : total count, all statuses, all teams.
+//   Incoming      : statuses [Incoming, Received, In Process, In Review, Hold, Pending, Approved]
+//                   scoped to docs where Endorsed To === userTeam (team-members only).
+//   Received      : status Received, scoped to userTeam.
+//   Outgoing      : status Forwarded, all teams.
+//   Hold          : statuses [Hold, Pending, In Review, In Process], scoped to userTeam.
+//   Complete      : status Completed, all teams.
+function _computeStatsGAS(docs, userTeam) {
+  const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
+  const team = (userTeam || '').toString().trim().toLowerCase();
+
+  // Exact status sets (lowercase) for each section
+  const INCOMING_STATUSES = ['incoming', 'received', 'in process', 'in review', 'hold', 'pending', 'approved'];
+  const HOLD_STATUSES     = ['hold', 'pending', 'in review', 'in process'];
+
+  (docs || []).forEach(function(doc) {
     s.total++;
-    const st = String(doc.Status || '').toLowerCase().trim();
-    if      (st.includes('forwarded'))                             s.outgoing++;
-    else if (st.includes('completed') || st.includes('complete')) s.complete++;
-    else                                                           s.incoming++;
-    if (st.includes('received')) s.received++;
-    if (st.includes('hold'))     s.hold++;
-    if (doc.Overdue && doc.Overdue !== 'On time')                 s.overdue++;
+    const st  = String(doc.Status || '').toLowerCase().trim();
+    const ofc = String(doc['Endorsed To'] || '').toLowerCase().trim();
+
+    if (doc.Overdue && doc.Overdue !== 'On time') s.overdue++;
+
+    // Outgoing: Forwarded — all teams
+    if (st === 'forwarded') s.outgoing++;
+
+    // Complete: Completed — all teams
+    if (st === 'completed') s.complete++;
+
+    // Team-scoped sections: only count when Endorsed To matches the user's team
+    const isTeamMatch = team ? ofc.trim() === team : false;
+    if (isTeamMatch) {
+      if (INCOMING_STATUSES.indexOf(st) !== -1) s.incoming++;
+      if (st === 'received')                     s.received++;
+      if (HOLD_STATUSES.indexOf(st) !== -1)      s.hold++;
+    }
   });
+
   return s;
 }
 

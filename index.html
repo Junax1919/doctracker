@@ -4526,6 +4526,9 @@
           // 6. Documents — render using chunked RAF so the browser stays responsive
           allDocs = result.docs || [];
           populateTableFilters();
+          // Override server-side pre-computed stats with accurate client-side calculation
+          // once docs are available in memory (server stats may not have user's team yet).
+          _applyStats(_computeStats(allDocs));
           _renderChunked(allDocs, currentFilter);
         })
         .withFailureHandler(function () {
@@ -4611,33 +4614,53 @@
         .getAllDocuments();
     }
 
-    // Compute document statistics purely from the local allDocs array (0 ms, no server call).
-    // "incoming" counts only docs where Status = Received AND Endorsed To matches the
-    // logged-in user's team (if the user has a team assigned). Admins / users with no team
-    // see the legacy catch-all count so nothing breaks for existing workflows.
+    // ── Document Statistics ──────────────────────────────────────────────────────
+    // Computed purely from the local allDocs array — zero server calls.
+    //
+    // Rules (verbatim from specification):
+    //   All Documents : total count, all statuses, all teams.
+    //   Incoming      : [Incoming, Received, In Process, In Review, Hold, Pending, Approved]
+    //                   Endorsed To must exactly equal the logged-in user's team.
+    //   Received      : [Received]  — Endorsed To must exactly equal user's team.
+    //   Outgoing      : [Forwarded] — visible to all users/teams.
+    //   Hold          : [Hold, Pending, In Review, In Process]
+    //                   Endorsed To must exactly equal user's team.
+    //   Complete      : [Completed] — visible to all users/teams.
+    // ─────────────────────────────────────────────────────────────────────────────
     function _computeStats(docs) {
       const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
-      const userTeam = (currentUser && currentUser.team) ? currentUser.team.trim().toLowerCase() : '';
+
+      // Normalise the logged-in user's team once (empty string means no team assigned).
+      const userTeam = (currentUser && currentUser.team)
+        ? currentUser.team.trim().toLowerCase()
+        : '';
+
+      // Exact status sets (lowercase) — must match stored values exactly.
+      const INCOMING_STATUSES = ['incoming', 'received', 'in process', 'in review', 'hold', 'pending', 'approved'];
+      const HOLD_STATUSES     = ['hold', 'pending', 'in review', 'in process'];
+
       (docs || []).forEach(doc => {
         s.total++;
-        const st = String(doc.Status || '').toLowerCase().trim();
-        if (st.includes('forwarded')) s.outgoing++;
-        else if (st.includes('completed') || st.includes('complete')) s.complete++;
-        else s.incoming++;
-        if (st.includes('received')) s.received++;
-        if (st.includes('hold')) s.hold++;
+        const st  = String(doc.Status      || '').toLowerCase().trim();
+        const ofc = String(doc['Endorsed To'] || '').toLowerCase().trim();
+
         if (doc.Overdue && doc.Overdue !== 'On time') s.overdue++;
+
+        // ── Global sections (no team restriction) ───────────────────────────────
+        if (st === 'forwarded') s.outgoing++;
+        if (st === 'completed') s.complete++;
+
+        // ── Team-scoped sections ─────────────────────────────────────────────────
+        // Strict equality: 'Endorsed To' must exactly match the user's team.
+        // Users with no team assigned see 0 for these sections.
+        const isTeamMatch = userTeam !== '' && ofc === userTeam;
+        if (isTeamMatch) {
+          if (INCOMING_STATUSES.includes(st)) s.incoming++;
+          if (st === 'received')              s.received++;
+          if (HOLD_STATUSES.includes(st))     s.hold++;
+        }
       });
-      // Re-compute incoming as team-scoped: Status contains "received" AND
-      // Endorsed To matches the user's team. Falls back to the catch-all when
-      // the user has no team assigned (preserves existing behaviour).
-      if (userTeam) {
-        s.incoming = (docs || []).filter(doc => {
-          const st  = String(doc.Status || '').toLowerCase().trim();
-          const ofc = String(doc['Endorsed To'] || '').toLowerCase().trim();
-          return st.includes('received') && ofc === userTeam;
-        }).length;
-      }
+
       return s;
     }
 
@@ -4730,38 +4753,33 @@
       currentFilter = f;
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
 
+      // Exact status sets — must mirror _computeStats exactly.
+      const INCOMING_STATUSES = ['incoming', 'received', 'in process', 'in review', 'hold', 'pending', 'approved'];
+      const HOLD_STATUSES     = ['hold', 'pending', 'in review', 'in process'];
+
+      // Normalise user's team once for this filter pass.
+      const _userTeam = (currentUser && currentUser.team)
+        ? currentUser.team.trim().toLowerCase()
+        : '';
+
       // 1. Sidebar status filter
       if (f === 'all') {
         filteredDocs = [...allDocs];
       } else {
         filteredDocs = allDocs.filter(d => {
-          const st = (d.Status || '').toLowerCase().trim();
+          const st  = String(d.Status         || '').toLowerCase().trim();
+          const ofc = String(d['Endorsed To'] || '').toLowerCase().trim();
+
+          // Strict equality: Endorsed To must exactly match the user's team.
+          const isTeamMatch = _userTeam !== '' && ofc === _userTeam;
+
           switch (f) {
-            case 'incoming': {
-              // Team-scoped incoming: Status contains "received" AND Endorsed To matches
-              // the logged-in user's team. Falls back to the legacy catch-all when the
-              // user has no team assigned, preserving existing behaviour for those accounts.
-              const _userTeam = (currentUser && currentUser.team)
-                ? currentUser.team.trim().toLowerCase() : '';
-              if (_userTeam) {
-                const _ofc = (d['Endorsed To'] || '').toLowerCase().trim();
-                return st.includes('received') && _ofc === _userTeam;
-              }
-              return !st.includes('forwarded') &&
-                !st.includes('completed') &&
-                !st.includes('complete');
-            }
-            case 'received':
-              return st === 'received' || st.includes('received');
-            case 'outgoing':
-              return st === 'forwarded' || st.includes('forwarded');
-            case 'hold':
-              return st === 'hold' || st.includes('hold');
-            case 'complete':
-              return st === 'complete' || st === 'completed' ||
-                st.includes('complete');
-            default:
-              return true;
+            case 'incoming': return isTeamMatch && INCOMING_STATUSES.includes(st);
+            case 'received': return isTeamMatch && st === 'received';
+            case 'outgoing': return st === 'forwarded';
+            case 'hold':     return isTeamMatch && HOLD_STATUSES.includes(st);
+            case 'complete': return st === 'completed';
+            default:         return true;
           }
         });
       }
