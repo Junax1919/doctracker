@@ -5543,16 +5543,6 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     function handleLogout() {
       showConfirmModal('Sign Out', 'Are you sure you want to sign out of DocuTracker?', 'Sign Out', 'danger', function () {
 
-        // ── Build the redirect URL from the BROWSER'S current location ──────────
-        // This is the only reliable approach across all environments:
-        //   • Custom domain   (https://doctracker.junaxdmly.workers.dev/)
-        //   • Cloudflare / CDN proxy
-        //   • Localhost       (http://localhost:3000/)
-        //   • GAS exec URL    (https://script.google.com/macros/s/.../exec)
-        // window.location.origin + pathname always reflects the real host the user
-        // is browsing from — no hardcoded URLs, no backend value needed.
-        const currentOrigin = window.location.origin + window.location.pathname;
-
         // 1. Capture token BEFORE wiping state
         const _logoutToken = _sessionToken;
 
@@ -5561,7 +5551,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         _sessionToken = '';
         try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
 
-        // 3. Fire the backend session-invalidation as fire-and-forget.
+        // 3. Set a sessionStorage logout flag so checkSession() knows to skip
+        //    session restore and show the login page immediately.
+        //    sessionStorage is reliable in ALL environments:
+        //      • GAS deployed (window.location.search is always empty — ?logout=1 is invisible)
+        //      • Cloudflare / CDN proxy
+        //      • Localhost / file:// shim mode
+        //    It survives a same-tab page reload but auto-clears when the tab closes.
+        try { sessionStorage.setItem('docutracker_logged_out', '1'); } catch (e) { }
+
+        // 4. Fire the backend session-invalidation as fire-and-forget.
         //    We do NOT wait for its response — the server session will expire
         //    naturally if this call fails, and the local state is already cleared.
         try {
@@ -5571,9 +5570,11 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             .logout(_logoutToken);
         } catch (e) { /* ignore in local/shim mode */ }
 
-        // 4. Redirect immediately — no waiting for the backend round-trip.
-        //    ?logout=1 tells checkSession() to skip session restore and show login.
-        window.location.href = currentOrigin + '?logout=1';
+        // 5. Navigate back to the base URL (no query string needed).
+        //    The sessionStorage flag above is what tells checkSession() to show
+        //    the login page — we no longer rely on ?logout=1 in the URL.
+        const baseUrl = window.location.origin + window.location.pathname;
+        window.location.href = baseUrl;
       }); // end showConfirmModal
     }
 
@@ -6922,8 +6923,18 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       // If a reset token is present the reset flow (checkResetToken) handles it
       if (token) return;
 
-      // If the user just logged out, skip session check and show login immediately
-      if (isLogout) { showView('login'); return; }
+      // If the user just logged out, skip session check and show login immediately.
+      // Primary signal: sessionStorage flag (works in GAS deployed mode where
+      // window.location.search is always empty and ?logout=1 is invisible).
+      // Secondary signal: ?logout=1 query param (works in localhost / shim mode).
+      const justLoggedOut = isLogout ||
+        (function() { try { return sessionStorage.getItem('docutracker_logged_out') === '1'; } catch(e) { return false; } })();
+      if (justLoggedOut) {
+        // Clear the flag so a subsequent manual refresh doesn't re-trigger this branch
+        try { sessionStorage.removeItem('docutracker_logged_out'); } catch(e) {}
+        showView('login');
+        return;
+      }
 
       // Restore this browser's session token from localStorage
       try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
@@ -6949,8 +6960,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       document.body.appendChild(loadingEl);
 
       // Normal session check — pass THIS browser's token (never shared with other browsers)
-      // Retry once on null result before giving up — guards against transient GAS errors
+      // Retry up to 3 times with progressive back-off to handle GAS cold-start delays
+      // (cold GAS executions can take 2-3 s before PropertiesService becomes available).
       let _sessionCheckAttempts = 0;
+      const _retryDelays = [1500, 2500]; // ms to wait before attempt 2, then attempt 3
       function _attemptSessionCheck() {
         _sessionCheckAttempts++;
         google.script.run
@@ -6960,12 +6973,12 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               if (loader) loader.remove();
               showView('dashboard');
               initDashboard();
-            } else if (_sessionCheckAttempts < 2) {
-              // First attempt returned null — wait 1.2s and retry once
-              // (guards against transient PropertiesService / CacheService misses)
-              setTimeout(_attemptSessionCheck, 1200);
+            } else if (_sessionCheckAttempts < 3) {
+              // Returned null — wait and retry (handles GAS cold-start / cache-miss)
+              const delay = _retryDelays[_sessionCheckAttempts - 1] || 2000;
+              setTimeout(_attemptSessionCheck, delay);
             } else {
-              // Genuinely invalid or expired session
+              // Genuinely invalid or expired session after 3 attempts
               if (loader) loader.remove();
               _sessionToken = '';
               try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }

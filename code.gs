@@ -227,12 +227,15 @@ function _validateSession(token) {
   if (!token) return null;
   try {
     // CacheService first (fast path — avoids ScriptProperties quota hits)
+    // TTL = 21600s (6h, the CacheService maximum) so that normal page refreshes
+    // always hit the cache and never fall through to the slower PropertiesService.
+    const SESSION_CACHE_TTL = 21600;
     const ck  = 'sv_' + token.replace(/-/g, '');
     const hit = CacheService.getScriptCache().get(ck);
     if (hit) {
-      // Sliding renewal: refresh cache TTL on every successful hit so active
-      // users never get kicked out just because the 6-min cache window expired.
-      CacheService.getScriptCache().put(ck, hit, 600);
+      // Sliding renewal: refresh cache TTL on every successful hit so the
+      // 6-hour window resets with each request, keeping active users logged in.
+      CacheService.getScriptCache().put(ck, hit, SESSION_CACHE_TTL);
       return hit;
     }
     // Slow path — read from ScriptProperties
@@ -248,8 +251,8 @@ function _validateSession(token) {
     // (keeps the session alive as long as the user is active)
     sess.expires = now + 24 * 60 * 60 * 1000;
     PropertiesService.getScriptProperties().setProperty('sess_' + token, JSON.stringify(sess));
-    // Cache for 10 minutes — long enough to survive normal page interactions
-    CacheService.getScriptCache().put(ck, sess.email, 600);
+    // Cache for 6 hours — maximises hit rate on page refresh; CacheService max is 21600s.
+    CacheService.getScriptCache().put(ck, sess.email, SESSION_CACHE_TTL);
     return sess.email;
   } catch (e) { Logger.log('_validateSession error: ' + e); return null; }
 }
@@ -331,7 +334,8 @@ function getCurrentUser(tokenParam) {
       const perms  = _getDefaultPermissions(role);
       try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
       const user = { email: data[i][0], name: data[i][3] || 'User', role: role, status: status, permissions: perms, team: String(data[i][10] || '').trim() };
-      try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 300); } catch (e) {}
+      // Cache user object for 1 hour — reduces repeated sheet reads on page refresh
+      try { CacheService.getScriptCache().put(ck, JSON.stringify(user), 3600); } catch (e) {}
       return user;
     }
     return null;
