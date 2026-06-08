@@ -4611,9 +4611,13 @@
         .getAllDocuments();
     }
 
-    // Compute document statistics purely from the local allDocs array (0 ms, no server call)
+    // Compute document statistics purely from the local allDocs array (0 ms, no server call).
+    // "incoming" counts only docs where Status = Received AND Endorsed To matches the
+    // logged-in user's team (if the user has a team assigned). Admins / users with no team
+    // see the legacy catch-all count so nothing breaks for existing workflows.
     function _computeStats(docs) {
       const s = { total: 0, incoming: 0, received: 0, outgoing: 0, hold: 0, complete: 0, overdue: 0 };
+      const userTeam = (currentUser && currentUser.team) ? currentUser.team.trim().toLowerCase() : '';
       (docs || []).forEach(doc => {
         s.total++;
         const st = String(doc.Status || '').toLowerCase().trim();
@@ -4624,6 +4628,16 @@
         if (st.includes('hold')) s.hold++;
         if (doc.Overdue && doc.Overdue !== 'On time') s.overdue++;
       });
+      // Re-compute incoming as team-scoped: Status contains "received" AND
+      // Endorsed To matches the user's team. Falls back to the catch-all when
+      // the user has no team assigned (preserves existing behaviour).
+      if (userTeam) {
+        s.incoming = (docs || []).filter(doc => {
+          const st  = String(doc.Status || '').toLowerCase().trim();
+          const ofc = String(doc['Endorsed To'] || '').toLowerCase().trim();
+          return st.includes('received') && ofc === userTeam;
+        }).length;
+      }
       return s;
     }
 
@@ -4723,12 +4737,20 @@
         filteredDocs = allDocs.filter(d => {
           const st = (d.Status || '').toLowerCase().trim();
           switch (f) {
-            case 'incoming':
-              // Same logic as _computeStats: everything that is NOT outgoing and NOT complete.
-              // This is the catch-all bucket matching the badge counter exactly.
+            case 'incoming': {
+              // Team-scoped incoming: Status contains "received" AND Endorsed To matches
+              // the logged-in user's team. Falls back to the legacy catch-all when the
+              // user has no team assigned, preserving existing behaviour for those accounts.
+              const _userTeam = (currentUser && currentUser.team)
+                ? currentUser.team.trim().toLowerCase() : '';
+              if (_userTeam) {
+                const _ofc = (d['Endorsed To'] || '').toLowerCase().trim();
+                return st.includes('received') && _ofc === _userTeam;
+              }
               return !st.includes('forwarded') &&
                 !st.includes('completed') &&
                 !st.includes('complete');
+            }
             case 'received':
               return st === 'received' || st.includes('received');
             case 'outgoing':
