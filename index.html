@@ -5502,38 +5502,38 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     // On success, calls updatePdfLink (single-cell sheet write) and refreshes
     // the table row so the attachment icon appears instantly.
     function _uploadPdfBackground(file, docId) {
-  if (!file || !docId) return;
-  const reader = new FileReader();
-  reader.onload = function (ev) {
-    const b64 = ev.target.result.split(',')[1];
-    google.script.run
-      .withSuccessHandler(function (uploadResult) {
-        if (uploadResult && uploadResult.status === 'success') {
-          // 1. Update local store
-          const docIdx = allDocs.findIndex(function (d) { return d['ID/Barcode'] === docId; });
-          if (docIdx !== -1) allDocs[docIdx]['PDF Link'] = uploadResult.fileUrl;
-          // 2. Force-overwrite the PDF link in the sheet
-          google.script.run
-            .withSuccessHandler(function () {
-              renderTable();
-              toast('PDF attached ✔');
-            })
-            .withFailureHandler(function () {
-              renderTable();
-              toast('PDF uploaded but link not saved — please re-save the document', 'warning');
-            })
-            .updatePdfLink(docId, uploadResult.fileUrl);
-        } else {
-          toast('PDF upload failed — document was saved without attachment', 'warning');
-        }
-      })
-      .withFailureHandler(function () {
-        toast('PDF upload failed — document was saved without attachment', 'warning');
-      })
-      .uploadPDFToGoogleDrive(b64, file.name, docId);
-  };
-  reader.readAsDataURL(file);
-}
+      if (!file || !docId) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const b64 = ev.target.result.split(',')[1];
+        google.script.run
+          .withSuccessHandler(function (uploadResult) {
+            if (uploadResult && uploadResult.status === 'success') {
+              // 1. Update local store so the icon shows without a full reload
+              const docIdx = allDocs.findIndex(function (d) { return d['ID/Barcode'] === docId; });
+              if (docIdx !== -1) allDocs[docIdx]['PDF Link'] = uploadResult.fileUrl;
+              // 2. Persist the link to the sheet (lightweight single-cell write)
+              google.script.run
+                .withSuccessHandler(function () {
+                  renderTable();
+                  toast('PDF attached ✔');
+                })
+                .withFailureHandler(function () {
+                  renderTable();
+                  toast('PDF uploaded but link not saved — please re-save the document', 'warning');
+                })
+                .updatePdfLink(docId, uploadResult.fileUrl);
+            } else {
+              toast('PDF upload failed — document was saved without attachment', 'warning');
+            }
+          })
+          .withFailureHandler(function () {
+            toast('PDF upload failed — document was saved without attachment', 'warning');
+          })
+          .uploadPDFToGoogleDrive(b64, file.name, docId);
+      };
+      reader.readAsDataURL(file);
+    }
 
     // ===================== USER PROFILE =====================
     function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); }
