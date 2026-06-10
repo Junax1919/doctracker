@@ -5198,6 +5198,21 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     function editDoc(id) {
       const doc = allDocs.find(d => d['ID/Barcode'] === id);
       if (!doc) { toast('Document not found', 'error'); return; }
+
+      // ── Creator-ownership check ──────────────────────────────────────────
+      // Only the user who created this record (or an admin) may open it for editing.
+      const docCreator = (doc['Created By'] || '').trim().toLowerCase();
+      const myEmail    = (currentUser && currentUser.email ? currentUser.email : '').trim().toLowerCase();
+      const myRole     = (currentUser && currentUser.role  ? currentUser.role  : '').toLowerCase();
+      if (docCreator && myRole !== 'admin' && docCreator !== myEmail) {
+        showAlertModal(
+          'Edit Not Permitted',
+          'You do not have permission to modify this record.<br><br>' +
+          'Only the user who <strong>originally created</strong> this document can edit its details.',
+          'error'
+        );
+        return;
+      }
       isEdit = true; selectedFile = null;
       document.getElementById('modalTitle').textContent = 'Edit Document';
       document.getElementById('editId').value = id;
@@ -5373,6 +5388,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               toast('Updated!');
               // Background PDF upload — does not block the save
               if (fileToUpload) _uploadPdfBackground(fileToUpload, id);
+            } else if (r.message === 'unauthorized') {
+              // Roll back optimistic update
+              if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
+              populateTableFilters(); applyFilter(currentFilter); updateStats();
+              showAlertModal(
+                'Edit Not Permitted',
+                'You do not have permission to modify this record.<br><br>' +
+                'Only the user who <strong>originally created</strong> this document can edit its details.',
+                'error'
+              );
             } else if (r.message === 'duplicate') {
               // Roll back optimistic update
               if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
@@ -5430,7 +5455,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'Date Endorse To CTO': data.dateEndorseToCTO || '',
           'PDF Link': data.pdfLink || '',
           'Doc Time Stamp': _nowTs,
-          'Overdue': 'On time'
+          'Overdue': 'On time',
+          'Created By': (currentUser && currentUser.email) ? currentUser.email : ''
         };
         allDocs.unshift(optimisticDoc);  // prepend so it appears at top
         toast('Saving…');
