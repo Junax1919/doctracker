@@ -5336,7 +5336,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'border-radius:4px;padding:3px 8px;';
         badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;color:#d97706">lock</span>' +
           'Locked by <strong style="margin-left:3px">' + ownerName + '</strong>';
-        const parent = el.closest('.form-group') || el.parentElement;
+        const parent = (anchorElId === 'endUser' || anchorElId === 'supp') ? (el.closest('.form-group') || el.parentElement) : el.parentElement;
         if (parent) parent.appendChild(badge);
       };
       // One badge per locked field, anchored to that field's own form group
