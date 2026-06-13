@@ -3477,10 +3477,10 @@
                       onclick="sortTable('dateEndCMO')">Date End. From CMO</th>
                     <th class="sortable hide-mobile col-deliveryStatus" data-column="deliveryStatus"
                       onclick="sortTable('deliveryStatus')">Delivery Status</th>
-                    <th class="sortable hide-mobile col-airNo" data-column="airNo"
-                      onclick="sortTable('airNo')">AIR No.</th>
-                    <th class="sortable hide-mobile col-airDate" data-column="airDate"
-                      onclick="sortTable('airDate')">AIR Date</th>
+                    <th class="sortable hide-mobile col-airNo" data-column="airNo" onclick="sortTable('airNo')">AIR No.
+                    </th>
+                    <th class="sortable hide-mobile col-airDate" data-column="airDate" onclick="sortTable('airDate')">
+                      AIR Date</th>
                     <th class="sortable hide-mobile col-dateEndCOA" data-column="dateEndCOA"
                       onclick="sortTable('dateEndCOA')">Date End. To COA</th>
                     <th class="sortable hide-mobile col-dateEndCTO" data-column="dateEndCTO"
@@ -4238,6 +4238,7 @@
     let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
     let allLogs = [];
+    let _docCreatorMap = {};
     // Per-browser session token (UUID issued by the backend on login).
     // Stored in localStorage so it persists across refreshes but is NEVER
     // shared between browsers/devices — each gets its own unique token.
@@ -4519,9 +4520,14 @@
 
           // 4. Users cache
           if (result.users && result.users.length) _allUsers = result.users;
+          // 4b. Lightweight email->name directory (available to all roles, for lock badges)
+          if (result.userDirectory && result.userDirectory.length) _userDirectory = result.userDirectory;
 
           // 5. Logs cache (may be empty on first load — lazy fetch on tab click)
-          if (result.logs && result.logs.length) allLogs = result.logs;
+          if (result.logs && result.logs.length) {
+            allLogs = result.logs;
+            buildCreatorMap();
+          }
 
           // 6. Documents — render using chunked RAF so the browser stays responsive
           allDocs = result.docs || [];
@@ -4538,6 +4544,36 @@
           if (tb) tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
         })
         .getInitialData(_sessionToken);
+    }
+
+    function buildCreatorMap() {
+      _docCreatorMap = {};
+      
+      // allLogs is newest-first. To easily find the oldest action, we iterate backwards (oldest to newest)
+      for (let i = allLogs.length - 1; i >= 0; i--) {
+        const log = allLogs[i];
+        if (!log.DocumentID) continue;
+        
+        const action = (log.Action || '').toLowerCase();
+        const userName = (log.User || '').trim();
+        if (!userName || userName.toLowerCase() === 'system') continue;
+        
+        // Try mapping to email
+        const u = _allUsers.find(u => (u.name || '').trim().toLowerCase() === userName.toLowerCase());
+        const mappedUser = u && u.email ? u.email.toLowerCase().trim() : userName.toLowerCase();
+        
+        // If this is the FIRST time we see this document (because we're going oldest-first),
+        // we set it as the creator (this is the fallback).
+        if (!_docCreatorMap[log.DocumentID]) {
+          _docCreatorMap[log.DocumentID] = mappedUser;
+        }
+        
+        // If we explicitly see a 'Create' or 'Add' action, this overrides any earlier weird actions 
+        // (though creation should chronologically be the oldest anyway).
+        if (action.includes('creat') || action.includes('add')) {
+          _docCreatorMap[log.DocumentID] = mappedUser;
+        }
+      }
     }
 
     // ── Chunked table render — splits large datasets into 50-row RAF batches
@@ -4637,11 +4673,11 @@
 
       // Exact status sets (lowercase) — must match stored values exactly.
       const INCOMING_STATUSES = ['incoming', 'received', 'in process', 'in review', 'hold', 'pending', 'approved'];
-      const HOLD_STATUSES     = ['hold', 'pending', 'in review', 'in process'];
+      const HOLD_STATUSES = ['hold', 'pending', 'in review', 'in process'];
 
       (docs || []).forEach(doc => {
         s.total++;
-        const st  = String(doc.Status      || '').toLowerCase().trim();
+        const st = String(doc.Status || '').toLowerCase().trim();
         const ofc = String(doc['Endorsed To'] || '').toLowerCase().trim();
 
         if (doc.Overdue && doc.Overdue !== 'On time') s.overdue++;
@@ -4656,8 +4692,8 @@
         const isTeamMatch = userTeam !== '' && ofc === userTeam;
         if (isTeamMatch) {
           if (INCOMING_STATUSES.includes(st)) s.incoming++;
-          if (st === 'received')              s.received++;
-          if (HOLD_STATUSES.includes(st))     s.hold++;
+          if (st === 'received') s.received++;
+          if (HOLD_STATUSES.includes(st)) s.hold++;
         }
       });
 
@@ -4755,7 +4791,7 @@
 
       // Exact status sets — must mirror _computeStats exactly.
       const INCOMING_STATUSES = ['incoming', 'received', 'in process', 'in review', 'hold', 'pending', 'approved'];
-      const HOLD_STATUSES     = ['hold', 'pending', 'in review', 'in process'];
+      const HOLD_STATUSES = ['hold', 'pending', 'in review', 'in process'];
 
       // Normalise user's team once for this filter pass.
       const _userTeam = (currentUser && currentUser.team)
@@ -4767,7 +4803,7 @@
         filteredDocs = [...allDocs];
       } else {
         filteredDocs = allDocs.filter(d => {
-          const st  = String(d.Status         || '').toLowerCase().trim();
+          const st = String(d.Status || '').toLowerCase().trim();
           const ofc = String(d['Endorsed To'] || '').toLowerCase().trim();
 
           // Strict equality: Endorsed To must exactly match the user's team.
@@ -4777,9 +4813,9 @@
             case 'incoming': return isTeamMatch && INCOMING_STATUSES.includes(st);
             case 'received': return isTeamMatch && st === 'received';
             case 'outgoing': return st === 'forwarded';
-            case 'hold':     return isTeamMatch && HOLD_STATUSES.includes(st);
+            case 'hold': return isTeamMatch && HOLD_STATUSES.includes(st);
             case 'complete': return st === 'completed';
-            default:         return true;
+            default: return true;
           }
         });
       }
@@ -5194,25 +5230,55 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       removeFile();
       showModal('docModal');
     }
-    function closeModal() { hideModal('docModal'); }
+    function closeModal() { _unlockAllEditFields(); hideModal('docModal'); }
     function editDoc(id) {
       const doc = allDocs.find(d => d['ID/Barcode'] === id);
       if (!doc) { toast('Document not found', 'error'); return; }
 
-      // ── Creator-ownership check ──────────────────────────────────────────
-      // Only the user who created this record (or an admin) may open it for editing.
-      const docCreator = (doc['Created By'] || '').trim().toLowerCase();
-      const myEmail    = (currentUser && currentUser.email ? currentUser.email : '').trim().toLowerCase();
-      const myRole     = (currentUser && currentUser.role  ? currentUser.role  : '').toLowerCase();
-      if (docCreator && myRole !== 'admin' && docCreator !== myEmail) {
-        showAlertModal(
-          'Edit Not Permitted',
-          'You do not have permission to modify this record.<br><br>' +
-          'Only the user who <strong>originally created</strong> this document can edit its details.',
-          'error'
-        );
-        return;
-      }
+      // ── Per-field ownership (all editable fields) ──────────────────────────────
+      // Each field is locked individually only when: it currently has a
+      // non-empty value, AND it has a recorded owner, AND that owner is someone
+      // other than the current user. Blank/never-touched fields are always
+      // editable by anyone — only fields someone has actually filled in get
+      // locked to that original editor. Admin role bypasses all locks.
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      const myEmail = (currentUser && currentUser.email ? currentUser.email : '').trim().toLowerCase();
+      let fieldOwners = {};
+      try { fieldOwners = JSON.parse(doc['Field Owners'] || '{}'); } catch (e) { fieldOwners = {}; }
+
+      // Helper: apply or clear the locked visual on a field element
+      const _lockField = (elId, locked) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.disabled        = locked;
+        el.style.background    = locked ? '#f1f5f9' : '';
+        el.style.cursor        = locked ? 'not-allowed' : '';
+        el.style.opacity       = locked ? '0.65' : '';
+        el.style.pointerEvents = locked ? 'none' : '';
+      };
+
+      // Map of column name -> form element id, for every individually-lockable field
+      // Note: Endorsed To, Status, and Delivery Status are intentionally excluded —
+      // these are shared workflow fields that multiple departments update in sequence.
+      const FIELD_ELS = {
+        'Doc Type': 'docType', 'Doc No': 'docNo', 'PR Date': 'prDate',
+        'Description': 'desc', 'Amount': 'amt', 'EndUser': 'endUser', 'Requisitioner': 'req',
+        'Date Received From BAC': 'dateReceivedFromBAC', 'PO No': 'poNo', 'PO Date': 'poDate',
+        'PO Amount': 'poAmt', 'Supplier': 'supp',
+        'AIR No.': 'airNo', 'AIR Date': 'airDate',
+        'Date Endorsed To Acctng': 'dateEndorsedToAcctng', 'Date Endorsed From CMO': 'dateEndorsedFromCMO',
+        'Date Endorse To COA': 'dateEndorseToCOA', 'Date Endorse To CTO': 'dateEndorseToCTO', 'Notes': 'note'
+      };
+      // Build the list of fields locked for this user (used for locking + badges below)
+      const lockedFields = Object.keys(FIELD_ELS).filter(col => {
+        const owner = (fieldOwners[col] || '').trim().toLowerCase();
+        const hasValue = String(doc[col] || '').trim() !== '';
+        return !isAdmin && !!owner && owner !== myEmail && hasValue;
+      });
+      Object.keys(FIELD_ELS).forEach(col => {
+        _lockField(FIELD_ELS[col], lockedFields.includes(col));
+      });
+
       isEdit = true; selectedFile = null;
       document.getElementById('modalTitle').textContent = 'Edit Document';
       document.getElementById('editId').value = id;
@@ -5252,7 +5318,52 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       document.getElementById('docNoError').style.display = 'none';
       const poErrEl2 = document.getElementById('poNoError'); if (poErrEl2) poErrEl2.style.display = 'none';
       removeFile();
+
+      // Remove any stale badges from a previous edit session
+      document.querySelectorAll('.field-owner-badge').forEach(b => b.remove());
+
+      // Inject an amber lock badge into the form group of a representative field
+      const _addBadge = (anchorElId, ownerEmail) => {
+        const el = document.getElementById(anchorElId);
+        if (!el) return;
+        const ownerUser = _userDirectory.find(u => (u.email || '').trim().toLowerCase() === ownerEmail)
+                       || _allUsers.find(u => (u.email || '').trim().toLowerCase() === ownerEmail);
+        const ownerName = ownerUser && ownerUser.name ? ownerUser.name : ownerEmail;
+        const badge = document.createElement('div');
+        badge.className = 'field-owner-badge';
+        badge.style.cssText = 'display:flex;align-items:center;gap:5px;margin-top:5px;' +
+          'font-size:11px;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;' +
+          'border-radius:4px;padding:3px 8px;';
+        badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;color:#d97706">lock</span>' +
+          'Locked by <strong style="margin-left:3px">' + ownerName + '</strong>';
+        const parent = el.closest('.form-group') || el.parentElement;
+        if (parent) parent.appendChild(badge);
+      };
+      // One badge per locked field, anchored to that field's own form group
+      lockedFields.forEach(col => {
+        const owner = (fieldOwners[col] || '').trim().toLowerCase();
+        _addBadge(FIELD_ELS[col], owner);
+      });
+
       showModal('docModal');
+    }
+
+    // Restore all edit fields to their unlocked state (called by closeModal)
+    function _unlockAllEditFields() {
+      ['docType','docNo','desc','prDate','amt','endUser','req',
+       'dateReceivedFromBAC','poNo','poDate','poAmt','supp','office',
+       'stat','deliveryStatus','airNo','airDate',
+       'dateEndorsedToAcctng','dateEndorsedFromCMO','dateEndorseToCOA','dateEndorseToCTO','note'
+      ].forEach(function(fid) {
+        const el = document.getElementById(fid);
+        if (!el) return;
+        el.disabled            = false;
+        el.style.background    = '';
+        el.style.cursor        = '';
+        el.style.opacity       = '';
+        el.style.pointerEvents = '';
+      });
+      document.querySelectorAll('.field-owner-badge').forEach(b => b.remove());
     }
     // ── Duplicate-check helpers ──────────────────────────────────────────────
     // Returns true if value is already used by another document in allDocs.
@@ -5385,19 +5496,24 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         google.script.run
           .withSuccessHandler(r => {
             if (r.status === 'success') {
-              toast('Updated!');
+              // Roll back just the specific blocked fields in allDocs so the table stays consistent
+              if (r.blockedFields && r.blockedFields.length > 0 && idx !== -1 && originalDoc) {
+                r.blockedFields.forEach(f => { allDocs[idx][f] = originalDoc[f]; });
+                populateTableFilters(); applyFilter(currentFilter); updateStats();
+                showAlertModal('🔒 Partial Save',
+                  'Your changes to <strong>' + r.blockedFields.join(', ') + '</strong> were not saved — ' +
+                  (r.blockedFields.length === 1 ? 'this field is' : 'these fields are') +
+                  ' locked by another user.<br><br>All other fields were saved successfully.',
+                  'warning');
+              } else {
+                toast('Updated!');
+              }
+              // Reflect updated per-field ownership in local allDocs so the next editDoc() call is correct
+              if (idx !== -1 && r.fieldOwners) {
+                allDocs[idx]['Field Owners'] = JSON.stringify(r.fieldOwners);
+              }
               // Background PDF upload — does not block the save
               if (fileToUpload) _uploadPdfBackground(fileToUpload, id);
-            } else if (r.message === 'unauthorized') {
-              // Roll back optimistic update
-              if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
-              populateTableFilters(); applyFilter(currentFilter); updateStats();
-              showAlertModal(
-                'Edit Not Permitted',
-                'You do not have permission to modify this record.<br><br>' +
-                'Only the user who <strong>originally created</strong> this document can edit its details.',
-                'error'
-              );
             } else if (r.message === 'duplicate') {
               // Roll back optimistic update
               if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
@@ -5456,7 +5572,32 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'PDF Link': data.pdfLink || '',
           'Doc Time Stamp': _nowTs,
           'Overdue': 'On time',
-          'Created By': (currentUser && currentUser.email) ? currentUser.email : ''
+          // Field Owners: per-field JSON map — owner recorded only for fields
+          // that have a non-empty value on creation (matches addDocument backend logic).
+          'Field Owners': (() => {
+            const _me = currentUser ? (currentUser.email || '').toLowerCase().trim() : '';
+            const _fmtAmt = v => v ? '₱' + parseFloat(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+            const _vals = {
+              'Doc Type': data.docType || '', 'Doc No': data.docNo || '',
+              'PR Date': data.prDate || '', 'Description': data.description || '',
+              'Amount': _fmtAmt(data.amount),
+              'EndUser': data.endUser || '',
+              'Requisitioner': data.requisitioner || '',
+              'Date Received From BAC': data.dateReceivedFromBAC || '',
+              'PO No': data.poNo || '', 'PO Date': data.poDate || '',
+              'PO Amount': _fmtAmt(data.poAmount),
+              'Supplier': data.supplier || '',
+              'AIR No.': data.airNo || '', 'AIR Date': data.airDate || '',
+              'Date Endorsed To Acctng': data.dateEndorsedToAcctng || '',
+              'Date Endorsed From CMO': data.dateEndorsedFromCMO || '',
+              'Date Endorse To COA': data.dateEndorseToCOA || '',
+              'Date Endorse To CTO': data.dateEndorseToCTO || '',
+              'Notes': data.notes || ''
+            };
+            const _owners = {};
+            Object.keys(_vals).forEach(k => { if (String(_vals[k] || '').trim() !== '') _owners[k] = _me; });
+            return JSON.stringify(_owners);
+          })()
         };
         allDocs.unshift(optimisticDoc);  // prepend so it appears at top
         toast('Saving…');
@@ -5468,12 +5609,12 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         google.script.run
           .withSuccessHandler(r => {
             if (r.status === 'success') {
-              // Replace temp ID with real server-assigned ID
               const realId = r.docId || tempId;
               const tempIdx = allDocs.findIndex(d => d['ID/Barcode'] === tempId);
-              if (tempIdx !== -1) allDocs[tempIdx]['ID/Barcode'] = realId;
+              if (tempIdx !== -1) {
+                allDocs[tempIdx]['ID/Barcode'] = realId;
+              }
               toast('Added!');
-              // Background PDF upload — does not block the save
               if (fileToUpload) _uploadPdfBackground(fileToUpload, realId);
               populateTableFilters();
               applyFilter(currentFilter);
@@ -6954,10 +7095,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       // window.location.search is always empty and ?logout=1 is invisible).
       // Secondary signal: ?logout=1 query param (works in localhost / shim mode).
       const justLoggedOut = isLogout ||
-        (function() { try { return sessionStorage.getItem('docutracker_logged_out') === '1'; } catch(e) { return false; } })();
+        (function () { try { return sessionStorage.getItem('docutracker_logged_out') === '1'; } catch (e) { return false; } })();
       if (justLoggedOut) {
         // Clear the flag so a subsequent manual refresh doesn't re-trigger this branch
-        try { sessionStorage.removeItem('docutracker_logged_out'); } catch(e) {}
+        try { sessionStorage.removeItem('docutracker_logged_out'); } catch (e) { }
         showView('login');
         return;
       }
@@ -7033,7 +7174,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
   <script>
     // ===================== USER MANAGEMENT =====================
-    let _isEditUser = false, _allUsers = [];
+    let _isEditUser = false, _allUsers = [], _userDirectory = [];
 
     function showUsersView(evt) {
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
