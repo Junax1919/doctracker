@@ -5660,7 +5660,28 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           .deleteDocument(id);
       }); // end showConfirmModal
     }
-    function handleFileSelect(e) { const file = e.target.files[0]; if (!file) return; if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; } if (file.size > 5 * 1024 * 1024) { toast('File must be under 5MB', 'error'); e.target.value = ''; return; } selectedFile = file; document.getElementById('fileUploadArea').classList.add('has-file'); document.getElementById('fileInfo').style.display = 'flex'; document.getElementById('fileName').textContent = file.name; }
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; }
+      const MAX_SIZE = 5 * 1024 * 1024; // 5 MB strict limit
+      if (file.size > MAX_SIZE) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        showAlertModal(
+          'Large File Warning',
+          `The selected file is <strong>${sizeMB} MB</strong>, which exceeds the maximum allowed size of <strong>5 MB</strong>. The file was not attached.<br><br>Please compress your file before uploading. You may use any of the following free tools:<br><br>
+          <a href="https://www.smallpdf.com" target="_blank" style="color:var(--blue)">www.smallpdf.com</a> &nbsp;|&nbsp;
+          <a href="https://www.tinyjpg.com" target="_blank" style="color:var(--blue)">www.tinyjpg.com</a>`,
+          'warning'
+        );
+        e.target.value = ''; // clear input — file is strictly rejected
+        return;
+      }
+      selectedFile = file;
+      document.getElementById('fileUploadArea').classList.add('has-file');
+      document.getElementById('fileInfo').style.display = 'flex';
+      document.getElementById('fileName').textContent = file.name;
+    }
     function removeFile() { selectedFile = null; document.getElementById('pdfInput').value = ''; document.getElementById('fileUploadArea').classList.remove('has-file'); document.getElementById('fileInfo').style.display = 'none'; }
 
     // ── Background PDF upload ─────────────────────────────────────────────
