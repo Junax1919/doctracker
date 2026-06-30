@@ -4735,6 +4735,10 @@
           // All data rendered — dismiss the loader
           _setDashLoaderStep('Done!', 1);
           setTimeout(_hideDashLoader, 300);
+
+          // Begin real-time multi-user sync — picks up changes from other
+          // users (or direct Sheet edits) without needing a manual refresh.
+          _startRealtimeSync();
         })
         .withFailureHandler(function () {
           _hideDashLoader();
@@ -4847,6 +4851,68 @@
           updateBadges();
         })
         .withFailureHandler(() => toast('Failed to load', 'error'))
+        .getAllDocuments();
+    }
+
+    // ── Real-time multi-user sync ──────────────────────────────────────────
+    // Polls a tiny revision fingerprint (DriveApp metadata call — no sheet
+    // read) every few seconds. Only when the fingerprint actually changes
+    // do we pull the full dataset and silently re-render — so idle tabs
+    // cost almost nothing, and active edits in other tabs/users appear
+    // within one poll cycle without anyone touching the browser.
+    let _lastDocsRev    = null;
+    let _syncIntervalId = null;
+    let _syncInFlight   = false;
+    const SYNC_POLL_MS  = 8000; // 8s — fast enough to feel "live", cheap enough to run forever
+
+    function _startRealtimeSync() {
+      _stopRealtimeSync(); // guard against double-start
+      _syncIntervalId = setInterval(_checkForRemoteChanges, SYNC_POLL_MS);
+      // Also re-check immediately whenever the tab regains focus/visibility —
+      // catches changes that happened while the tab was backgrounded.
+      document.addEventListener('visibilitychange', _onVisibilityChange);
+    }
+    function _stopRealtimeSync() {
+      if (_syncIntervalId) { clearInterval(_syncIntervalId); _syncIntervalId = null; }
+      document.removeEventListener('visibilitychange', _onVisibilityChange);
+    }
+    function _onVisibilityChange() {
+      if (document.visibilityState === 'visible') _checkForRemoteChanges();
+    }
+    function _checkForRemoteChanges() {
+      // Skip if a previous check is still in flight, the tab is hidden, or
+      // the user is actively filling out the Add/Edit modal (don't yank
+      // data out from under them mid-edit).
+      if (_syncInFlight || document.visibilityState !== 'visible') return;
+      const docModalEl = document.getElementById('docModal');
+      if (docModalEl && docModalEl.style.display !== 'none' && docModalEl.classList.contains('active')) return;
+
+      _syncInFlight = true;
+      google.script.run
+        .withSuccessHandler(function (rev) {
+          _syncInFlight = false;
+          if (!rev || !rev.rev) return;
+          if (_lastDocsRev === null) { _lastDocsRev = rev.rev; return; } // first check just baselines
+          if (rev.rev !== _lastDocsRev) {
+            _lastDocsRev = rev.rev;
+            _silentRefreshDocs();
+          }
+        })
+        .withFailureHandler(function () { _syncInFlight = false; })
+        .getDocsRevision();
+    }
+    // Pulls the latest documents + stats and re-renders in place, preserving
+    // the user's current filter/sort/page/search — no flicker, no scroll jump.
+    function _silentRefreshDocs() {
+      google.script.run
+        .withSuccessHandler(function (d) {
+          allDocs = d || [];
+          populateTableFilters();
+          applyFilter(currentFilter);          // re-applies current filter/sort/search/page
+          _applyStats(_computeStats(allDocs));  // dashboard cards stay current too
+          if (typeof updateBadges === 'function') updateBadges();
+        })
+        .withFailureHandler(function () { /* silent — next poll cycle will retry */ })
         .getAllDocuments();
     }
 
@@ -5954,6 +6020,9 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
         // 1. Capture token BEFORE wiping state
         const _logoutToken = _sessionToken;
+
+        // 1b. Stop the real-time sync poll loop — no point polling once signed out
+        _stopRealtimeSync();
 
         // 2. Clear local session state immediately — this is instant
         currentUser = null;
