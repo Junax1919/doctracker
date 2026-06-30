@@ -2171,6 +2171,115 @@
       visibility: hidden
     }
 
+    /* ── Dashboard loader overlay ── */
+    #dashLoader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: radial-gradient(ellipse at 50% 40%, #1e293b 0%, #0f172a 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      /* GPU layer — keeps the overlay composited so fade-out never repaints */
+      will-change: opacity;
+      transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #dashLoader.dl-hiding {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .dl-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      width: 280px;
+    }
+    .dl-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dl-logo .material-symbols-outlined {
+      font-size: 30px;
+      color: #3b82f6;
+    }
+    .dl-brand {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #f1f5f9;
+    }
+    /* Dual-ring spinner — two concentric arcs counter-rotating for depth */
+    .dl-spinner {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      /* GPU promotion so rotation never triggers layout */
+      will-change: transform;
+    }
+    @keyframes dlSpinCW {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes dlSpinCCW {
+      to { transform: rotate(-360deg); }
+    }
+    .dl-ring-outer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #3b82f6;
+      border-right-color: rgba(59,130,246,0.35);
+      will-change: transform;
+      animation: dlSpinCW 0.9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .dl-ring-inner {
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-bottom-color: #60a5fa;
+      border-left-color: rgba(96,165,250,0.3);
+      will-change: transform;
+      animation: dlSpinCCW 0.7s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    /* Step label — cross-fades between messages instead of snapping */
+    .dl-step {
+      font-size: 12.5px;
+      color: #64748b;
+      text-align: center;
+      margin: 0;
+      height: 18px;
+      /* opacity toggled by JS for cross-fade; transform avoids layout shift */
+      opacity: 1;
+      will-change: opacity, transform;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .dl-step.dl-step-fade {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    /* Progress bar — uses scaleX on a 100%-wide element to avoid width reflows */
+    .dl-bar-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .dl-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+      border-radius: 99px;
+      transform-origin: left center;
+      transform: scaleX(0);
+      will-change: transform;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     /* ── Print: prevent blank trailing page ── */
     @media print {
 
@@ -3341,6 +3450,10 @@
                   onchange="applyTableFilters()">
                   <option value="">All Types</option>
                 </select>
+                <select id="filterDocCategory" class="filter-select" title="Filter by Document Category"
+                  onchange="applyTableFilters()">
+                  <option value="">All Categories</option>
+                </select>
                 <select id="filterStatus" class="filter-select" title="Filter by Status" onchange="applyTableFilters()">
                   <option value="">All Statuses</option>
                 </select>
@@ -3376,6 +3489,8 @@
                         onchange="toggleColumn('no')"><label for="col-no">Doc No</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-prDate" checked
                         onchange="toggleColumn('prDate')"><label for="col-prDate">PR Date</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-docCat" checked
+                        onchange="toggleColumn('docCat')"><label for="col-docCat">Doc Category</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-desc" checked
                         onchange="toggleColumn('desc')"><label for="col-desc">Description</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-amount" checked
@@ -3450,6 +3565,7 @@
                     <th class="sortable col-no" data-column="no" onclick="sortTable('no')">Doc No</th>
                     <th class="sortable hide-mobile col-prDate" data-column="prDate" onclick="sortTable('prDate')">PR
                       Date</th>
+                    <th class="sortable hide-mobile col-docCat" data-column="docCat" onclick="sortTable('docCat')">Doc Category</th>
                     <th class="sortable hide-mobile col-desc" data-column="desc" onclick="sortTable('desc')">Description
                     </th>
                     <th class="sortable col-amount" data-column="amount" onclick="sortTable('amount')">Amount</th>
@@ -3675,6 +3791,10 @@
                     class="form-select" id="printDocTypeFilter">
                     <option value="all">All Types</option>
                   </select></div>
+                <div class="form-group"><label class="form-label">Document Category Filter</label><select
+                    class="form-select" id="printDocCategoryFilter">
+                    <option value="all">All Categories</option>
+                  </select></div>
               </div>
               <div id="printColumnsSection" style="display:none">
                 <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
@@ -3685,6 +3805,7 @@
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-type"> Doc Type</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-no"> Doc No</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-prDate"> PR Date</label>
+                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-docCat"> Doc Category</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-desc"> Description</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-amount"> Amount</label>
                   <label class="checkbox-label"><input type="checkbox" checked id="pcol-endUser"> EndUser</label>
@@ -3733,6 +3854,22 @@
         target="_blank">ALJUNEQ</a></footer>
   </div><!-- end view-dashboard -->
 
+  <!-- ===== DASHBOARD LOADER OVERLAY ===== -->
+  <div id="dashLoader" style="display:none" role="status" aria-live="polite">
+    <div class="dl-box">
+      <div class="dl-logo">
+        <span class="material-symbols-outlined">flutter</span>
+        <span class="dl-brand">DocuTracker</span>
+      </div>
+      <div class="dl-spinner">
+        <div class="dl-ring-outer"></div>
+        <div class="dl-ring-inner"></div>
+      </div>
+      <p class="dl-step" id="dlStep">Connecting to server…</p>
+      <div class="dl-bar-track"><div class="dl-bar" id="dlBar"></div></div>
+    </div>
+  </div>
+
   <!-- ===== MODALS ===== -->
   <!-- Add/Edit Document Modal -->
   <div class="modal" id="docModal" style="display:none">
@@ -3768,6 +3905,14 @@
             <label class="form-label">Doc/PR Number <span class="req-star">*</span></label>
             <input type="text" class="form-input" id="docNo" placeholder="e.g., PR-2025-001">
             <span id="docNoError" style="color:var(--danger);font-size:12px;display:none;margin-top:4px"></span>
+          </div>
+
+          <!-- Document Category (full-width, required) -->
+          <div class="form-group form-group-full">
+            <label class="form-label">Document Category <span class="req-star">*</span></label>
+            <select class="form-select" id="docCategory">
+              <option value="">Select category...</option>
+            </select>
           </div>
 
           <!-- Description (full-width) -->
@@ -3998,6 +4143,8 @@
             id="adminStatuses" placeholder="One per line..." style="min-height:120px"></textarea></div>
         <div class="form-group"><label class="form-label">End Users</label><textarea class="form-textarea"
             id="adminEndUsers" placeholder="One per line..." style="min-height:120px"></textarea></div>
+        <div class="form-group"><label class="form-label">Document Category</label><textarea class="form-textarea"
+            id="adminDocCategories" placeholder="One per line..." style="min-height:120px"></textarea></div>
       </div>
       <div class="modal-footer"><button class="btn btn-outline" onclick="closeAdminModal()">Cancel</button><button
           class="btn admin-btn" onclick="saveAdminSettings()"><span
@@ -4235,8 +4382,8 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = 'overdue', sortDirection = 'desc';
-    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
-    let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [] }, selectedFile = null;
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, docCat: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, attachment: true };
+    let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [], docCategories: [] }, selectedFile = null;
     let allLogs = [];
     let _docCreatorMap = {};
     // Per-browser session token (UUID issued by the backend on login).
@@ -4245,7 +4392,7 @@
     let _sessionToken = '';
     try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
     // Active toolbar filter values
-    let activeFilters = { docType: '', status: '', endUser: '' };
+    let activeFilters = { docType: '', docCategory: '', status: '', endUser: '' };
 
     // ===================== VIEW ROUTER =====================
     function showView(name) {
@@ -4294,7 +4441,7 @@
           _sessionToken = r.token || '';
           try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
           showNotif('loginNotif', 'Login successful!', 'success');
-          setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
+          setTimeout(() => { showView('dashboard'); _showDashLoader(); initDashboard(); }, 800);
         }
         else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
       }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
@@ -4327,7 +4474,7 @@
             _sessionToken = r.token || '';
             try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
             showNotif('loginNotif', `${provider} Login successful!`, 'success');
-            setTimeout(() => { showView('dashboard'); initDashboard(); }, 800);
+            setTimeout(() => { showView('dashboard'); _showDashLoader(); initDashboard(); }, 800);
           } else {
             showNotif('loginNotif', r.message || 'Access denied', 'error');
             restoreBtn();
@@ -4479,6 +4626,38 @@
     document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
 
     // ===================== DASHBOARD INIT =====================
+    // ── Dashboard loader — shows real fetch progress after login ──────────
+    function _showDashLoader() {
+      const el = document.getElementById('dashLoader');
+      if (!el) return;
+      el.classList.remove('dl-hiding');
+      el.style.display = 'flex';
+      // Force a reflow so the initial opacity:1 is painted before any transition fires
+      void el.offsetHeight;
+      _setDashLoaderStep('Connecting to server…', 0.05);
+    }
+    function _setDashLoaderStep(msg, pct) {
+      const step = document.getElementById('dlStep');
+      const bar  = document.getElementById('dlBar');
+      // Progress bar: scaleX never triggers layout — pure compositor animation
+      if (bar) bar.style.transform = 'scaleX(' + (pct || 0) + ')';
+      if (!step || step.textContent === msg) return;
+      // Cross-fade the label: fade out → swap text → fade in
+      step.classList.add('dl-step-fade');
+      setTimeout(function () {
+        step.textContent = msg;
+        step.classList.remove('dl-step-fade');
+      }, 190); // slightly longer than the CSS transition (0.18s) to avoid flash
+    }
+    function _hideDashLoader() {
+      const el = document.getElementById('dashLoader');
+      if (!el) return;
+      // CSS transition on opacity handles the smooth fade — no JS animation loop
+      el.classList.add('dl-hiding');
+      // Remove from layout after the transition completes (0.55s defined in CSS)
+      setTimeout(function () { el.style.display = 'none'; el.classList.remove('dl-hiding'); }, 580);
+    }
+
     // ── Skeleton row generator — fills the table with shimmer rows instantly ──
     function _showSkeleton(rows) {
       const cols = 10; // visible columns estimate
@@ -4494,9 +4673,10 @@
       // 🚀 Single server round-trip: user + docs + opts + stats + users
       google.script.run
         .withSuccessHandler(function (result) {
-          if (!result) { showView('login'); return; }
+          if (!result) { _hideDashLoader(); showView('login'); return; }
 
           // 1. User profile — render immediately (fast, local DOM writes)
+          _setDashLoaderStep('Loading user profile…', 0.25);
           if (result.user) {
             currentUser = result.user;
             document.getElementById('userName').textContent = result.user.name || 'User';
@@ -4509,6 +4689,7 @@
           }
 
           // 2. Dropdown options
+          _setDashLoaderStep('Loading dropdown options…', 0.45);
           if (result.opts) {
             dropdownOptions = result.opts;
             populateDropdowns();
@@ -4516,6 +4697,7 @@
           }
 
           // 3. Stats — show immediately from pre-computed server value
+          _setDashLoaderStep('Computing statistics…', 0.60);
           if (result.stats) _applyStats(result.stats);
 
           // 4. Users cache
@@ -4530,14 +4712,20 @@
           }
 
           // 6. Documents — render using chunked RAF so the browser stays responsive
+          _setDashLoaderStep('Rendering documents…', 0.80);
           allDocs = result.docs || [];
           populateTableFilters();
           // Override server-side pre-computed stats with accurate client-side calculation
           // once docs are available in memory (server stats may not have user's team yet).
           _applyStats(_computeStats(allDocs));
           _renderChunked(allDocs, currentFilter);
+
+          // All data rendered — dismiss the loader
+          _setDashLoaderStep('Done!', 1);
+          setTimeout(_hideDashLoader, 300);
         })
         .withFailureHandler(function () {
+          _hideDashLoader();
           toast('Failed to load dashboard data', 'error');
           // Clear skeleton on failure
           const tb = document.getElementById('docTable');
@@ -4722,6 +4910,7 @@
       document.getElementById('docType').innerHTML = '<option value="">Select document type...</option>' + dropdownOptions.docTypes.map(t => `<option value="${t}">${t}</option>`).join('');
       setVal('docType', vDocType);
 
+
       const vSupp = getVal('supp');
       document.getElementById('supp').innerHTML = '<option value="">Select supplier...</option>' + dropdownOptions.suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
       setVal('supp', vSupp);
@@ -4740,6 +4929,12 @@
         eu.innerHTML = '<option value="">Select end user...</option>' + (dropdownOptions.endUsers || []).map(u => `<option value="${u}">${u}</option>`).join('');
         eu.value = vEu;
       }
+      const dcEl = document.getElementById('docCategory');
+      if (dcEl) {
+        const vDc = dcEl.value;
+        dcEl.innerHTML = '<option value="">Select category...</option>' + (dropdownOptions.docCategories || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        if (vDc) dcEl.value = vDc;
+      }
     }
 
     // Populate the three toolbar filter dropdowns from the actual data
@@ -4754,13 +4949,14 @@
         // Restore previous selection if the value still exists
         if (values.includes(prev)) sel.value = prev;
         // Sync activeFilters
-        const keyMap = { filterDocType: 'docType', filterStatus: 'status', filterEndUser: 'endUser' };
+        const keyMap = { filterDocType: 'docType', filterDocCategory: 'docCategory', filterStatus: 'status', filterEndUser: 'endUser' };
         if (keyMap[id]) activeFilters[keyMap[id]] = sel.value;
         // Visual highlight when a filter is active
         sel.classList.toggle('filter-active', !!sel.value);
       };
 
       fill('filterDocType', unique('Doc Type'), 'All Types');
+      fill('filterDocCategory', unique('Document Category'), 'All Categories');
       fill('filterStatus', unique('Status'), 'All Statuses');
       fill('filterEndUser', unique('EndUser'), 'All End Users');
     }
@@ -4774,12 +4970,13 @@
     // the full filter pipeline (sidebar status + toolbar dropdowns + search text).
     function applyTableFilters() {
       activeFilters.docType = document.getElementById('filterDocType').value;
+      activeFilters.docCategory = document.getElementById('filterDocCategory') ? document.getElementById('filterDocCategory').value : '';
       activeFilters.status = document.getElementById('filterStatus').value;
       activeFilters.endUser = document.getElementById('filterEndUser').value;
       // Visual highlight when a filter is active
-      ['filterDocType', 'filterStatus', 'filterEndUser'].forEach(id => {
-        document.getElementById(id).classList.toggle('filter-active',
-          !!document.getElementById(id).value);
+      ['filterDocType', 'filterDocCategory', 'filterStatus', 'filterEndUser'].forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        el.classList.toggle('filter-active', !!el.value);
       });
       currentPage = 1;
       applyFilter(currentFilter);
@@ -4825,6 +5022,10 @@
         filteredDocs = filteredDocs.filter(d =>
           (d['Doc Type'] || '').toLowerCase() === activeFilters.docType.toLowerCase());
       }
+      if (activeFilters.docCategory) {
+        filteredDocs = filteredDocs.filter(d =>
+          (d['Document Category'] || '').toLowerCase() === activeFilters.docCategory.toLowerCase());
+      }
       if (activeFilters.status) {
         filteredDocs = filteredDocs.filter(d =>
           (d.Status || '').toLowerCase() === activeFilters.status.toLowerCase());
@@ -4861,7 +5062,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO' || sortColumn === 'airDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', docCat: 'Document Category', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO' || sortColumn === 'airDate') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -4876,7 +5077,7 @@
       if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="27" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', docCat = d['Document Category'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf
           ? `<a href="${pdf}" target="_blank" onclick="event.stopPropagation()"
@@ -4893,6 +5094,7 @@
 <td class="col-type" style="display:${disp('type')}"><strong>${ty}</strong></td>
 <td class="col-no" style="display:${disp('no')}">${no}</td>
 <td class="hide-mobile col-prDate" style="display:${disp('prDate')}">${prDate}</td>
+<td class="hide-mobile col-docCat" style="display:${disp('docCat')}">${docCat}</td>
 <td class="hide-mobile col-desc" style="display:${disp('desc')}">${ds}</td>
 <td class="col-amount" style="display:${disp('amount')}">${am}</td>
 <td class="col-endUser" style="display:${disp('endUser')}">${eu}</td>
@@ -5013,6 +5215,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         <div class="det-section">
           ${sectionHead('receipt_long', 'Purchase Request (PR)')}
           ${pair('Doc No', val('Doc No'), 'PR Date', fmtDate(val('PR Date')))}
+          ${single('Document Category', val('Document Category'))}
           ${single('Description', `<strong>${val('Description')}</strong>`)}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px">
             <div><div class="dl">Amount</div>
@@ -5219,6 +5422,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const officeEl = document.getElementById('office'); if (officeEl) officeEl.value = '';
       const euEl = document.getElementById('endUser'); if (euEl) euEl.value = '';
       const statEl = document.getElementById('stat'); if (statEl) statEl.value = dropdownOptions.statuses[0] || 'Received';
+      const dcEl2 = document.getElementById('docCategory'); if (dcEl2) dcEl2.value = '';
       const errEl = document.getElementById('docNoError'); if (errEl) errEl.style.display = 'none';
       const poErrEl = document.getElementById('poNoError'); if (poErrEl) poErrEl.style.display = 'none';
       // Set auto-generated timestamps for display
@@ -5267,7 +5471,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         'PO Amount': 'poAmt', 'Supplier': 'supp',
         'AIR No.': 'airNo', 'AIR Date': 'airDate',
         'Date Endorsed To Acctng': 'dateEndorsedToAcctng', 'Date Endorsed From CMO': 'dateEndorsedFromCMO',
-        'Date Endorse To COA': 'dateEndorseToCOA', 'Date Endorse To CTO': 'dateEndorseToCTO', 'Notes': 'note'
+        'Date Endorse To COA': 'dateEndorseToCOA', 'Date Endorse To CTO': 'dateEndorseToCTO', 'Notes': 'note',
+        'Document Category': 'docCategory'
       };
       // Build the list of fields locked for this user (used for locking + badges below)
       const lockedFields = Object.keys(FIELD_ELS).filter(col => {
@@ -5307,6 +5512,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const airDateEl = document.getElementById('airDate'); if (airDateEl) airDateEl.value = doc['AIR Date'] || '';
       const decoaEl = document.getElementById('dateEndorseToCOA'); if (decoaEl) decoaEl.value = doc['Date Endorse To COA'] || '';
       const dectoEl = document.getElementById('dateEndorseToCTO'); if (dectoEl) dectoEl.value = doc['Date Endorse To CTO'] || '';
+      const dcEl = document.getElementById('docCategory'); if (dcEl) dcEl.value = doc['Document Category'] || '';
       // Timestamps: show existing values (all read-only)
       const now = new Date();
       const dtsEl = document.getElementById('docTimeStamp');
@@ -5352,7 +5558,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     function _unlockAllEditFields() {
       ['docType','docNo','desc','prDate','amt','endUser','req',
        'dateReceivedFromBAC','poNo','poDate','poAmt','supp','office',
-       'stat','deliveryStatus','airNo','airDate',
+       'stat','deliveryStatus','airNo','airDate','docCategory',
        'dateEndorsedToAcctng','dateEndorsedFromCMO','dateEndorseToCOA','dateEndorseToCTO','note'
       ].forEach(function(fid) {
         const el = document.getElementById(fid);
@@ -5405,8 +5611,9 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const docType = document.getElementById('docType').value;
       const desc = document.getElementById('desc').value;
       const office = document.getElementById('office').value;
-      if (!docType || !docNo || !desc || !prDate || !endUser || !office) {
-        showAlertModal('Required Fields Missing', 'Please fill in all required fields:<br><br><strong>Document Type, Doc/PR Number, Description, Doc/PR Date, End User,</strong> and <strong>Office/Department (Endorsed To)</strong>.', 'error');
+      const docCategory = document.getElementById('docCategory') ? document.getElementById('docCategory').value : '';
+      if (!docType || !docNo || !docCategory || !desc || !prDate || !endUser || !office) {
+        showAlertModal('Required Fields Missing', 'Please fill in all required fields:<br><br><strong>Document Type, Doc/PR Number, Document Category, Description, Doc/PR Date, End User,</strong> and <strong>Office/Department (Endorsed To)</strong>.', 'error');
         return;
       }
 
@@ -5444,7 +5651,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         airNo: document.getElementById('airNo') ? document.getElementById('airNo').value : '',
         airDate: document.getElementById('airDate') ? document.getElementById('airDate').value : '',
         dateEndorseToCOA: document.getElementById('dateEndorseToCOA') ? document.getElementById('dateEndorseToCOA').value : '',
-        dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : ''
+        dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : '',
+        docCategory: docCategory
       };
       // Capture selected file then save document immediately — PDF uploads in background
       const fileToUpload = selectedFile;
@@ -5483,7 +5691,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             'AIR Date': data.airDate,
             'Date Endorse To COA': data.dateEndorseToCOA,
             'Date Endorse To CTO': data.dateEndorseToCTO,
-            'PDF Link': data.pdfLink || existing['PDF Link'] || ''
+            'PDF Link': data.pdfLink || existing['PDF Link'] || '',
+            'Document Category': data.docCategory || ''
           });
         }
         // Close modal and refresh UI immediately — don't wait for server
@@ -5570,6 +5779,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'Date Endorse To COA': data.dateEndorseToCOA || '',
           'Date Endorse To CTO': data.dateEndorseToCTO || '',
           'PDF Link': data.pdfLink || '',
+          'Document Category': data.docCategory || '',
           'Doc Time Stamp': _nowTs,
           'Overdue': 'On time',
           // Field Owners: per-field JSON map — owner recorded only for fields
@@ -5778,13 +5988,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       document.getElementById('adminStatuses').value = (opts.statuses || []).join('\n');
       const euEl = document.getElementById('adminEndUsers');
       if (euEl) euEl.value = (opts.endUsers || []).join('\n');
+      const dcAdminEl = document.getElementById('adminDocCategories');
+      if (dcAdminEl) dcAdminEl.value = (opts.docCategories || []).join('\n');
       showModal('adminModal');
     }
     function closeAdminModal() { hideModal('adminModal'); }
     function saveAdminSettings() {
       // 🚀 ONE server call instead of 5 — saves all categories in a single round-trip
-      const ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers'];
-      const keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers'];
+      const ids = ['adminDocTypes', 'adminSuppliers', 'adminOffices', 'adminStatuses', 'adminEndUsers', 'adminDocCategories'];
+      const keys = ['docTypes', 'suppliers', 'offices', 'statuses', 'endUsers', 'docCategories'];
       const optionsObj = {};
       ids.forEach((id, i) => {
         const el = document.getElementById(id);
@@ -6211,6 +6423,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const sf = document.getElementById('printStatusFilter');
       if (sf) sf.value = 'all';
 
+      const dcFEl = document.getElementById('printDocCategoryFilter');
+      if (dcFEl) {
+        const dcSet = new Set((dropdownOptions.docCategories || []).map(v => v.trim()).filter(Boolean));
+        (allDocs || []).forEach(d => { const v = (d['Document Category'] || '').trim(); if (v) dcSet.add(v); });
+        const dcSorted = [...dcSet].sort((a, b) => a.localeCompare(b));
+        dcFEl.innerHTML = '<option value="all">All Categories</option>' +
+          dcSorted.map(c => `<option value="${c}">${c}</option>`).join('');
+        dcFEl.value = 'all';
+      }
+
       const df = document.getElementById('printDateFrom');
       if (df) df.value = '';
       const dt = document.getElementById('printDateTo');
@@ -6223,6 +6445,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const euEl = document.getElementById('printEndUserFilter');
       const eu = euEl ? euEl.value : 'all';
       const tf = document.getElementById('printDocTypeFilter').value;
+      const dcfEl = document.getElementById('printDocCategoryFilter');
+      const dcf = dcfEl ? dcfEl.value : 'all';
 
       // Parse filter dates to midnight local time so comparisons are reliable
       const dfMs = dfRaw ? new Date(dfRaw + 'T00:00:00').getTime() : null;
@@ -6278,6 +6502,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         result = result.filter(x => {
           const v = (x['Doc Type'] || '').toLowerCase().trim();
           return v === tfLow;
+        });
+      }
+
+      // 5. Document Category filter — trim + case-insensitive
+      if (dcf && dcf !== 'all') {
+        const dcfLow = dcf.toLowerCase().trim();
+        result = result.filter(x => {
+          const v = (x['Document Category'] || '').toLowerCase().trim();
+          return v === dcfLow;
         });
       }
 
@@ -6517,6 +6750,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         type: document.getElementById('pcol-type').checked,
         no: document.getElementById('pcol-no').checked,
         prDate: document.getElementById('pcol-prDate').checked,
+        docCat: document.getElementById('pcol-docCat') ? document.getElementById('pcol-docCat').checked : false,
         desc: document.getElementById('pcol-desc').checked,
         amount: document.getElementById('pcol-amount').checked,
         endUser: document.getElementById('pcol-endUser').checked,
@@ -6548,6 +6782,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (cols.type) h += `<th>Doc Type</th>`;
       if (cols.no) h += `<th>Doc No</th>`;
       if (cols.prDate) h += `<th>PR Date</th>`;
+      if (cols.docCat) h += `<th>Doc Category</th>`;
       if (cols.desc) h += `<th>Description</th>`;
       if (cols.amount) h += `<th>Amount</th>`;
       if (cols.endUser) h += `<th>EndUser</th>`;
@@ -6578,6 +6813,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         if (cols.type) h += `<td>${d['Doc Type'] || '-'}</td>`;
         if (cols.no) h += `<td>${d['Doc No'] || '-'}</td>`;
         if (cols.prDate) h += `<td>${d['PR Date'] || '-'}</td>`;
+        if (cols.docCat) h += `<td>${d['Document Category'] || '-'}</td>`;
         if (cols.desc) h += `<td>${d.Description || '-'}</td>`;
         if (cols.amount) h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`;
         if (cols.endUser) h += `<td>${d['EndUser'] || '-'}</td>`;
@@ -6867,6 +7103,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (visibleColumns.type) { cols.push('Doc Type'); hdrs.push('Doc Type'); }
       if (visibleColumns.no) { cols.push('Doc No'); hdrs.push('Doc No'); }
       if (visibleColumns.prDate) { cols.push('PR Date'); hdrs.push('PR Date'); }
+      if (visibleColumns.docCat) { cols.push('Document Category'); hdrs.push('Doc Category'); }
       if (visibleColumns.desc) { cols.push('Description'); hdrs.push('Description'); }
       if (visibleColumns.amount) { cols.push('Amount'); hdrs.push('Amount'); }
       if (visibleColumns.endUser) { cols.push('EndUser'); hdrs.push('EndUser'); }
