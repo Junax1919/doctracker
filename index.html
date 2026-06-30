@@ -3899,7 +3899,13 @@
           <!-- Doc Type | Doc No -->
           <div class="form-group">
             <label class="form-label">Document Type <span class="req-star">*</span></label>
-            <select class="form-select" id="docType"></select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="docType" style="flex:1;"></select>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage Document Categories"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Doc/PR Number <span class="req-star">*</span></label>
@@ -3910,9 +3916,15 @@
           <!-- Document Category (full-width, required) -->
           <div class="form-group form-group-full">
             <label class="form-label">Document Category <span class="req-star">*</span></label>
-            <select class="form-select" id="docCategory">
-              <option value="">Select category...</option>
-            </select>
+            <div style="display:flex;gap:8px;">
+              <select class="form-select" id="docCategory" style="flex:1;">
+                <option value="">Select category...</option>
+              </select>
+              <button type="button" class="btn btn-outline"
+                style="padding:0 12px;display:flex;align-items:center;justify-content:center;"
+                onclick="openAdminSettings()" title="Add / Manage Document Categories"><span class="material-symbols-outlined"
+                  style="font-size:18px;">add</span></button>
+            </div>
           </div>
 
           <!-- Description (full-width) -->
@@ -4077,7 +4089,7 @@
             <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('pdfInput').click()">
               <span class="material-symbols-outlined" style="font-size:48px;color:var(--muted)">upload_file</span>
               <p style="margin-top:8px;color:var(--muted)">Click to upload PDF file</p>
-              <p style="font-size:12px;color:var(--muted)">Max size: 10MB</p>
+              <p style="font-size:12px;color:var(--muted)">Max size: 3MB</p>
             </div>
             <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
               onchange="handleFileSelect(event)">
@@ -5874,14 +5886,13 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const file = e.target.files[0];
       if (!file) return;
       if (file.type !== 'application/pdf') { toast('Please select a PDF file', 'error'); e.target.value = ''; return; }
-      const MAX_SIZE = 5 * 1024 * 1024; // 5 MB strict limit
+      const MAX_SIZE = 3 * 1024 * 1024; // 3 MB strict limit
       if (file.size > MAX_SIZE) {
         const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
         showAlertModal(
           'Large File Warning',
-          `The selected file is <strong>${sizeMB} MB</strong>, which exceeds the maximum allowed size of <strong>5 MB</strong>. The file was not attached.<br><br>Please compress your file before uploading. You may use any of the following free tools:<br><br>
-          <a href="https://www.smallpdf.com" target="_blank" style="color:var(--blue)">www.smallpdf.com</a> &nbsp;|&nbsp;
-          <a href="https://www.tinyjpg.com" target="_blank" style="color:var(--blue)">www.tinyjpg.com</a>`,
+          `The selected file is <strong>${sizeMB} MB</strong>, which exceeds the maximum allowed size of <strong>3 MB</strong>. The file was not attached.<br><br>Please compress your file using:<br><br>
+          <a href="https://www.smallpdf.com" target="_blank" style="color:var(--blue)">www.smallpdf.com</a>`,
           'warning'
         );
         e.target.value = ''; // clear input — file is strictly rejected
