@@ -4228,7 +4228,7 @@
 
   <!-- View Document Details Modal -->
   <div class="modal" id="viewModal" style="display:none">
-    <div class="modal-content" style="max-width:720px">
+    <div class="modal-content" style="max-width:1100px">
       <div class="modal-header" style="background:var(--primary);border-radius:12px 12px 0 0">
         <div style="display:flex;align-items:center;gap:10px">
           <span class="material-symbols-outlined" style="color:#94a3b8;font-size:22px">description</span>
@@ -5080,6 +5080,17 @@
         csEl.innerHTML = '<option value="">Select cashier status...</option>' + (dropdownOptions.cashierStatuses || ['Paid','Unpaid','On Process','Pending']).map(c => `<option value="${c}">${c}</option>`).join('');
         if (vCs) csEl.value = vCs;
       }
+
+      // Populate dashboard cashier status checkboxes dynamically
+      const dashCsDropdown = document.getElementById('dashCashierStatusDropdown');
+      if (dashCsDropdown) {
+        const statuses = dropdownOptions.cashierStatuses || ['Paid', 'Unpaid', 'On Process', 'Pending'];
+        // Preserve checked states if possible
+        const checkedVals = Array.from(dashCsDropdown.querySelectorAll('input:checked')).map(cb => cb.value);
+        dashCsDropdown.innerHTML = statuses.map((status, i) => 
+          `<div class="dropdown-item"><input type="checkbox" id="cs-dash-${i}" value="${status}" onchange="applyDashCashierStatus()" ${checkedVals.includes(status) ? 'checked' : ''}><label for="cs-dash-${i}">${status}</label></div>`
+        ).join('');
+      }
     }
 
     // Populate the three toolbar filter dropdowns from the actual data
@@ -5372,7 +5383,46 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           .det-section{padding:16px;border:1px solid var(--border);border-radius:10px;
                        display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
           .det-section.tinted{background:var(--bg)}
+          .view-layout{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:0}
+          .view-left{border-right:1px solid var(--border);padding:20px 18px;overflow-y:auto;
+                     max-height:75vh;background:var(--bg)}
+          .view-right{padding:20px 24px;overflow-y:auto;max-height:75vh}
+          .trail-item{display:flex;gap:14px;align-items:flex-start;position:relative;padding-bottom:18px}
+          .trail-item:not(:last-child):before{content:"";position:absolute;left:9px;top:20px;
+                       bottom:0;width:2px;background:var(--border)}
+          .trail-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;
+                     align-items:center;justify-content:center;margin-top:1px;z-index:1}
+          .trail-dot.created{background:#dcfce7;border:2px solid #16a34a}
+          .trail-dot.updated{background:#dbeafe;border:2px solid #2563eb}
+          .trail-dot.deleted{background:#fee2e2;border:2px solid #dc2626}
+          .trail-dot .material-symbols-outlined{font-size:12px;color:inherit}
+          .trail-dot.created .material-symbols-outlined{color:#16a34a}
+          .trail-dot.updated .material-symbols-outlined{color:#2563eb}
+          .trail-dot.deleted .material-symbols-outlined{color:#dc2626}
+          .trail-action{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+          .trail-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+          .trail-remarks{font-size:11px;color:var(--text);margin-top:4px;padding:6px 8px;
+                         background:#fff;border-radius:6px;border:1px solid var(--border)}
+          @media(max-width:700px){.view-layout{grid-template-columns:1fr}
+            .view-left{border-right:none;border-bottom:1px solid var(--border);max-height:220px}}
         </style>
+        <div class="view-layout">
+          <!-- LEFT: Audit Trail -->
+          <div class="view-left">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+                        color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px">
+              <span class="material-symbols-outlined" style="font-size:15px">history</span>
+              Document Activity Timeline
+            </div>
+            <div id="viewAuditTrail" style="display:flex;flex-direction:column">
+              <div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px">
+                <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:.4">history</span>
+                Loading history…
+              </div>
+            </div>
+          </div>
+          <!-- RIGHT: Document Details -->
+          <div class="view-right">
 
         <!-- ① Header strip: Doc No + Status + Overdue + Doc Type -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;
@@ -5468,7 +5518,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
                <div class="dv" style="font-family:monospace;font-size:12px;color:var(--muted)">${val('ID/Barcode')}</div></div>
         </div>
 
-        <!-- ⑦ PDF Attachment -->
+        <!-- ⑧ PDF Attachment -->
         ${pdf
           ? `<div style="padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;
                          display:flex;align-items:center;gap:12px">
@@ -5488,9 +5538,64 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
                <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">attachment</span>
                No PDF attachment
              </div>`
-        }
-      `;
+        } 
+          </div>
+        </div>
+      `; // close view-right + view-layout
       showModal('viewModal');
+
+      // ── Load Audit Trail async (same approach as searchTrack) ──────────────
+      const auditEl = document.getElementById('viewAuditTrail');
+      const iconMap = {
+        'created':    { icon: 'add_circle',   cls: 'created' },
+        'incoming':   { icon: 'inbox',         cls: 'updated' },
+        'received':   { icon: 'mail',          cls: 'created' },
+        'in review':  { icon: 'rate_review',   cls: 'updated' },
+        'in process': { icon: 'pending',       cls: 'updated' },
+        'approved':   { icon: 'check_circle',  cls: 'created' },
+        'forwarded':  { icon: 'send',          cls: 'updated' },
+        'hold':       { icon: 'pause_circle',  cls: 'updated' },
+        'completed':  { icon: 'task_alt',      cls: 'created' },
+        'complete':   { icon: 'task_alt',      cls: 'created' },
+        'deleted':    { icon: 'delete',        cls: 'deleted' }
+      };
+      const _getTrailIcon = (action, status) => {
+        const al = (action || '').toLowerCase();
+        const sl = (status || '').toLowerCase().trim();
+        if (al.includes('created')) return iconMap['created'];
+        if (al.includes('deleted')) return iconMap['deleted'];
+        return iconMap[sl] || { icon: 'update', cls: 'updated' };
+      };
+      google.script.run
+        .withSuccessHandler(function(hist) {
+          if (!auditEl) return;
+          if (!hist || hist.length === 0) {
+            auditEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:12px;font-style:italic">No activity history recorded for this document.</div>';
+            return;
+          }
+          auditEl.innerHTML = hist.map(function(e) {
+            const { icon, cls } = _getTrailIcon(e.action, e.status);
+            return `
+              <div class="trail-item">
+                <div class="trail-dot ${cls}">
+                  <span class="material-symbols-outlined">${icon}</span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="trail-action">${e.action}</div>
+                  <div class="trail-meta">
+                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">person</span> ${e.user || 'System'}<br>
+                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">schedule</span> ${e.timestamp}
+                    ${e.status ? `<br><span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">label</span> <strong>${e.status}</strong>` : ''}
+                  </div>
+                  ${e.remarks ? `<div class="trail-remarks">${e.remarks}</div>` : ''}
+                </div>
+              </div>`;
+          }).join('');
+        })
+        .withFailureHandler(function() {
+          if (auditEl) auditEl.innerHTML = '<div style="color:var(--muted);font-size:12px;font-style:italic;padding:12px 0">Unable to load history.</div>';
+        })
+        .getDocumentHistory(id);
     }
 
     function closeViewModal() { hideModal('viewModal'); viewingDocId = null; }
@@ -6661,8 +6766,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (df) df.value = '';
       const dt = document.getElementById('printDateTo');
       if (dt) dt.value = '';
-      // Reset Cashier Status checkboxes
-      document.querySelectorAll('#printCashierStatusDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+      // Populate and reset Cashier Status checkboxes dynamically
+      const printCsDropdown = document.getElementById('printCashierStatusDropdown');
+      if (printCsDropdown) {
+        const statuses = dropdownOptions.cashierStatuses || ['Paid', 'Unpaid', 'On Process', 'Pending'];
+        printCsDropdown.innerHTML = statuses.map((status, i) => 
+          `<div class="dropdown-item"><input type="checkbox" id="cs-print-${i}" value="${status}" onchange="updatePrintCashierStatus()"><label for="cs-print-${i}">${status}</label></div>`
+        ).join('');
+      }
       if (document.getElementById('printCashierStatusLabel')) document.getElementById('printCashierStatusLabel').innerText = 'All Cashier Statuses';
     }
     function getPrintFilteredData() {
@@ -7692,7 +7804,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     document.getElementById('mobileOverlay').addEventListener('click', closeMobileSidebar);
     // Auto-close sidebar on mobile when any nav item is tapped
     document.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => { if (window.innerWidth < 768) closeMobileSidebar(); }));
-    ['docModal', 'profileModal', 'adminModal', 'viewModal', 'userModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); else if (id === 'userModal') closeUserModal(); } }); });
+    // Modal backdrop click-to-close behavior has been disabled as requested
     document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); const dcs = document.getElementById('dashCashierStatusDropdown'); if (dcs && !e.target.closest('.dropdown') && !dcs.contains(e.target)) dcs.classList.remove('show'); const pcs = document.getElementById('printCashierStatusDropdown'); if (pcs && !e.target.closest('.dropdown') && !pcs.contains(e.target)) pcs.classList.remove('show'); });
 
     function initDragToScroll() {

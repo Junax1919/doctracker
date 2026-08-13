@@ -226,7 +226,7 @@ function updateDropdownOptions(type, values, tokenParam) {
     }
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
-    const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5 };
+    const columnMap = { docTypes: 1, suppliers: 2, offices: 3, statuses: 4, endUsers: 5, docCategories: 6, cashierStatuses: 7 };
     const column = columnMap[type];
     if (!column) return { status: 'error', message: 'Invalid type' };
     
@@ -981,6 +981,12 @@ function getAllDocuments() {
 }
 
 function addDocument(docData) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { status: 'error', message: 'System is currently busy. Please try saving again.' };
+  }
   try {
     // Use cached docs for duplicate check — avoids a cold sheet read
     const cachedDocs = getAllDocuments();
@@ -1112,10 +1118,18 @@ function addDocument(docData) {
   } catch (error) {
     Logger.log('addDocument error: ' + error);
     return { status: 'error', message: error.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
 
 function updateDocument(docId, docData) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { status: 'error', message: 'System is currently busy. Please try saving again.' };
+  }
   try {
     // Use cached docs for duplicate check — avoids a full sheet read
     const cachedDocs = getAllDocuments();
@@ -1342,10 +1356,18 @@ function updateDocument(docId, docData) {
   } catch (error) {
     Logger.log('updateDocument error: ' + error);
     return { status: 'error', message: error.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
 
 function deleteDocument(docId) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { status: 'error', message: 'System is currently busy. Please try again.' };
+  }
   try {
     const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
@@ -1373,6 +1395,8 @@ function deleteDocument(docId) {
   } catch (error) {
     Logger.log('deleteDocument error: ' + error);
     return { status: 'error', message: error.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
 
