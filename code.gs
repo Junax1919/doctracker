@@ -124,8 +124,8 @@ function initializeConfigSheet() {
   let configSheet = ss.getSheetByName(CONFIG_SHEET);
   if (!configSheet) {
     configSheet = ss.insertSheet(CONFIG_SHEET);
-    configSheet.getRange(1, 1, 1, 6).setValues([['Document Types', 'Suppliers', 'Offices', 'Status Options', 'EndUser', 'Document Category']]);
-    configSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    configSheet.getRange(1, 1, 1, 7).setValues([['Document Types', 'Suppliers', 'Offices', 'Status Options', 'EndUser', 'Document Category', 'Cashier Status']]);
+    configSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
     const defaultDocTypes = ['Purchase Request','Purchase Order','Notice to Proceed',
       'Notice of Award','COA AOM','Memos','DTR','Leave','PAR','PRS','Clearance'];
     const defaultOffices  = ['GSO-Supp','GSO-Admin','GSO-Rec','BAC','CADMIN',
@@ -142,6 +142,8 @@ function initializeConfigSheet() {
     defaultStatuses.forEach((v, i) => configSheet.getRange(i + 2, 4).setValue(v));
     defaultEndUsers.forEach((v, i) => configSheet.getRange(i + 2, 5).setValue(v));
     defaultDocCategories.forEach((v, i) => configSheet.getRange(i + 2, 6).setValue(v));
+    const defaultCashierStatuses = ['Paid', 'Unpaid', 'On Process', 'Pending'];
+    defaultCashierStatuses.forEach((v, i) => configSheet.getRange(i + 2, 7).setValue(v));
     Logger.log('Config sheet created with defaults');
   } else {
     // Ensure EndUser header exists in col 5 for existing sheets
@@ -173,6 +175,19 @@ function initializeConfigSheet() {
         configSheet.getRange(1, 6).setFontWeight('bold');
       }
     }
+    // Ensure Cashier Status header exists in col 7 for existing sheets
+    if (lastCol < 7) {
+      configSheet.getRange(1, 7).setValue('Cashier Status');
+      configSheet.getRange(1, 7).setFontWeight('bold');
+      const defaultCashierStatuses = ['Paid', 'Unpaid', 'On Process', 'Pending'];
+      defaultCashierStatuses.forEach((v, i) => configSheet.getRange(i + 2, 7).setValue(v));
+    } else {
+      const csHeader = configSheet.getRange(1, 7).getValue();
+      if (!csHeader || csHeader.toString().trim() === '') {
+        configSheet.getRange(1, 7).setValue('Cashier Status');
+        configSheet.getRange(1, 7).setFontWeight('bold');
+      }
+    }
   }
   return configSheet;
 }
@@ -184,7 +199,7 @@ function getDropdownOptions() {
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
     const data = configSheet.getDataRange().getValues();
-    const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [] };
+    const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) options.docTypes.push(data[i][0]);
       if (data[i][1]) options.suppliers.push(data[i][1]);
@@ -192,12 +207,13 @@ function getDropdownOptions() {
       if (data[i][3]) options.statuses.push(data[i][3]);
       if (data[i][4]) options.endUsers.push(data[i][4]);
       if (data[i][5]) options.docCategories.push(data[i][5]);
+      if (data[i][6]) options.cashierStatuses.push(data[i][6]);
     }
     try { CacheService.getScriptCache().put('dropdown_opts', JSON.stringify(options), 300); } catch(e) {}
     return options;
   } catch (error) {
     Logger.log('getDropdownOptions error: ' + error);
-    return { docTypes: ['Purchase Request'], suppliers: [], offices: ['GSO-Admin'], statuses: ['Received'], endUsers: [], docCategories: [] };
+    return { docTypes: ['Purchase Request'], suppliers: [], offices: ['GSO-Admin'], statuses: ['Received'], endUsers: [], docCategories: [], cashierStatuses: ['Paid','Unpaid','On Process','Pending'] };
   }
 }
 
@@ -843,7 +859,8 @@ function ensureDocumentSheetHeaders(sheet) {
       'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
       'Date Endorse To COA','Date Endorse To CTO',
       'Date Received','Due Date','Overdue','Notes','PDF Link',
-      'Field Owners','PO Fields Owner','Document Category'  // Field Owners = JSON map {fieldName: ownerEmail} for ALL editable fields; PO Fields Owner is legacy/unused
+      'Field Owners','PO Fields Owner','Document Category',  // Field Owners = JSON map {fieldName: ownerEmail} for ALL editable fields; PO Fields Owner is legacy/unused
+      'Cashier Status','Date Paid'
     ];
     if (!sheet) return;
     const data = sheet.getDataRange().getValues();
@@ -978,16 +995,17 @@ function addDocument(docData) {
     let sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
-      sheet.getRange(1, 1, 1, 33).setValues([[
+      sheet.getRange(1, 1, 1, 35).setValues([[
         'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
         'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
         'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
         'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
         'Date Endorse To COA','Date Endorse To CTO',
         'Date Received','Due Date','Overdue','Notes','PDF Link',
-        'Field Owners','PO Fields Owner','Document Category'
+        'Field Owners','PO Fields Owner','Document Category',
+        'Cashier Status','Date Paid'
       ]]);
-      sheet.getRange(1, 1, 1, 33).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 35).setFontWeight('bold');
     } else {
       // Ensure new columns exist in existing sheets
       ensureDocumentSheetHeaders(sheet);
@@ -1068,7 +1086,9 @@ function addDocument(docData) {
       docData.pdfLink              || '',
       JSON.stringify(fieldOwners),            // Field Owners — per-field map, blank fields unowned
       '',                                      // PO Fields Owner — legacy/unused
-      docData.docCategory                || '' // Document Category
+      docData.docCategory                || '', // Document Category
+      docData.cashierStatus              || '', // Cashier Status
+      docData.datePaid                   || ''  // Date Paid
     ]);
     _invalidateDocsCache();
     const createRemarks = [
@@ -1215,6 +1235,8 @@ function updateDocument(docId, docData) {
     _setF('Notes',                   docData.notes                || '');
     _setF('PDF Link',                docData.pdfLink              || existingPdf || '');
     _setF('Document Category',       docData.docCategory          || '');
+    _setF('Cashier Status',          docData.cashierStatus        || '');
+    _setF('Date Paid',               docData.datePaid             || '');
 
     // ── Per-field lock enforcement (all editable fields) ───────────────────────
     // For each editable field: if it's locked (owned by someone else, currently
@@ -1296,7 +1318,9 @@ function updateDocument(docId, docData) {
       { label: 'Delivery Status',     col: 'Delivery Status',         nw: docData.deliveryStatus       },
       { label: 'Date End. To COA',    col: 'Date Endorse To COA',     nw: docData.dateEndorseToCOA     },
       { label: 'Date End. To CTO',    col: 'Date Endorse To CTO',     nw: docData.dateEndorseToCTO     },
-      { label: 'Notes',               col: 'Notes',                   nw: docData.notes                }
+      { label: 'Notes',               col: 'Notes',                   nw: docData.notes                },
+      { label: 'Cashier Status',       col: 'Cashier Status',           nw: docData.cashierStatus        },
+      { label: 'Date Paid',            col: 'Date Paid',                nw: docData.datePaid             }
     ];
     const _fChanges = [];
     _fldDefs.forEach(function(f) {
@@ -1774,22 +1798,22 @@ function updateAllDropdownOptions(optionsObj, tokenParam) {
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
 
-    const keys = ['docTypes','suppliers','offices','statuses','endUsers','docCategories'];
+    const keys = ['docTypes','suppliers','offices','statuses','endUsers','docCategories','cashierStatuses'];
     // Build per-column value arrays
     const cols = keys.map(k =>
       [...new Set((optionsObj[k] || []).map(v => String(v).trim()).filter(v => v))]
     );
     const maxRows = Math.max(...cols.map(c => c.length), 1);
 
-    // Clear existing data rows (all 6 columns in one API call)
+    // Clear existing data rows (all 7 columns in one API call)
     const lastRow = configSheet.getLastRow();
-    if (lastRow > 1) configSheet.getRange(2, 1, lastRow - 1, 6).clearContent();
+    if (lastRow > 1) configSheet.getRange(2, 1, lastRow - 1, 7).clearContent();
 
-    // Write all 6 columns in ONE setValues call (build 2D array)
+    // Write all 7 columns in ONE setValues call (build 2D array)
     const grid = Array.from({ length: maxRows }, (_, r) =>
       cols.map(col => col[r] !== undefined ? col[r] : '')
     );
-    configSheet.getRange(2, 1, maxRows, 6).setValues(grid);
+    configSheet.getRange(2, 1, maxRows, 7).setValues(grid);
 
     _invalidateDropdownCache();
     return { status: 'success', message: 'All dropdown options updated successfully' };
