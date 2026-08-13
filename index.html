@@ -3461,14 +3461,22 @@
                   onchange="applyTableFilters()">
                   <option value="">All End Users</option>
                 </select>
-                <select id="filterCashierStatus" class="filter-select" title="Filter by Cashier Status"
+                <select id="filterSupplier" class="filter-select" title="Filter by Supplier"
                   onchange="applyTableFilters()">
-                  <option value="">All Cashier Statuses</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Unpaid">Unpaid</option>
-                  <option value="On Process">On Process</option>
-                  <option value="Pending">Pending</option>
+                  <option value="">All Suppliers</option>
                 </select>
+                <div class="dropdown">
+                  <button class="btn btn-outline filter-select" id="filterCashierStatusBtn" style="min-width: 175px; justify-content: space-between;" onclick="toggleDashCashierStatusDropdown(event)">
+                    <span id="filterCashierStatusLabel" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">All Cashier Statuses</span>
+                    <span class="material-symbols-outlined" style="font-size:16px">arrow_drop_down</span>
+                  </button>
+                  <div class="dropdown-menu" id="dashCashierStatusDropdown">
+                    <div class="dropdown-item"><input type="checkbox" id="cs-dash-paid" value="Paid" onchange="applyDashCashierStatus()"><label for="cs-dash-paid">Paid</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="cs-dash-unpaid" value="Unpaid" onchange="applyDashCashierStatus()"><label for="cs-dash-unpaid">Unpaid</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="cs-dash-onprocess" value="On Process" onchange="applyDashCashierStatus()"><label for="cs-dash-onprocess">On Process</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="cs-dash-pending" value="Pending" onchange="applyDashCashierStatus()"><label for="cs-dash-pending">Pending</label></div>
+                  </div>
+                </div>
 
                 <div class="dropdown"><button class="btn btn-outline" id="exportBtn"
                     onclick="toggleExportDropdown(event)"><span class="material-symbols-outlined">download</span><span
@@ -3802,6 +3810,10 @@
                     id="printEndUserFilter">
                     <option value="all">All End Users</option>
                   </select></div>
+                <div class="form-group"><label class="form-label">Supplier Filter</label><select class="form-select"
+                    id="printSupplierFilter">
+                    <option value="all">All Suppliers</option>
+                  </select></div>
                 <div class="form-group"><label class="form-label">Document Type Filter</label><select
                     class="form-select" id="printDocTypeFilter">
                     <option value="all">All Types</option>
@@ -3810,14 +3822,21 @@
                     class="form-select" id="printDocCategoryFilter">
                     <option value="all">All Categories</option>
                   </select></div>
-                <div class="form-group"><label class="form-label">Cashier Status Filter</label><select
-                    class="form-select" id="printCashierStatusFilter">
-                    <option value="all">All Cashier Statuses</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Unpaid">Unpaid</option>
-                    <option value="On Process">On Process</option>
-                    <option value="Pending">Pending</option>
-                  </select></div>
+                <div class="form-group">
+                  <label class="form-label">Cashier Status Filter</label>
+                  <div class="dropdown" style="width: 100%;">
+                    <button class="btn btn-outline filter-select" id="printCashierStatusBtn" style="width: 100%; justify-content:space-between; background: #fff;" onclick="togglePrintCashierStatusDropdown(event)">
+                      <span id="printCashierStatusLabel" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">All Cashier Statuses</span>
+                      <span class="material-symbols-outlined" style="font-size:16px">arrow_drop_down</span>
+                    </button>
+                    <div class="dropdown-menu" id="printCashierStatusDropdown" style="width: 100%;">
+                      <div class="dropdown-item"><input type="checkbox" id="cs-print-paid" value="Paid" onchange="updatePrintCashierStatus()"><label for="cs-print-paid">Paid</label></div>
+                      <div class="dropdown-item"><input type="checkbox" id="cs-print-unpaid" value="Unpaid" onchange="updatePrintCashierStatus()"><label for="cs-print-unpaid">Unpaid</label></div>
+                      <div class="dropdown-item"><input type="checkbox" id="cs-print-onprocess" value="On Process" onchange="updatePrintCashierStatus()"><label for="cs-print-onprocess">On Process</label></div>
+                      <div class="dropdown-item"><input type="checkbox" id="cs-print-pending" value="Pending" onchange="updatePrintCashierStatus()"><label for="cs-print-pending">Pending</label></div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div id="printColumnsSection" style="display:none">
                 <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
@@ -4446,8 +4465,7 @@
     // shared between browsers/devices — each gets its own unique token.
     let _sessionToken = '';
     try { _sessionToken = localStorage.getItem('docutracker_session_token') || ''; } catch (e) { }
-    // Active toolbar filter values
-    let activeFilters = { docType: '', docCategory: '', status: '', endUser: '', cashierStatus: '' };
+    let activeFilters = { docType: '', docCategory: '', status: '', endUser: '', supplier: '', cashierStatus: [] };
 
     // ===================== VIEW ROUTER =====================
     function showView(name) {
@@ -5076,7 +5094,7 @@
         // Restore previous selection if the value still exists
         if (values.includes(prev)) sel.value = prev;
         // Sync activeFilters
-        const keyMap = { filterDocType: 'docType', filterDocCategory: 'docCategory', filterStatus: 'status', filterEndUser: 'endUser', filterCashierStatus: 'cashierStatus' };
+        const keyMap = { filterDocType: 'docType', filterDocCategory: 'docCategory', filterStatus: 'status', filterEndUser: 'endUser', filterSupplier: 'supplier' };
         if (keyMap[id]) activeFilters[keyMap[id]] = sel.value;
         // Visual highlight when a filter is active
         sel.classList.toggle('filter-active', !!sel.value);
@@ -5086,6 +5104,7 @@
       fill('filterDocCategory', unique('Document Category'), 'All Categories');
       fill('filterStatus', unique('Status'), 'All Statuses');
       fill('filterEndUser', unique('EndUser'), 'All End Users');
+      fill('filterSupplier', unique('Supplier'), 'All Suppliers');
     }
 
     // updateStats / updateBadges — now compute from in-memory allDocs (instant, no server call)
@@ -5100,9 +5119,10 @@
       activeFilters.docCategory = document.getElementById('filterDocCategory') ? document.getElementById('filterDocCategory').value : '';
       activeFilters.status = document.getElementById('filterStatus').value;
       activeFilters.endUser = document.getElementById('filterEndUser').value;
-      activeFilters.cashierStatus = document.getElementById('filterCashierStatus') ? document.getElementById('filterCashierStatus').value : '';
+      activeFilters.supplier = document.getElementById('filterSupplier') ? document.getElementById('filterSupplier').value : '';
+      // Cashier Status is handled via applyDashCashierStatus separately, but we ensure highlight is correct
       // Visual highlight when a filter is active
-      ['filterDocType', 'filterDocCategory', 'filterStatus', 'filterEndUser', 'filterCashierStatus'].forEach(id => {
+      ['filterDocType', 'filterDocCategory', 'filterStatus', 'filterEndUser', 'filterSupplier'].forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         el.classList.toggle('filter-active', !!el.value);
       });
@@ -5162,9 +5182,15 @@
         filteredDocs = filteredDocs.filter(d =>
           (d['EndUser'] || d['End User'] || '').toLowerCase() === activeFilters.endUser.toLowerCase());
       }
-      if (activeFilters.cashierStatus) {
+      if (activeFilters.supplier) {
         filteredDocs = filteredDocs.filter(d =>
-          (d['Cashier Status'] || '').toLowerCase() === activeFilters.cashierStatus.toLowerCase());
+          (d['Supplier'] || '').toLowerCase() === activeFilters.supplier.toLowerCase());
+      }
+      if (activeFilters.cashierStatus && activeFilters.cashierStatus.length > 0) {
+        filteredDocs = filteredDocs.filter(d => {
+          const v = (d['Cashier Status'] || '').trim().toLowerCase();
+          return activeFilters.cashierStatus.some(cs => cs.toLowerCase() === v);
+        });
       }
 
       // 3. Free-text search (across all visible fields)
@@ -5199,6 +5225,30 @@
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
     function toggleExportDropdown(e) { e.stopPropagation(); document.getElementById('exportDropdown').classList.toggle('show'); }
+    function toggleDashCashierStatusDropdown(e) { e.stopPropagation(); document.getElementById('dashCashierStatusDropdown').classList.toggle('show'); }
+    function togglePrintCashierStatusDropdown(e) { e.stopPropagation(); document.getElementById('printCashierStatusDropdown').classList.toggle('show'); }
+    
+    function applyDashCashierStatus() {
+      const csDashBoxes = document.querySelectorAll('#dashCashierStatusDropdown input[type="checkbox"]:checked');
+      const csVals = Array.from(csDashBoxes).map(cb => cb.value);
+      activeFilters.cashierStatus = csVals;
+      const btn = document.getElementById('filterCashierStatusBtn');
+      if (btn) {
+        btn.classList.toggle('filter-active', csVals.length > 0);
+        document.getElementById('filterCashierStatusLabel').innerText = csVals.length > 0 ? csVals.join(', ') : 'All Cashier Statuses';
+      }
+      currentPage = 1;
+      applyFilter(currentFilter);
+    }
+    
+    function updatePrintCashierStatus() {
+      const csPrintBoxes = document.querySelectorAll('#printCashierStatusDropdown input[type="checkbox"]:checked');
+      const csVals = Array.from(csPrintBoxes).map(cb => cb.value);
+      const btn = document.getElementById('printCashierStatusBtn');
+      if (btn) {
+        document.getElementById('printCashierStatusLabel').innerText = csVals.length > 0 ? csVals.join(', ') : 'All Cashier Statuses';
+      }
+    }
 
     function formatAmountInput(inp) { let v = inp.value.replace(/[^\d.]/g, ''); const p = v.split('.'); if (p.length > 2) v = p[0] + '.' + p.slice(1).join(''); if (p[0]) { const int = parseInt(p[0]).toLocaleString('en-US'); inp.value = p.length > 1 ? int + '.' + p[1].substring(0, 2) : int; } else { inp.value = v; } }
     function formatAmountDisplay(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -6567,6 +6617,19 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         euEl.value = 'all';
       }
 
+      const spEl = document.getElementById('printSupplierFilter');
+      if (spEl) {
+        const spSet = new Set();
+        (allDocs || []).forEach(d => {
+          const v = (d.Supplier || '').trim();
+          if (v) spSet.add(v);
+        });
+        const spSorted = [...spSet].sort((a, b) => a.localeCompare(b));
+        spEl.innerHTML = '<option value="all">All Suppliers</option>' +
+          spSorted.map(o => `<option value="${o}">${o}</option>`).join('');
+        spEl.value = 'all';
+      }
+
       if (dtEl) {
         // Merge configured doc types + actual values found in documents
         const dtSet = new Set((dropdownOptions.docTypes || []).map(v => v.trim()).filter(Boolean));
@@ -6598,9 +6661,9 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       if (df) df.value = '';
       const dt = document.getElementById('printDateTo');
       if (dt) dt.value = '';
-      // Reset Cashier Status filter to default
-      const csfEl = document.getElementById('printCashierStatusFilter');
-      if (csfEl) csfEl.value = 'all';
+      // Reset Cashier Status checkboxes
+      document.querySelectorAll('#printCashierStatusDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+      if (document.getElementById('printCashierStatusLabel')) document.getElementById('printCashierStatusLabel').innerText = 'All Cashier Statuses';
     }
     function getPrintFilteredData() {
       const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
@@ -6608,6 +6671,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const sf = document.getElementById('printStatusFilter').value;
       const euEl = document.getElementById('printEndUserFilter');
       const eu = euEl ? euEl.value : 'all';
+      const spEl = document.getElementById('printSupplierFilter');
+      const sp = spEl ? spEl.value : 'all';
       const tf = document.getElementById('printDocTypeFilter').value;
       const dcfEl = document.getElementById('printDocCategoryFilter');
       const dcf = dcfEl ? dcfEl.value : 'all';
@@ -6660,6 +6725,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         });
       }
 
+      // 4. Supplier filter
+      if (sp && sp !== 'all') {
+        const spLow = sp.toLowerCase().trim();
+        result = result.filter(x => {
+          const v = (x.Supplier || '').toLowerCase().trim();
+          return v === spLow;
+        });
+      }
+
       // 4. Doc Type filter — trim + case-insensitive
       if (tf && tf !== 'all') {
         const tfLow = tf.toLowerCase().trim();
@@ -6678,14 +6752,13 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         });
       }
 
-      // 6. Cashier Status filter
-      const csfEl = document.getElementById('printCashierStatusFilter');
-      const csf = csfEl ? csfEl.value : 'all';
-      if (csf && csf !== 'all') {
-        const csfLow = csf.toLowerCase().trim();
+      // 6. Cashier Status filter (multi-select)
+      const csPrintBoxes = document.querySelectorAll('#printCashierStatusDropdown input[type="checkbox"]:checked');
+      const csVals = Array.from(csPrintBoxes).map(cb => cb.value.toLowerCase().trim());
+      if (csVals.length > 0) {
         result = result.filter(x => {
           const v = (x['Cashier Status'] || '').toLowerCase().trim();
-          return v === csfLow;
+          return csVals.includes(v);
         });
       }
 
@@ -7620,7 +7693,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     // Auto-close sidebar on mobile when any nav item is tapped
     document.querySelectorAll('.nav-link').forEach(el => el.addEventListener('click', () => { if (window.innerWidth < 768) closeMobileSidebar(); }));
     ['docModal', 'profileModal', 'adminModal', 'viewModal', 'userModal'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.addEventListener('click', e => { if (e.target === el) { if (id === 'docModal') closeModal(); else if (id === 'profileModal') closeProfileModal(); else if (id === 'adminModal') closeAdminModal(); else if (id === 'viewModal') closeViewModal(); else if (id === 'userModal') closeUserModal(); } }); });
-    document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); });
+    document.addEventListener('click', e => { const ud = document.getElementById('userDropdown'), up = document.getElementById('userProfile'); if (ud && !up.contains(e.target)) ud.classList.remove('show'); const cd = document.getElementById('columnsDropdown'), xd = document.getElementById('exportDropdown'); if (cd && !e.target.closest('.dropdown') && !cd.contains(e.target)) cd.classList.remove('show'); if (xd && !e.target.closest('#exportBtn') && !xd.contains(e.target)) xd.classList.remove('show'); const dcs = document.getElementById('dashCashierStatusDropdown'); if (dcs && !e.target.closest('.dropdown') && !dcs.contains(e.target)) dcs.classList.remove('show'); const pcs = document.getElementById('printCashierStatusDropdown'); if (pcs && !e.target.closest('.dropdown') && !pcs.contains(e.target)) pcs.classList.remove('show'); });
 
     function initDragToScroll() {
       const containers = document.querySelectorAll('.table-container, .logs-table-wrap');
