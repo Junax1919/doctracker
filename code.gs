@@ -124,8 +124,8 @@ function initializeConfigSheet() {
   let configSheet = ss.getSheetByName(CONFIG_SHEET);
   if (!configSheet) {
     configSheet = ss.insertSheet(CONFIG_SHEET);
-    configSheet.getRange(1, 1, 1, 5).setValues([['Document Types', 'Suppliers', 'Offices', 'Status Options', 'EndUser']]);
-    configSheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+    configSheet.getRange(1, 1, 1, 6).setValues([['Document Types', 'Suppliers', 'Offices', 'Status Options', 'EndUser', 'Document Category']]);
+    configSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
     const defaultDocTypes = ['Purchase Request','Purchase Order','Notice to Proceed',
       'Notice of Award','COA AOM','Memos','DTR','Leave','PAR','PRS','Clearance'];
     const defaultOffices  = ['GSO-Supp','GSO-Admin','GSO-Rec','BAC','CADMIN',
@@ -133,10 +133,15 @@ function initializeConfigSheet() {
     const defaultStatuses = ['Received','Incoming','In Review','In Process',
       'Approved','Forwarded','Hold','Completed'];
     const defaultEndUsers = ['GSO','BAC','CADMIN','CMO','CBO','CACCTO','COA','CPDO','CECON'];
+    const defaultDocCategories = [
+      'Catering Services','Job Order Services','Printing Services','Medicines',
+      'Medical','Reimbursement','Infrastructure Projects','Goods Services'
+    ];
     defaultDocTypes.forEach((v, i) => configSheet.getRange(i + 2, 1).setValue(v));
     defaultOffices.forEach((v, i)  => configSheet.getRange(i + 2, 3).setValue(v));
     defaultStatuses.forEach((v, i) => configSheet.getRange(i + 2, 4).setValue(v));
     defaultEndUsers.forEach((v, i) => configSheet.getRange(i + 2, 5).setValue(v));
+    defaultDocCategories.forEach((v, i) => configSheet.getRange(i + 2, 6).setValue(v));
     Logger.log('Config sheet created with defaults');
   } else {
     // Ensure EndUser header exists in col 5 for existing sheets
@@ -151,6 +156,23 @@ function initializeConfigSheet() {
         configSheet.getRange(1, 5).setFontWeight('bold');
       }
     }
+    // Ensure Document Category header exists in col 6 for existing sheets
+    if (lastCol < 6) {
+      configSheet.getRange(1, 6).setValue('Document Category');
+      configSheet.getRange(1, 6).setFontWeight('bold');
+      // Seed defaults if col 6 is brand new
+      const defaultDocCategories = [
+        'Catering Services','Job Order Services','Printing Services','Medicines',
+        'Medical','Reimbursement','Infrastructure Projects','Goods Services'
+      ];
+      defaultDocCategories.forEach((v, i) => configSheet.getRange(i + 2, 6).setValue(v));
+    } else {
+      const catHeader = configSheet.getRange(1, 6).getValue();
+      if (!catHeader || catHeader.toString().trim() === '') {
+        configSheet.getRange(1, 6).setValue('Document Category');
+        configSheet.getRange(1, 6).setFontWeight('bold');
+      }
+    }
   }
   return configSheet;
 }
@@ -162,19 +184,20 @@ function getDropdownOptions() {
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
     const data = configSheet.getDataRange().getValues();
-    const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
+    const options = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [] };
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) options.docTypes.push(data[i][0]);
       if (data[i][1]) options.suppliers.push(data[i][1]);
       if (data[i][2]) options.offices.push(data[i][2]);
       if (data[i][3]) options.statuses.push(data[i][3]);
       if (data[i][4]) options.endUsers.push(data[i][4]);
+      if (data[i][5]) options.docCategories.push(data[i][5]);
     }
     try { CacheService.getScriptCache().put('dropdown_opts', JSON.stringify(options), 300); } catch(e) {}
     return options;
   } catch (error) {
     Logger.log('getDropdownOptions error: ' + error);
-    return { docTypes: ['Purchase Request'], suppliers: [], offices: ['GSO-Admin'], statuses: ['Received'], endUsers: [] };
+    return { docTypes: ['Purchase Request'], suppliers: [], offices: ['GSO-Admin'], statuses: ['Received'], endUsers: [], docCategories: [] };
   }
 }
 
@@ -819,7 +842,8 @@ function ensureDocumentSheetHeaders(sheet) {
       'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
       'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
       'Date Endorse To COA','Date Endorse To CTO',
-      'Date Received','Due Date','Overdue','Notes','PDF Link'
+      'Date Received','Due Date','Overdue','Notes','PDF Link',
+      'Field Owners','PO Fields Owner','Document Category'  // Field Owners = JSON map {fieldName: ownerEmail} for ALL editable fields; PO Fields Owner is legacy/unused
     ];
     if (!sheet) return;
     const data = sheet.getDataRange().getValues();
@@ -954,15 +978,16 @@ function addDocument(docData) {
     let sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(DOCS_SHEET);
-      sheet.getRange(1, 1, 1, 30).setValues([[
+      sheet.getRange(1, 1, 1, 33).setValues([[
         'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
         'EndUser','PO Time Stamp','Date Received From BAC','PO No','PO Date','PO Amount',
         'Supplier','Requisitioner','Endorsed To','Endorsement Time Stamp','Status',
         'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
         'Date Endorse To COA','Date Endorse To CTO',
-        'Date Received','Due Date','Overdue','Notes','PDF Link'
+        'Date Received','Due Date','Overdue','Notes','PDF Link',
+        'Field Owners','PO Fields Owner','Document Category'
       ]]);
-      sheet.getRange(1, 1, 1, 30).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 33).setFontWeight('bold');
     } else {
       // Ensure new columns exist in existing sheets
       ensureDocumentSheetHeaders(sheet);
@@ -978,6 +1003,38 @@ function addDocument(docData) {
     const poTimeStamp = (docData.poNo && docData.poNo.trim() !== '') ? _fmtTs(now) : '';
     // Endorsement Time Stamp: recorded when Endorsed To (office) is set on creation
     const endorsementTimeStamp = (docData.office && docData.office.trim() !== '') ? _fmtTs(now) : '';
+    // ── Per-field PR ownership: record an owner only for PR fields that have a
+    // non-empty value on creation. Blank fields stay unowned and remain editable
+    // by anyone until someone fills them in.
+    const cu = getCurrentUser();
+    const creatorEmail = cu ? (cu.email || '').toLowerCase().trim() : '';
+    // Note: Endorsed To, Status, and Delivery Status are intentionally excluded —
+    // these are shared workflow fields that multiple departments update in sequence.
+    const _FIELD_VALUES = {
+      'Doc Type':      docData.docType       || '',
+      'Doc No':        docData.docNo         || '',
+      'PR Date':       docData.prDate        || '',
+      'Description':   docData.description   || '',
+      'Amount':        formatAmount(docData.amount),
+      'EndUser':       docData.endUser       || '',
+      'Requisitioner': docData.requisitioner || '',
+      'Date Received From BAC': docData.dateReceivedFromBAC || '',
+      'PO No':                  docData.poNo                || '',
+      'PO Date':                docData.poDate              || '',
+      'PO Amount':              formatAmount(docData.poAmount),
+      'Supplier':               docData.supplier            || '',
+      'AIR No.':                docData.airNo               || '',
+      'AIR Date':               docData.airDate             || '',
+      'Date Endorsed To Acctng': docData.dateEndorsedToAcctng || '',
+      'Date Endorsed From CMO':  docData.dateEndorsedFromCMO  || '',
+      'Date Endorse To COA':     docData.dateEndorseToCOA     || '',
+      'Date Endorse To CTO':     docData.dateEndorseToCTO     || '',
+      'Notes':                  docData.notes               || ''
+    };
+    const fieldOwners = {};
+    Object.keys(_FIELD_VALUES).forEach(function(k) {
+      if (String(_FIELD_VALUES[k] || '').trim() !== '') fieldOwners[k] = creatorEmail;
+    });
     sheet.appendRow([
       docTimeStamp,
       docId,
@@ -1008,7 +1065,10 @@ function addDocument(docData) {
       _fmtDate(dueDate),
       calculateOverdueStatus(dateRcvd, docData.status),
       docData.notes                || '',
-      docData.pdfLink              || ''
+      docData.pdfLink              || '',
+      JSON.stringify(fieldOwners),            // Field Owners — per-field map, blank fields unowned
+      '',                                      // PO Fields Owner — legacy/unused
+      docData.docCategory                || '' // Document Category
     ]);
     _invalidateDocsCache();
     const createRemarks = [
@@ -1018,7 +1078,6 @@ function addDocument(docData) {
       docData.prDate    ? `PR Date: ${docData.prDate}`           : '',
       docData.supplier  ? `Supplier: ${docData.supplier}`        : ''
     ].filter(Boolean).join(' | ');
-    const cu = getCurrentUser();
     // Build a descriptive create log message
     const createDetail = 'Created New Document: ' + (docData.description || '(no description)') +
       (docData.docNo    ? ' | Doc No: '       + docData.docNo    : '') +
@@ -1103,6 +1162,21 @@ function updateDocument(docId, docData) {
                                   : origEndTs;
     const pdfLinkCol   = colIdx['PDF Link'];
     const existingPdf  = (pdfLinkCol !== undefined) ? origRow[pdfLinkCol] : '';
+
+    // ── Per-field PR ownership setup ───────────────────────────────────────────
+    // Reads the JSON owner map from 'Field Owners'. A field is locked only if
+    // it (a) currently has a non-empty value, (b) has a recorded owner, and
+    // (c) that owner is someone other than the caller. Admin bypasses all locks.
+    const callerEmail = cu ? (cu.email || '').toLowerCase().trim() : '';
+    const isAdmin     = cu && (cu.role || '').toLowerCase() === 'admin';
+    const fieldOwnersCol = colIdx['Field Owners'];
+    let fieldOwners = {};
+    if (fieldOwnersCol !== undefined) {
+      try {
+        const raw = origRow[fieldOwnersCol];
+        if (raw) fieldOwners = JSON.parse(raw);
+      } catch (e) { fieldOwners = {}; }
+    }
     // ── Column-name-aware row write ────────────────────────────────────────────
     // Builds the updated row from the original row data, overwriting only the
     // fields that belong to this update. Works correctly with BOTH the old
@@ -1140,6 +1214,44 @@ function updateDocument(docId, docData) {
     _setF('Overdue',                 calculateOverdueStatus(dateRcvd, docData.status));
     _setF('Notes',                   docData.notes                || '');
     _setF('PDF Link',                docData.pdfLink              || existingPdf || '');
+    _setF('Document Category',       docData.docCategory          || '');
+
+    // ── Per-field lock enforcement (all editable fields) ───────────────────────
+    // For each editable field: if it's locked (owned by someone else, currently
+    // non-empty, and the caller tried to change it) — revert it to the
+    // original value and record it in blockedFields. Otherwise let the new
+    // value stand and update/clear ownership for that field.
+    const blockedFields = [];
+    // Note: Endorsed To, Status, and Delivery Status are intentionally excluded —
+    // these are shared workflow fields that multiple departments update in sequence.
+    [
+      'Doc Type','Doc No','PR Date','Description','Amount','EndUser','Requisitioner',
+      'Date Received From BAC','PO No','PO Date','PO Amount','Supplier',
+      'AIR No.','AIR Date',
+      'Date Endorsed To Acctng','Date Endorsed From CMO','Date Endorse To COA','Date Endorse To CTO',
+      'Notes'
+    ].forEach(function(f) {
+      const ci = colIdx[f];
+      if (ci === undefined) return;
+      const origVal = String(origRow[ci] || '').trim();
+      const newVal  = String(updatedRow[ci] || '').trim();
+      const owner   = (fieldOwners[f] || '').toLowerCase().trim();
+      const locked  = !isAdmin && !!owner && owner !== callerEmail && origVal !== '';
+      if (locked && newVal !== origVal) {
+        // Revert this field's value — caller is not allowed to change it
+        updatedRow[ci] = origRow[ci];
+        blockedFields.push(f);
+        // ownership unchanged
+      } else if (newVal !== '') {
+        // Field has data after this write — caller (or existing owner if unchanged) owns it
+        fieldOwners[f] = locked ? owner : (callerEmail || owner);
+      } else {
+        // Field cleared — becomes unowned, editable by anyone
+        delete fieldOwners[f];
+      }
+    });
+    _setF('Field Owners', JSON.stringify(fieldOwners));
+
     sheet.getRange(rowIndex, 1, 1, headers.length).setValues([updatedRow]);    _invalidateDocsCache();
     const statusActionMap = {
       'incoming':   'Status: Incoming',
@@ -1202,7 +1314,7 @@ function updateDocument(docId, docData) {
       : 'Updated [' + (docData.docNo || docId) + ']: No field changes detected';
     _logBoth(docId, actionName, docData.status || 'Received', cu ? cu.name : 'System', updateRemarks,
              'Update Document', changeDetail);
-    return { status: 'success', docId: docId };
+    return { status: 'success', docId: docId, blockedFields: blockedFields, fieldOwners: fieldOwners };
   } catch (error) {
     Logger.log('updateDocument error: ' + error);
     return { status: 'error', message: error.toString() };
@@ -1262,6 +1374,29 @@ function getDocumentStats(tokenParam) {
   }
 }
 
+// ── Real-time sync: lightweight revision fingerprint ──────────────────────
+// Returns a cheap "did anything change" signal so the client can poll
+// frequently without re-fetching the full dataset every time. Uses the
+// spreadsheet FILE's last-updated timestamp (via DriveApp) rather than
+// reading sheet content — this is a single metadata call, not a data read,
+// so it's effectively free and correctly detects edits anywhere in the
+// sheet (including edits made directly in Google Sheets by an admin, not
+// just changes made through the web app), not just appends to the last row.
+function getDocsRevision() {
+  try {
+    const ss   = _getSS();
+    const file = DriveApp.getFileById(ss.getId());
+    const sheet = ss.getSheetByName(DOCS_SHEET);
+    const rows  = sheet ? sheet.getLastRow() : 0;
+    // updated.getTime() changes on ANY edit to ANY sheet in the spreadsheet —
+    // appends, deletes, in-place edits, even formula recalcs.
+    return { rev: file.getLastUpdated().getTime() + '_' + rows, rows: rows };
+  } catch (error) {
+    Logger.log('getDocsRevision error: ' + error);
+    return { rev: '0', rows: 0 };
+  }
+}
+
 // =====================================================================
 //  PDF UPLOAD
 // =====================================================================
@@ -1314,6 +1449,22 @@ function updatePdfLink(docId, pdfUrl) {
 // =====================================================================
 //  USER MANAGEMENT  (Admin only)
 // =====================================================================
+// Lightweight email -> name directory, available to ALL logged-in users
+// (used to display names instead of emails in field-lock badges).
+function _getUserDirectory() {
+  try {
+    const sheet = _getSS().getSheetByName(USERS_SHEET);
+    if (!sheet) return [];
+    const data = sheet.getDataRange().getValues();
+    const dir = [];
+    for (let i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
+      dir.push({ email: String(data[i][0]).toLowerCase().trim(), name: data[i][3] || '' });
+    }
+    return dir;
+  } catch (e) { Logger.log('_getUserDirectory error: ' + e); return []; }
+}
+
 function getUsers(tokenParam) {
   try {
     const cu = getCurrentUser(tokenParam || _doPostToken);
@@ -1459,7 +1610,7 @@ function getInitialData(token) {
   try {
     _doPostToken = token || _doPostToken;
     const user = getCurrentUser(token);
-    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {}, logs: [], users: [] };
+    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[] }, stats: {}, logs: [], users: [] };
 
     // ── Fast path: serve entirely from cache ─────────────────────────────────
     const cache    = CacheService.getScriptCache();
@@ -1478,7 +1629,8 @@ function getInitialData(token) {
           try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
         }
         const stats = _computeStatsGAS(docs, user.team);
-        return { user, docs, opts, stats, logs, users };
+        const userDirectory = _getUserDirectory();
+        return { user, docs, opts, stats, logs, users, userDirectory };
       } catch(e) {
         // Cache parse error — fall through to cold path
       }
@@ -1501,7 +1653,7 @@ function getInitialData(token) {
     }
 
     // Read config/dropdown sheet
-    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [] };
+    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [] };
     if (!optsCached) {
       const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
       if (cfgSheet) {
@@ -1512,6 +1664,7 @@ function getInitialData(token) {
           if (cfgData[i][2]) opts.offices.push(cfgData[i][2]);
           if (cfgData[i][3]) opts.statuses.push(cfgData[i][3]);
           if (cfgData[i][4]) opts.endUsers.push(cfgData[i][4]);
+          if (cfgData[i][5]) opts.docCategories.push(cfgData[i][5]);
         }
         try { cache.put('dropdown_opts', JSON.stringify(opts), 600); } catch(e) {}
       }
@@ -1530,10 +1683,11 @@ function getInitialData(token) {
     }
 
     const stats = _computeStatsGAS(docs, user.team);
-    return { user, docs, opts, stats, logs, users };
+    const userDirectory = _getUserDirectory();
+    return { user, docs, opts, stats, logs, users, userDirectory };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
-    return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[] }, stats: {}, logs: [], users: [] };
+    return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[] }, stats: {}, logs: [], users: [] };
   }
 }
 
@@ -1620,22 +1774,22 @@ function updateAllDropdownOptions(optionsObj, tokenParam) {
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
 
-    const keys = ['docTypes','suppliers','offices','statuses','endUsers'];
+    const keys = ['docTypes','suppliers','offices','statuses','endUsers','docCategories'];
     // Build per-column value arrays
     const cols = keys.map(k =>
       [...new Set((optionsObj[k] || []).map(v => String(v).trim()).filter(v => v))]
     );
     const maxRows = Math.max(...cols.map(c => c.length), 1);
 
-    // Clear existing data rows (all 5 columns in one API call)
+    // Clear existing data rows (all 6 columns in one API call)
     const lastRow = configSheet.getLastRow();
-    if (lastRow > 1) configSheet.getRange(2, 1, lastRow - 1, 5).clearContent();
+    if (lastRow > 1) configSheet.getRange(2, 1, lastRow - 1, 6).clearContent();
 
-    // Write all 5 columns in ONE setValues call (build 2D array)
+    // Write all 6 columns in ONE setValues call (build 2D array)
     const grid = Array.from({ length: maxRows }, (_, r) =>
       cols.map(col => col[r] !== undefined ? col[r] : '')
     );
-    configSheet.getRange(2, 1, maxRows, 5).setValues(grid);
+    configSheet.getRange(2, 1, maxRows, 6).setValues(grid);
 
     _invalidateDropdownCache();
     return { status: 'success', message: 'All dropdown options updated successfully' };
