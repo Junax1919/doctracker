@@ -3489,6 +3489,10 @@
                         style="font-size:18px">description</span><span>Export as Excel</span></div>
                   </div>
                 </div>
+                <button class="btn btn-outline" id="clearFiltersBtn" onclick="clearDashboardFilters()" title="Clear Filters" style="margin-right: 8px;">
+                  <span class="material-symbols-outlined" style="font-size:18px">filter_alt_off</span>
+                  <span class="btn-label" style="display:none;">Clear</span>
+                </button>
                 <div class="dropdown"><button class="btn btn-outline" onclick="toggleColumnsDropdown()"><span
                       class="material-symbols-outlined">view_column</span><span
                       class="btn-label">Columns</span></button>
@@ -3562,6 +3566,8 @@
                         onchange="toggleColumn('cashierStatus')"><label for="col-cashierStatus">Cashier Status</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-datePaid" checked
                         onchange="toggleColumn('datePaid')"><label for="col-datePaid">Date Paid</label></div>
+                    <div class="dropdown-item"><input type="checkbox" id="col-checkNo" checked
+                        onchange="toggleColumn('checkNo')"><label for="col-checkNo">Check No.</label></div>
                     <div class="dropdown-item"><input type="checkbox" id="col-attachment" checked
                         onchange="toggleColumn('attachment')"><label for="col-attachment">PDF Link</label></div>
                   </div>
@@ -3627,6 +3633,7 @@
                     </th>
                     <th class="sortable hide-mobile col-cashierStatus" data-column="cashierStatus" onclick="sortTable('cashierStatus')">Cashier Status</th>
                     <th class="sortable hide-mobile col-datePaid" data-column="datePaid" onclick="sortTable('datePaid')">Date Paid</th>
+                    <th class="sortable hide-mobile col-checkNo" data-column="checkNo" onclick="sortTable('checkNo')">Check No.</th>
                     <th class="col-attachment">PDF Link</th>
                     <th>Actions</th>
                   </tr>
@@ -3699,6 +3706,9 @@
                   <option value="login">User Login</option>
                   <option value="logout">User Logout</option>
                 </select>
+                <button class="btn btn-outline" id="clearLogsFiltersBtn" onclick="clearLogsFilters()" title="Clear Filters">
+                  <span class="material-symbols-outlined" style="font-size:18px">filter_alt_off</span>
+                </button>
                 <div class="logs-actions">
                   <button class="btn btn-outline" onclick="clearLogFilters()">Clear</button>
                   <button class="btn btn-outline" onclick="loadLogs(true)">Refresh</button>
@@ -3838,6 +3848,12 @@
                   </div>
                 </div>
               </div>
+              <div style="margin-top: 10px; text-align: right;">
+                <button class="btn btn-outline" id="clearPrintFiltersBtn" onclick="clearPrintFilters()" title="Clear Filters">
+                  <span class="material-symbols-outlined" style="font-size:18px">filter_alt_off</span>
+                  <span class="btn-label">Clear Filters</span>
+                </button>
+              </div>
               <div id="printColumnsSection" style="display:none">
                 <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
                 <div class="columns-grid">
@@ -3879,6 +3895,7 @@
                   <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
                   <label class="checkbox-label"><input type="checkbox" id="pcol-cashierStatus"> Cashier Status</label>
                   <label class="checkbox-label"><input type="checkbox" id="pcol-datePaid"> Date Paid</label>
+                  <label class="checkbox-label"><input type="checkbox" id="pcol-checkNo"> Check No.</label>
                 </div>
               </div>
               <div class="print-actions">
@@ -4161,6 +4178,10 @@
           <div class="form-group">
             <label class="form-label">Date Paid</label>
             <input type="date" class="form-input" id="datePaid">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Check No.</label>
+            <input type="text" class="form-input" id="checkNo" placeholder="Enter check number">
           </div>
 
         </div><!-- end form-grid-2col -->
@@ -4456,7 +4477,7 @@
     // ===================== STATE =====================
     let allDocs = [], filteredDocs = [], currentFilter = 'all', currentPage = 1, perPage = 25, isEdit = false;
     let sortColumn = 'overdue', sortDirection = 'desc';
-    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, docCat: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, cashierStatus: true, datePaid: true, attachment: true };
+    let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, docCat: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, cashierStatus: true, datePaid: true, checkNo: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [], docCategories: [], cashierStatuses: [] }, selectedFile = null;
     let allLogs = [];
     let _docCreatorMap = {};
@@ -5125,6 +5146,55 @@
     // applyTableFilters() — called by the toolbar dropdown onchange events.
     // Reads the three filter selects, updates activeFilters, then re-runs
     // the full filter pipeline (sidebar status + toolbar dropdowns + search text).
+    function clearDashboardFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterDocType').value = '';
+      document.getElementById('filterDocCategory').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterEndUser').value = '';
+      document.getElementById('filterSupplier').value = '';
+      // Clear cashier status multi-select checkboxes
+      document.querySelectorAll('#dashCashierStatusDropdown input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+      document.getElementById('filterCashierStatusLabel').innerText = 'All Cashier Statuses';
+      const btn = document.getElementById('filterCashierStatusBtn');
+      if (btn) btn.classList.remove('filter-active');
+      activeFilters.cashierStatus = [];
+      // Reset sidebar status filter
+      currentFilter = 'all';
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+      if (allBtn) allBtn.classList.add('active');
+      ['filterDocType', 'filterDocCategory', 'filterStatus', 'filterEndUser', 'filterSupplier'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('filter-active');
+      });
+      currentPage = 1;
+      applyFilter('all');
+    }
+
+    function clearPrintFilters() {
+      document.getElementById('printDateFrom').value = '';
+      document.getElementById('printDateTo').value = '';
+      document.getElementById('printStatusFilter').value = 'all';
+      document.getElementById('printEndUserFilter').value = 'all';
+      document.getElementById('printSupplierFilter').value = 'all';
+      document.getElementById('printDocTypeFilter').value = 'all';
+      document.getElementById('printDocCategoryFilter').value = 'all';
+      // Clear cashier status multi-select checkboxes
+      document.querySelectorAll('#printCashierStatusDropdown input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+      document.getElementById('printCashierStatusLabel').innerText = 'All Cashier Statuses';
+      // Clear the report preview
+      const prev = document.getElementById('reportPreview');
+      if (prev) { prev.innerHTML = ''; prev.classList.remove('show'); }
+    }
+
+    function clearLogsFilters() {
+      document.getElementById('logsSearch').value = '';
+      document.getElementById('logsFrom').value = '';
+      document.getElementById('logsTo').value = '';
+      document.getElementById('logsType').value = '';
+      if(typeof applyLogFilters === 'function') applyLogFilters();
+    }
+
     function applyTableFilters() {
       activeFilters.docType = document.getElementById('filterDocType').value;
       activeFilters.docCategory = document.getElementById('filterDocCategory') ? document.getElementById('filterDocCategory').value : '';
@@ -5231,7 +5301,7 @@
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } applySorting(); renderTable(); }
 
-    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', docCat: 'Document Category', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes', cashierStatus: 'Cashier Status', datePaid: 'Date Paid' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO' || sortColumn === 'airDate' || sortColumn === 'datePaid') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
+    function applySorting() { if (!sortColumn) return; document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); const th = document.querySelector(`th[data-column="${sortColumn}"]`); if (th) th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc'); const map = { overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type', no: 'Doc No', prDate: 'PR Date', docCat: 'Document Category', desc: 'Description', amount: 'Amount', endUser: 'EndUser', req: 'Requisitioner', poTs: 'PO Time Stamp', dateRecvdBAC: 'Date Received From BAC', poNo: 'PO No', poDate: 'PO Date', supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement Time Stamp', status: 'Status', dateEndAcctng: 'Date Endorsed To Acctng', dateEndCMO: 'Date Endorsed From CMO', deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date', dateEndCOA: 'Date Endorse To COA', dateEndCTO: 'Date Endorse To CTO', date: 'Date Received', notes: 'Notes', cashierStatus: 'Cashier Status', datePaid: 'Date Paid', checkNo: 'Check No.' }; const key = map[sortColumn]; filteredDocs.sort((a, b) => { let va = a[key] || '', vb = b[key] || ''; if (sortColumn === 'amount') { va = parseFloat(va.toString().replace(/[^0-9.-]/g, '')) || 0; vb = parseFloat(vb.toString().replace(/[^0-9.-]/g, '')) || 0; } else if (sortColumn === 'date' || sortColumn === 'prDate' || sortColumn === 'poDate' || sortColumn === 'dateRecvdBAC' || sortColumn === 'dateEndAcctng' || sortColumn === 'dateEndCMO' || sortColumn === 'dateEndCOA' || sortColumn === 'dateEndCTO' || sortColumn === 'airDate' || sortColumn === 'datePaid') { va = new Date(va || 0).getTime(); vb = new Date(vb || 0).getTime(); } else if (sortColumn === 'overdue') { va = va === 'On time' ? -1 : (parseInt(va.toString().replace(/[^0-9]/g, '')) || 0); vb = vb === 'On time' ? -1 : (parseInt(vb.toString().replace(/[^0-9]/g, '')) || 0); } else { va = va.toString().toLowerCase(); vb = vb.toString().toLowerCase(); } return va < vb ? (sortDirection === 'asc' ? -1 : 1) : va > vb ? (sortDirection === 'asc' ? 1 : -1) : 0; }); }
 
     function toggleColumn(col) { visibleColumns[col] = !visibleColumns[col]; document.querySelectorAll(`.col-${col}`).forEach(el => el.style.display = visibleColumns[col] ? '' : 'none'); }
     function toggleColumnsDropdown() { document.getElementById('columnsDropdown').classList.toggle('show'); }
@@ -5270,7 +5340,7 @@
       if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="27" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', docCat = d['Document Category'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', cStatus = d['Cashier Status'] || '-', dPaid = d['Date Paid'] || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', docCat = d['Document Category'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', cStatus = d['Cashier Status'] || '-', dPaid = d['Date Paid'] || '-', checkNo = d['Check No.'] || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf
           ? `<a href="${pdf}" target="_blank" onclick="event.stopPropagation()"
@@ -5312,6 +5382,7 @@
 <td class="hide-mobile col-notes" style="display:${disp('notes')}">${nt}</td>
 <td class="hide-mobile col-cashierStatus" style="display:${disp('cashierStatus')}">${cStatus}</td>
 <td class="hide-mobile col-datePaid" style="display:${disp('datePaid')}">${dPaid}</td>
+<td class="hide-mobile col-checkNo" style="display:${disp('checkNo')}">${checkNo}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
 <td onclick="event.stopPropagation()" style="cursor:default"><div class="table-actions">
 <button class="action-btn" title="View details" onclick='viewDoc(\`${safeId}\`)' style="color:var(--blue)">
@@ -5503,6 +5574,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
                  <div class="dv"><strong>${val('Cashier Status') !== '—' ? val('Cashier Status') : '<span style="color:var(--muted);font-style:italic">Not set</span>'}</strong></div></div>
             <div><div class="dl">Date Paid</div>
                  <div class="dv">${val('Date Paid') !== '—' ? fmtDate(val('Date Paid')) : '<span style="color:var(--muted);font-style:italic">Not set</span>'}</div></div>
+            <div><div class="dl">Check No.</div>
+                 <div class="dv">${val('Check No.') !== '—' ? val('Check No.') : '<span style="color:var(--muted);font-style:italic">Not set</span>'}</div></div>
           </div>
         </div>
 
@@ -5818,6 +5891,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const dcEl = document.getElementById('docCategory'); if (dcEl) dcEl.value = doc['Document Category'] || '';
       const csEl = document.getElementById('cashierStatus'); if (csEl) csEl.value = doc['Cashier Status'] || '';
       const dpEl = document.getElementById('datePaid'); if (dpEl) dpEl.value = doc['Date Paid'] || '';
+      const cnEl = document.getElementById('checkNo'); if (cnEl) cnEl.value = doc['Check No.'] || '';
       // Timestamps: show existing values (all read-only)
       const now = new Date();
       const dtsEl = document.getElementById('docTimeStamp');
@@ -5960,7 +6034,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         dateEndorseToCTO: document.getElementById('dateEndorseToCTO') ? document.getElementById('dateEndorseToCTO').value : '',
         docCategory: docCategory,
         cashierStatus: document.getElementById('cashierStatus') ? document.getElementById('cashierStatus').value : '',
-        datePaid: document.getElementById('datePaid') ? document.getElementById('datePaid').value : ''
+        datePaid: document.getElementById('datePaid') ? document.getElementById('datePaid').value : '',
+        checkNo: document.getElementById('checkNo') ? document.getElementById('checkNo').value : ''
       };
       // Capture selected file then save document immediately — PDF uploads in background
       const fileToUpload = selectedFile;
@@ -6002,7 +6077,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             'PDF Link': data.pdfLink || existing['PDF Link'] || '',
             'Document Category': data.docCategory || '',
             'Cashier Status': data.cashierStatus || '',
-            'Date Paid': data.datePaid || ''
+            'Date Paid': data.datePaid || '',
+            'Check No.': data.checkNo || ''
           });
         }
         // Close modal and refresh UI immediately — don't wait for server
@@ -6092,6 +6168,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           'Document Category': data.docCategory || '',
           'Cashier Status': data.cashierStatus || '',
           'Date Paid': data.datePaid || '',
+          'Check No.': data.checkNo || '',
           'Doc Time Stamp': _nowTs,
           'Overdue': 'On time',
           // Field Owners: per-field JSON map — owner recorded only for fields
@@ -6114,7 +6191,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               'Date Endorsed From CMO': data.dateEndorsedFromCMO || '',
               'Date Endorse To COA': data.dateEndorseToCOA || '',
               'Date Endorse To CTO': data.dateEndorseToCTO || '',
-              'Notes': data.notes || ''
+              'Notes': data.notes || '',
+              'Check No.': data.checkNo || ''
             };
             const _owners = {};
             Object.keys(_vals).forEach(k => { if (String(_vals[k] || '').trim() !== '') _owners[k] = _me; });
@@ -6908,8 +6986,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         { w: 7 }, { w: 6 }, { w: 7 }, { w: 7 }, { w: 6 }, { w: 7 }, { w: 18 }, { w: 8 }, { w: 10 }, { w: 8 }, { w: 9 }, { w: 7 }
       ],
       cashier: [
-        // DOC NO | PR DATE | AMOUNT | PO NO | PO DATE | PO AMOUNT | DESCRIPTION | END USER | SUPPLIER | CASHIER STATUS | DATE PAID | NOTES
-        { w: 8 }, { w: 6 }, { w: 7 }, { w: 7 }, { w: 6 }, { w: 7 }, { w: 18 }, { w: 8 }, { w: 10 }, { w: 9 }, { w: 7 }, { w: 7 }
+        // DOC NO | PR DATE | AMOUNT | PO NO | PO DATE | PO AMOUNT | DESCRIPTION | END USER | SUPPLIER | CASHIER STATUS | DATE PAID | CHECK NO. | NOTES
+        { w: 7 }, { w: 6 }, { w: 7 }, { w: 7 }, { w: 5 }, { w: 6 }, { w: 16 }, { w: 7 }, { w: 9 }, { w: 8 }, { w: 6 }, { w: 7 }, { w: 9 }
       ]
     };
 
@@ -7128,7 +7206,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const colHeaders = `<thead><tr>
         <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
         <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
-        <th>CASHIER STATUS</th><th>DATE PAID</th><th>NOTES</th>
+        <th>CASHIER STATUS</th><th>DATE PAID</th><th>CHECK NO.</th><th>NOTES</th>
       </tr></thead>`;
 
       let grandAmt = 0, grandPoAmt = 0;
@@ -7154,6 +7232,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             <td>${d.Supplier || '-'}</td>
             <td style="font-weight:600">${d['Cashier Status'] || '-'}</td>
             <td>${d['Date Paid'] || '-'}</td>
+            <td>${d['Check No.'] || '-'}</td>
             <td>${d.Notes || '-'}</td>
           </tr>`;
         }).join('');
@@ -7164,7 +7243,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           <td style="text-align:right;color:#059669;font-size:11px">${fmtAmt(grpAmt)}</td>
           <td colspan="2"></td>
           <td style="text-align:right;color:#059669;font-size:11px">${fmtAmt(grpPoAmt)}</td>
-          <td colspan="6"></td>
+          <td colspan="7"></td>
         </tr>`;
 
         let icon = '&#128176;';
@@ -7198,7 +7277,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               <td colspan="2"></td>
               <td style="text-align:right;color:#86efac;
                   -webkit-print-color-adjust:exact;print-color-adjust:exact">${fmtAmt(grandPoAmt)}</td>
-              <td colspan="6"></td>
+              <td colspan="7"></td>
             </tr>
           </tbody>
         </table>
@@ -7564,11 +7643,11 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         });
         groupOrder.sort((a, b) => a.localeCompare(b));
 
-        const colW = cg([8, 6, 7, 7, 6, 7, 18, 8, 10, 9, 7, 7]);
+        const colW = cg([7, 6, 7, 7, 5, 6, 16, 7, 9, 8, 6, 7, 9]);
         const colHeaders = `<thead><tr>
           <th>DOC NO</th><th>PR DATE</th><th>AMOUNT</th><th>PO NO</th><th>PO DATE</th>
           <th>PO AMOUNT</th><th>DESCRIPTION</th><th>END USER</th><th>SUPPLIER</th>
-          <th>CASHIER STATUS</th><th>DATE PAID</th><th>NOTES</th>
+          <th>CASHIER STATUS</th><th>DATE PAID</th><th>CHECK NO.</th><th>NOTES</th>
         </tr></thead>`;
 
         let grandAmt = 0, grandPoAmt = 0;
@@ -7594,6 +7673,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               <td>${d.Supplier || '-'}</td>
               <td>${d['Cashier Status'] || '-'}</td>
               <td>${d['Date Paid'] || '-'}</td>
+              <td>${d['Check No.'] || '-'}</td>
               <td>${d.Notes || '-'}</td>
             </tr>`;
           }).join('');
@@ -7603,7 +7683,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpAmt)}</td>
             <td colspan="2"></td>
             <td class="text-right" style="color:#059669;font-size:9px">${fmtAmt(grpPoAmt)}</td>
-            <td colspan="6"></td>
+            <td colspan="7"></td>
           </tr>`;
 
           let icon = '&#128176;';
@@ -7631,7 +7711,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
                 <td class="text-right" style="color:#86efac;padding:5px 4px">${fmtAmt(grandAmt)}</td>
                 <td colspan="2"></td>
                 <td class="text-right" style="color:#86efac;padding:5px 4px">${fmtAmt(grandPoAmt)}</td>
-                <td colspan="6"></td>
+                <td colspan="7"></td>
               </tr>
             </tbody>
           </table></div>`;
