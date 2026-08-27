@@ -194,7 +194,7 @@ function initializeConfigSheet() {
 
 function getDropdownOptions() {
   try {
-    const hit = CacheService.getScriptCache().get('dropdown_opts');
+    const hit = CacheService.getScriptCache().get('dropdown_opts_v2');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
     const ss = _getSS();
     let configSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
@@ -209,7 +209,7 @@ function getDropdownOptions() {
       if (data[i][5]) options.docCategories.push(data[i][5]);
       if (data[i][6]) options.cashierStatuses.push(data[i][6]);
     }
-    try { CacheService.getScriptCache().put('dropdown_opts', JSON.stringify(options), 300); } catch(e) {}
+    try { CacheService.getScriptCache().put('dropdown_opts_v2', JSON.stringify(options), 300); } catch(e) {}
     return options;
   } catch (error) {
     Logger.log('getDropdownOptions error: ' + error);
@@ -313,7 +313,7 @@ function _invalidateDocsCache() {
     cache.removeAll(keys);
   } catch(e) {}
 }
-function _invalidateDropdownCache() { try { CacheService.getScriptCache().remove('dropdown_opts'); } catch(e) {} }
+function _invalidateDropdownCache() { try { CacheService.getScriptCache().remove('dropdown_opts_v2'); } catch(e) {} }
 
 function _getDefaultPermissions(role) {
   const r = (role || 'Staff').toLowerCase();
@@ -860,7 +860,7 @@ function ensureDocumentSheetHeaders(sheet) {
       'Date Endorse To COA','Date Endorse To CTO',
       'Date Received','Due Date','Overdue','Notes','PDF Link',
       'Field Owners','PO Fields Owner','Document Category',  // Field Owners = JSON map {fieldName: ownerEmail} for ALL editable fields; PO Fields Owner is legacy/unused
-      'Cashier Status','Date Paid'
+      'Cashier Status','Date Paid','Check No.'
     ];
     if (!sheet) return;
     const data = sheet.getDataRange().getValues();
@@ -1009,7 +1009,7 @@ function addDocument(docData) {
         'Date Endorse To COA','Date Endorse To CTO',
         'Date Received','Due Date','Overdue','Notes','PDF Link',
         'Field Owners','PO Fields Owner','Document Category',
-        'Cashier Status','Date Paid'
+        'Cashier Status','Date Paid','Check No.'
       ]]);
       sheet.getRange(1, 1, 1, 35).setFontWeight('bold');
     } else {
@@ -1094,7 +1094,8 @@ function addDocument(docData) {
       '',                                      // PO Fields Owner — legacy/unused
       docData.docCategory                || '', // Document Category
       docData.cashierStatus              || '', // Cashier Status
-      docData.datePaid                   || ''  // Date Paid
+      docData.datePaid                   || '', // Date Paid
+      docData.checkNo                    || ''  // Check No.
     ]);
     _invalidateDocsCache();
     const createRemarks = [
@@ -1251,6 +1252,7 @@ function updateDocument(docId, docData) {
     _setF('Document Category',       docData.docCategory          || '');
     _setF('Cashier Status',          docData.cashierStatus        || '');
     _setF('Date Paid',               docData.datePaid             || '');
+    _setF('Check No.',               docData.checkNo              || '');
 
     // ── Per-field lock enforcement (all editable fields) ───────────────────────
     // For each editable field: if it's locked (owned by someone else, currently
@@ -1334,7 +1336,8 @@ function updateDocument(docId, docData) {
       { label: 'Date End. To CTO',    col: 'Date Endorse To CTO',     nw: docData.dateEndorseToCTO     },
       { label: 'Notes',               col: 'Notes',                   nw: docData.notes                },
       { label: 'Cashier Status',       col: 'Cashier Status',           nw: docData.cashierStatus        },
-      { label: 'Date Paid',            col: 'Date Paid',                nw: docData.datePaid             }
+      { label: 'Date Paid',            col: 'Date Paid',                nw: docData.datePaid             },
+      { label: 'Check No.',            col: 'Check No.',                nw: docData.checkNo              }
     ];
     const _fChanges = [];
     _fldDefs.forEach(function(f) {
@@ -1658,12 +1661,12 @@ function getInitialData(token) {
   try {
     _doPostToken = token || _doPostToken;
     const user = getCurrentUser(token);
-    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[] }, stats: {}, logs: [], users: [] };
+    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
 
     // ── Fast path: serve entirely from cache ─────────────────────────────────
     const cache    = CacheService.getScriptCache();
     const docsCached = _cacheGet('all_docs');
-    const optsCached = cache.get('dropdown_opts');
+    const optsCached = cache.get('dropdown_opts_v2');
 
     if (docsCached && optsCached) {
       // All data cached — zero sheet reads, returns in ~100ms
@@ -1701,7 +1704,7 @@ function getInitialData(token) {
     }
 
     // Read config/dropdown sheet
-    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [] };
+    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
     if (!optsCached) {
       const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
       if (cfgSheet) {
@@ -1713,8 +1716,9 @@ function getInitialData(token) {
           if (cfgData[i][3]) opts.statuses.push(cfgData[i][3]);
           if (cfgData[i][4]) opts.endUsers.push(cfgData[i][4]);
           if (cfgData[i][5]) opts.docCategories.push(cfgData[i][5]);
+          if (cfgData[i][6]) opts.cashierStatuses.push(cfgData[i][6]);
         }
-        try { cache.put('dropdown_opts', JSON.stringify(opts), 600); } catch(e) {}
+        try { cache.put('dropdown_opts_v2', JSON.stringify(opts), 600); } catch(e) {}
       }
     } else {
       try { opts = JSON.parse(optsCached); } catch(e) {}
