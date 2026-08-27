@@ -4531,11 +4531,12 @@
       this.disabled = true; this.textContent = 'Signing in...';
       google.script.run.withSuccessHandler(r => {
         if (r.status === 'success') {
-          // Store the server-issued token for this browser session
           _sessionToken = r.token || '';
           try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
-          showNotif('loginNotif', 'Login successful!', 'success');
-          setTimeout(() => { showView('dashboard'); _showDashLoader(); initDashboard(); }, 800);
+          // Transition immediately — the full-page loader handles the UX gap.
+          // No artificial delay: the server already pre-warmed the user cache,
+          // so the next getInitialData() call is a fast-path cache hit.
+          showView('dashboard'); _showDashLoader(); initDashboard();
         }
         else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
       }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
@@ -4567,8 +4568,8 @@
           if (r.status === 'success') {
             _sessionToken = r.token || '';
             try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
-            showNotif('loginNotif', `${provider} Login successful!`, 'success');
-            setTimeout(() => { showView('dashboard'); _showDashLoader(); initDashboard(); }, 800);
+            // Transition immediately — same as email login, no artificial delay.
+            showView('dashboard'); _showDashLoader(); initDashboard();
           } else {
             showNotif('loginNotif', r.message || 'Access denied', 'error');
             restoreBtn();
@@ -4760,72 +4761,50 @@
       if (tb) tb.innerHTML = skRow.repeat(rows || 12);
     }
 
+    // ── Shared dashboard bootstrap renderer ──────────────────────────────────
+    // Called by both initDashboard (fresh login) and the session-restore path
+    // (_attemptSessionCheck) so we never need two GAS round-trips on page refresh.
+    function _renderInitialData(result) {
+      if (!result || !result.user) { _hideDashLoader(); showView('login'); return; }
+
+      _setDashLoaderStep('Loading user profile…', 0.25);
+      currentUser = result.user;
+      document.getElementById('userName').textContent = result.user.name || 'User';
+      document.getElementById('userRole').textContent = result.user.role || 'User';
+      document.getElementById('userAvatar').textContent = getInitials(result.user.name);
+      document.getElementById('profileName').value  = result.user.name  || '';
+      document.getElementById('profileEmail').value = result.user.email || '';
+      document.getElementById('profileRole').value  = result.user.role  || '';
+      applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
+
+      _setDashLoaderStep('Loading dropdown options…', 0.45);
+      if (result.opts) { dropdownOptions = result.opts; populateDropdowns(); populatePrintFilters(); }
+
+      _setDashLoaderStep('Computing statistics…', 0.60);
+      if (result.stats) _applyStats(result.stats);
+
+      if (result.users  && result.users.length)       _allUsers       = result.users;
+      if (result.userDirectory && result.userDirectory.length) _userDirectory = result.userDirectory;
+      if (result.logs   && result.logs.length)        { allLogs = result.logs; buildCreatorMap(); }
+
+      _setDashLoaderStep('Rendering documents…', 0.80);
+      allDocs = result.docs || [];
+      populateTableFilters();
+      _applyStats(_computeStats(allDocs));
+      _renderChunked(allDocs, currentFilter);
+
+      _setDashLoaderStep('Done!', 1);
+      setTimeout(_hideDashLoader, 300);
+      _startRealtimeSync();
+    }
+
     function initDashboard() {
-      // Show skeleton immediately so the UI feels instant
       _showSkeleton(15);
-
-      // 🚀 Single server round-trip: user + docs + opts + stats + users
       google.script.run
-        .withSuccessHandler(function (result) {
-          if (!result) { _hideDashLoader(); showView('login'); return; }
-
-          // 1. User profile — render immediately (fast, local DOM writes)
-          _setDashLoaderStep('Loading user profile…', 0.25);
-          if (result.user) {
-            currentUser = result.user;
-            document.getElementById('userName').textContent = result.user.name || 'User';
-            document.getElementById('userRole').textContent = result.user.role || 'User';
-            document.getElementById('userAvatar').textContent = getInitials(result.user.name);
-            document.getElementById('profileName').value = result.user.name || '';
-            document.getElementById('profileEmail').value = result.user.email || '';
-            document.getElementById('profileRole').value = result.user.role || '';
-            applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
-          }
-
-          // 2. Dropdown options
-          _setDashLoaderStep('Loading dropdown options…', 0.45);
-          if (result.opts) {
-            dropdownOptions = result.opts;
-            populateDropdowns();
-            populatePrintFilters();
-          }
-
-          // 3. Stats — show immediately from pre-computed server value
-          _setDashLoaderStep('Computing statistics…', 0.60);
-          if (result.stats) _applyStats(result.stats);
-
-          // 4. Users cache
-          if (result.users && result.users.length) _allUsers = result.users;
-          // 4b. Lightweight email->name directory (available to all roles, for lock badges)
-          if (result.userDirectory && result.userDirectory.length) _userDirectory = result.userDirectory;
-
-          // 5. Logs cache (may be empty on first load — lazy fetch on tab click)
-          if (result.logs && result.logs.length) {
-            allLogs = result.logs;
-            buildCreatorMap();
-          }
-
-          // 6. Documents — render using chunked RAF so the browser stays responsive
-          _setDashLoaderStep('Rendering documents…', 0.80);
-          allDocs = result.docs || [];
-          populateTableFilters();
-          // Override server-side pre-computed stats with accurate client-side calculation
-          // once docs are available in memory (server stats may not have user's team yet).
-          _applyStats(_computeStats(allDocs));
-          _renderChunked(allDocs, currentFilter);
-
-          // All data rendered — dismiss the loader
-          _setDashLoaderStep('Done!', 1);
-          setTimeout(_hideDashLoader, 300);
-
-          // Begin real-time multi-user sync — picks up changes from other
-          // users (or direct Sheet edits) without needing a manual refresh.
-          _startRealtimeSync();
-        })
+        .withSuccessHandler(_renderInitialData)
         .withFailureHandler(function () {
           _hideDashLoader();
           toast('Failed to load dashboard data', 'error');
-          // Clear skeleton on failure
           const tb = document.getElementById('docTable');
           if (tb) tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
         })
@@ -8022,22 +8001,29 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       document.body.appendChild(loadingEl);
 
       // Normal session check — pass THIS browser's token (never shared with other browsers)
-      // Retry up to 3 times with progressive back-off to handle GAS cold-start delays
-      // (cold GAS executions can take 2-3 s before PropertiesService becomes available).
+      // Instead of calling getCurrentUser() + getInitialData() as two separate round-trips,
+      // call getInitialData() directly: it validates the token internally, returns null user
+      // if invalid/expired, and otherwise returns the full dashboard payload — so a valid
+      // session goes from TWO GAS round-trips to ONE.
+      // Retry up to 3 times with progressive back-off to handle GAS cold-start delays.
       let _sessionCheckAttempts = 0;
-      const _retryDelays = [1500, 2500]; // ms to wait before attempt 2, then attempt 3
+      const _retryDelays = [800, 1500]; // ms — tightened from 1500/2500; GAS warm-starts resolve faster
       function _attemptSessionCheck() {
         _sessionCheckAttempts++;
         google.script.run
-          .withSuccessHandler(function (user) {
+          .withSuccessHandler(function (result) {
             const loader = document.getElementById('sessionLoader');
-            if (user) {
+            if (result && result.user) {
+              // Valid session AND full dashboard payload in one call — go straight to render
               if (loader) loader.remove();
               showView('dashboard');
-              initDashboard();
-            } else if (_sessionCheckAttempts < 3) {
-              // Returned null — wait and retry (handles GAS cold-start / cache-miss)
-              const delay = _retryDelays[_sessionCheckAttempts - 1] || 2000;
+              _showDashLoader();
+              // Feed the already-fetched payload directly into the dashboard renderer
+              // so we don't need a second getInitialData() call from initDashboard().
+              _renderInitialData(result);
+            } else if (!result || (!result.user && _sessionCheckAttempts < 3)) {
+              // Null result — may be a GAS cold-start cache miss; retry
+              const delay = _retryDelays[_sessionCheckAttempts - 1] || 1500;
               setTimeout(_attemptSessionCheck, delay);
             } else {
               // Genuinely invalid or expired session after 3 attempts
@@ -8048,7 +8034,6 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             }
           })
           .withFailureHandler(function () {
-            // On network failure don't silently kick to login — show a retry prompt
             const loader = document.getElementById('sessionLoader');
             if (loader) {
               loader.innerHTML = `
@@ -8061,7 +8046,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
                 </div>`;
             } else { showView('login'); }
           })
-          .getCurrentUser(_sessionToken);
+          .getInitialData(_sessionToken);
       }
       _attemptSessionCheck();
     })();
