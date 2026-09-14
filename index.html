@@ -4442,12 +4442,8 @@
               callGASWithSessionCapture(prop, args)
                 .then(result => { if (state._success) state._success(result); })
                 .catch(err => {
-                  // Only log when there's a failure handler registered — fire-and-forget
-                  // calls (like warmUp) have no handler and should not pollute the console.
-                  if (state._failure) {
-                    console.warn('[DocuTracker] GAS call failed:', prop, err.message || err);
-                    state._failure(err);
-                  }
+                  console.error('[DocuTracker] GAS call failed:', prop, err);
+                  if (state._failure) state._failure(err);
                 });
             };
           }
@@ -4526,13 +4522,6 @@
       const el = document.getElementById(id); el.textContent = msg; el.className = 'notification show ' + type;
       setTimeout(() => el.classList.remove('show'), 2500);
     }
-
-    // Pre-boot the GAS execution environment as early as possible —
-    // fired immediately on page load so the instance is warm by the time
-    // the user submits their credentials. Fire-and-forget; errors are ignored.
-    (function () {
-      try { google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){}).warmUp(); } catch(e) {}
-    })();
 
     // Login
     document.getElementById('loginBtn').addEventListener('click', function () {
@@ -6119,9 +6108,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             // Roll back
             if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
             populateTableFilters(); applyFilter(currentFilter); updateStats();
-            toast('Network error — changes not saved', 'error');
+            showAlertModal(
+              'Save Failed',
+              'Your changes could not be saved due to a connection issue.<br><br>' +
+              'Your local view has been restored. Please <strong>try saving again</strong> — ' +
+              'your form was already closed, so re-open the record and re-submit.',
+              'error'
+            );
           })
-          .updateDocument(id, data);
+          .updateDocument(id, data, _sessionToken);
       } else {
         // ── OPTIMISTIC ADD ────────────────────────────────────────────────────
         // Show success immediately; the server confirms (or we roll back).
@@ -6228,9 +6223,14 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             // Roll back
             allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
             populateTableFilters(); applyFilter(currentFilter); updateStats();
-            toast('Network error — document not saved', 'error');
+            showAlertModal(
+              'Save Failed',
+              'The document could not be saved due to a connection issue.<br><br>' +
+              'Please <strong>try adding the document again</strong>. Your data was not saved.',
+              'error'
+            );
           })
-          .addDocument(data);
+          .addDocument(data, _sessionToken);
       }
     }
     function deleteDoc(id) {
@@ -6247,7 +6247,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             } else toast('Delete failed', 'error');
           })
           .withFailureHandler(() => toast('Error', 'error'))
-          .deleteDocument(id);
+          .deleteDocument(id, _sessionToken);
       }); // end showConfirmModal
     }
     function handleFileSelect(e) {
@@ -6307,7 +6307,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           .withFailureHandler(function () {
             toast('PDF upload failed — document was saved without attachment', 'warning');
           })
-          .uploadPDFToGoogleDrive(b64, file.name, docId);
+          .uploadPDFToGoogleDrive(b64, file.name, docId, _sessionToken);
       };
       reader.readAsDataURL(file);
     }
@@ -8013,32 +8013,31 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
       // Normal session check — pass THIS browser's token (never shared with other browsers)
       // Instead of calling getCurrentUser() + getInitialData() as two separate round-trips,
-      // Single GAS round-trip: getInitialData validates the token AND returns the full
-      // dashboard payload. On success with a valid user → render immediately.
-      // On failure (network blip or GAS cold-start timeout) → auto-retry up to
-      // MAX_RETRIES times with exponential back-off before showing the error screen.
-      // This eliminates the "Connection Error" screen that appeared on first cold-start.
-      const MAX_RETRIES  = 4;
-      const BASE_DELAY   = 1200; // ms — first retry after 1.2s
-      let _attempt = 0;
-
+      // call getInitialData() directly: it validates the token internally, returns null user
+      // if invalid/expired, and otherwise returns the full dashboard payload — so a valid
+      // session goes from TWO GAS round-trips to ONE.
+      // Retry up to 3 times with progressive back-off to handle GAS cold-start delays.
+      let _sessionCheckAttempts = 0;
+      const _retryDelays = [800, 1500]; // ms — tightened from 1500/2500; GAS warm-starts resolve faster
       function _attemptSessionCheck() {
-        _attempt++;
+        _sessionCheckAttempts++;
         google.script.run
           .withSuccessHandler(function (result) {
             const loader = document.getElementById('sessionLoader');
             if (result && result.user) {
-              // Valid session + full payload — render dashboard immediately
+              // Valid session AND full dashboard payload in one call — go straight to render
               if (loader) loader.remove();
               showView('dashboard');
               _showDashLoader();
+              // Feed the already-fetched payload directly into the dashboard renderer
+              // so we don't need a second getInitialData() call from initDashboard().
               _renderInitialData(result);
-            } else if (_attempt < MAX_RETRIES) {
-              // Null result: GAS cold-start returned before data was ready — retry
-              const delay = BASE_DELAY * Math.pow(1.6, _attempt - 1);
+            } else if (!result || (!result.user && _sessionCheckAttempts < 3)) {
+              // Null result — may be a GAS cold-start cache miss; retry
+              const delay = _retryDelays[_sessionCheckAttempts - 1] || 1500;
               setTimeout(_attemptSessionCheck, delay);
             } else {
-              // Definitively invalid / expired session after all retries
+              // Genuinely invalid or expired session after 3 attempts
               if (loader) loader.remove();
               _sessionToken = '';
               try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
@@ -8046,42 +8045,373 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             }
           })
           .withFailureHandler(function () {
-            // withFailureHandler fires on: network timeout, GAS execution error,
-            // or GAS cold-start that exceeds the google.script.run timeout.
-            // Auto-retry before giving up — most cold-start issues resolve in 1-2 retries.
-            if (_attempt < MAX_RETRIES) {
-              const loader = document.getElementById('sessionLoader');
-              if (loader) {
-                const pct = Math.round((_attempt / MAX_RETRIES) * 100);
-                const dotEl = loader.querySelector('#loadBar');
-                if (dotEl) dotEl.style.width = pct + '%';
-              }
-              const delay = BASE_DELAY * Math.pow(1.6, _attempt - 1);
-              setTimeout(_attemptSessionCheck, delay);
-            } else {
-              // All retries exhausted — now show the error screen
-              const loader = document.getElementById('sessionLoader');
-              if (loader) {
-                loader.innerHTML = `
-                  <div style="text-align:center;padding:32px">
-                    <div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div>
-                    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
-                    <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server after several attempts. Please check your internet connection or try again in a moment.</div>
-                    <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
-                    <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
-                  </div>`;
-              } else { showView('login'); }
-            }
+            const loader = document.getElementById('sessionLoader');
+            if (loader) {
+              loader.innerHTML = `
+                <div style="text-align:center;padding:32px">
+                  <div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div>
+                  <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
+                  <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server. Please check your internet connection.</div>
+                  <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
+                  <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
+                </div>`;
+            } else { showView('login'); }
           })
           .getInitialData(_sessionToken);
       }
-
-      // Fire a lightweight warm-up ping before the session check.
-      // This pre-boots the GAS execution environment and opens the spreadsheet
-      // handle so that getInitialData() runs against a warm instance.
-      // The ping is fire-and-forget — we don't wait for it to succeed.
-      google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){}).warmUp();
-
-      // Small head-start for the warm-up, then begin the real session check
-      setTimeout(_attemptSessionCheck, 300);
+      _attemptSessionCheck();
     })();
+  </script>
+
+  <script>
+    // ===================== USER MANAGEMENT =====================
+    let _isEditUser = false, _allUsers = [], _userDirectory = [];
+
+    function showUsersView(evt) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt) evt.target.closest('.nav-link').classList.add('active');
+      ['documentsView', 'trackView', 'logsView', 'printView'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+      const uv = document.getElementById('usersView');
+      if (uv) uv.style.display = 'block';
+      currentFilter = 'users';
+      document.getElementById('pageTitle').textContent = 'User Management';
+      if (window.innerWidth < 768) closeMobileSidebar();
+      loadUsers(false);  // use memory cache if available
+    }
+
+    function loadUsers(force) {
+      if (!force && _allUsers && _allUsers.length > 0) {
+        // Already in memory from getInitialData — render instantly (0 ms)
+        renderUsersTable(_allUsers);
+        return;
+      }
+      const tb = document.getElementById('usersTableBody');
+      if (tb) tb.innerHTML = '<tr><td colspan="5" class="loading">Loading users...</td></tr>';
+      google.script.run
+        .withSuccessHandler(r => {
+          if (r && r.status === 'success') { _allUsers = r.users || []; renderUsersTable(_allUsers); }
+          else if (tb) tb.innerHTML = `<tr><td colspan="5" class="empty-state">${(r && r.message) || 'Access denied'}</td></tr>`;
+        })
+        .withFailureHandler(() => { if (tb) tb.innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load users.</td></tr>'; })
+        .getUsers(_sessionToken);
+    }
+
+    function renderUsersTable(users) {
+      const tb = document.getElementById('usersTableBody');
+      if (!users || !users.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">No users found.</td></tr>'; return; }
+      const roleCol = { Admin: '#6366f1', Manager: '#3b82f6', Staff: '#64748b', Viewer: '#10b981' };
+      // Determine if the current user is an admin (only admins see the delete button)
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      tb.innerHTML = users.map((u, idx) => {
+        const active = (u.status || 'Active').toLowerCase() === 'active';
+        const nm = u.name || u.email || 'User';
+        const init = nm.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+        const rc = roleCol[u.role] || '#64748b';
+        // Self-check: admins cannot delete themselves
+        const isSelf = currentUser && currentUser.email && u.email &&
+          currentUser.email.toLowerCase() === u.email.toLowerCase();
+        const deleteBtn = isAdmin
+          ? `<button class="action-btn" title="${isSelf ? 'Cannot delete your own account' : 'Delete user'}"
+               style="color:var(--danger);opacity:${isSelf ? '0.35' : '1'}"
+               ${isSelf ? 'disabled' : `onclick="deleteUserByEmail(\`${u.email}\`, \`${(u.name || u.email).replace(/`/g, '')}\`)"`}>
+               <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+             </button>`
+          : '';
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:50%;background:${rc};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${init}</div>
+            <span style="font-weight:600">${u.name || '—'}</span>
+          </div></td>
+          <td style="color:var(--muted);font-size:13px">${u.email}</td>
+          <td><span style="font-size:12px;font-weight:700;color:${rc};background:${rc}22;padding:3px 10px;border-radius:12px">${u.role || 'Staff'}</span></td>
+          <td>${u.team || '—'}</td>
+          <td><span class="status-badge ${active ? 'status-received' : 'status-hold'}">${u.status || 'Active'}</span></td>
+          <td><div class="table-actions">
+            <button class="action-btn" title="Edit user" style="color:var(--blue)" onclick="editUserByIdx(${idx})">
+              <span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+            <button class="action-btn" title="${active ? 'Deactivate' : 'Activate'}"
+              style="color:${active ? 'var(--danger)' : 'var(--success)'}"
+              onclick='toggleUser(\`${u.email}\`)'>
+              <span class="material-symbols-outlined" style="font-size:18px">${active ? 'person_off' : 'person'}</span></button>
+            ${deleteBtn}
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function deleteUserByEmail(email, displayName) {
+      if (!confirm(`⚠️ Permanently delete user "${displayName}" (${email})?\n\nThis action cannot be undone.`)) return;
+      google.script.run
+        .withSuccessHandler(r => {
+          if (r.status === 'success') {
+            toast(`User "${displayName}" deleted.`);
+            // Remove from local cache immediately — no server round-trip needed
+            _allUsers = _allUsers.filter(u => u.email.toLowerCase() !== email.toLowerCase());
+            renderUsersTable(_allUsers);
+          } else {
+            toast(r.message || 'Delete failed', 'error');
+          }
+        })
+        .withFailureHandler(() => toast('Network error — could not delete user', 'error'))
+        .deleteUser(_sessionToken, email);
+    }
+
+    function editUserByIdx(idx) { const u = _allUsers[idx]; if (u) openEditUserModal(u); }
+
+    function _getDefaultPermsJS(role) {
+      const r = (role || 'Staff').toLowerCase();
+      if (r === 'admin') return { addDoc: true, editDoc: true, deleteDoc: true, viewDoc: true, printExport: true, manageSettings: true, manageUsers: true, viewAnalytics: true, trackHistory: true };
+      if (r === 'manager') return { addDoc: true, editDoc: true, deleteDoc: false, viewDoc: true, printExport: true, manageSettings: false, manageUsers: false, viewAnalytics: true, trackHistory: true };
+      if (r === 'viewer') return { addDoc: false, editDoc: false, deleteDoc: false, viewDoc: true, printExport: true, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true };
+      return { addDoc: true, editDoc: true, deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true };
+    }
+
+    function _setCheckboxes(perms) {
+      const ids = ['viewDoc', 'addDoc', 'editDoc', 'deleteDoc', 'printExport', 'trackHistory', 'viewAnalytics', 'manageSettings', 'manageUsers'];
+      ids.forEach(id => {
+        const el = document.getElementById('uperm-' + id);
+        if (el) el.checked = !!perms[id];
+      });
+    }
+
+    function _getCheckboxes() {
+      const ids = ['viewDoc', 'addDoc', 'editDoc', 'deleteDoc', 'printExport', 'trackHistory', 'viewAnalytics', 'manageSettings', 'manageUsers'];
+      const perms = {};
+      ids.forEach(id => {
+        const el = document.getElementById('uperm-' + id);
+        if (el) perms[id] = el.checked;
+      });
+      return perms;
+    }
+
+    function _showRolePerms(role) {
+      const perms = _getDefaultPermsJS(role);
+      _setCheckboxes(perms);
+    }
+
+    function openAddUserModal() {
+      _isEditUser = false;
+      document.getElementById('userModalTitle').textContent = 'Add New User';
+      document.getElementById('editUserEmail').value = '';
+      ['uFullName', 'uEmail', 'uPassword', 'uTeam'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('uEmail').readOnly = false;
+      document.getElementById('uRole').value = 'Staff';
+      document.getElementById('uStatus').value = 'Active';
+      document.getElementById('uPwdHint').textContent = '(required)';
+      _showRolePerms('Staff');
+      showModal('userModal');
+    }
+
+    function openEditUserModal(u) {
+      _isEditUser = true;
+      document.getElementById('userModalTitle').textContent = 'Edit User';
+      document.getElementById('editUserEmail').value = u.email;
+      document.getElementById('uFullName').value = u.name || '';
+      document.getElementById('uEmail').value = u.email || '';
+      document.getElementById('uEmail').readOnly = true;
+      document.getElementById('uPassword').value = '';
+      document.getElementById('uTeam').value = u.team || '';
+      document.getElementById('uRole').value = u.role || 'Staff';
+      document.getElementById('uStatus').value = u.status || 'Active';
+      document.getElementById('uPwdHint').textContent = '(leave blank to keep current)';
+      // Merge defaults with custom permissions
+      const perms = Object.assign({}, _getDefaultPermsJS(u.role), u.permissions || {});
+      _setCheckboxes(perms);
+      showModal('userModal');
+    }
+
+    function closeUserModal() { hideModal('userModal'); }
+
+    function saveUser() {
+      const name = document.getElementById('uFullName').value.trim();
+      const email = document.getElementById('uEmail').value.trim();
+      const pwd = document.getElementById('uPassword').value;
+      const role = document.getElementById('uRole').value;
+      const status = document.getElementById('uStatus').value;
+      const team = document.getElementById('uTeam').value.trim();
+      const permissions = _getCheckboxes();
+
+      if (!name || !email) { toast('Name and Email are required', 'error'); return; }
+      if (!_isEditUser && !pwd) { toast('Password is required for new users', 'error'); return; }
+      if (pwd && pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+      const ud = { name, email, role, status, team, permissions };
+      if (pwd) ud.password = pwd;
+
+      // Optimistic UI updates for instant feedback
+      closeUserModal();
+
+      if (_isEditUser) {
+        const targetEmail = document.getElementById('editUserEmail').value;
+        // Update local cache instantly
+        const idx = _allUsers.findIndex(u => u.email === targetEmail);
+        if (idx !== -1) _allUsers[idx] = Object.assign({}, _allUsers[idx], { name, role, status, team, permissions });
+        renderUsersTable(_allUsers);
+        toast('User updated!');
+
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status !== 'success') toast(r.message || 'Failed to update user on server', 'error');
+          })
+          .withFailureHandler(() => toast('Network error updating user', 'error'))
+          .updateUser(_sessionToken, targetEmail, ud);
+      } else {
+        // Add to local cache instantly
+        _allUsers.push({ email, name, role, status: status || 'Active', team, permissions });
+        renderUsersTable(_allUsers);
+        toast('User added!');
+
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status !== 'success') {
+              toast(r.message || 'Failed to add user on server', 'error');
+              // Optionally remove the optimistically added user if it fails
+              _allUsers = _allUsers.filter(u => u.email !== email);
+              renderUsersTable(_allUsers);
+            }
+          })
+          .withFailureHandler(() => {
+            toast('Network error adding user', 'error');
+            _allUsers = _allUsers.filter(u => u.email !== email);
+            renderUsersTable(_allUsers);
+          })
+          .addUser(_sessionToken, ud);
+      }
+    }
+
+    function toggleUser(email) {
+      showConfirmModal('Change User Status', `Are you sure you want to change the status for <strong>${email}</strong>?`, 'Confirm', 'info', function () {
+        google.script.run
+          .withSuccessHandler(r => {
+            if (r.status === 'success') {
+              toast(`User ${r.newStatus.toLowerCase()}d`);
+              // Update local cache instantly
+              const u = _allUsers.find(u => u.email === email);
+              if (u) u.status = r.newStatus;
+              renderUsersTable(_allUsers);
+            } else toast(r.message || 'Failed', 'error');
+          })
+          .withFailureHandler(() => toast('Error', 'error'))
+          .toggleUserStatus(_sessionToken, email);
+      }); // end showConfirmModal
+    }
+  </script>
+
+  <!-- ===== ALERT MODAL ===== -->
+  <div id="alertModal">
+    <div class="am-box">
+      <div class="am-header">
+        <div class="am-icon" id="amIcon">
+          <span class="material-symbols-outlined" id="amIconSymbol" style="font-size:22px">error</span>
+        </div>
+        <div class="am-title" id="amTitle">Notification</div>
+      </div>
+      <div class="am-body" id="amBody"></div>
+      <div class="am-footer">
+        <button id="amCancelBtn" class="btn btn-outline" style="display:none"
+          onclick="closeAlertModal()">Cancel</button>
+        <button id="amOkBtn" class="btn btn-primary"
+          onclick="_amConfirmCb && _amConfirmCb(); closeAlertModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SYSTEM INFO MODAL ===== -->
+  <div id="sysInfoModal">
+    <div class="si-box">
+      <div class="si-header">
+        <div class="si-header-inner">
+          <span class="material-symbols-outlined">info</span>
+          <h3>System Information</h3>
+        </div>
+        <button class="si-close" onclick="closeSysInfoModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="si-body">
+        <div class="si-title">About DocuTracker</div>
+        <p><span class="si-brand">DocuTracker</span> is a modern web-based document management and tracking system
+          designed to streamline the monitoring, routing, and status tracking of office documents in real time. The
+          system features secure user authentication, responsive dashboard analytics, document history timelines,
+          searchable records, activity logs, printable reports, and mobile-friendly access for efficient document
+          monitoring anytime and anywhere.</p>
+        <p>Built with a clean and professional interface, DocuTracker helps organizations improve document
+          accountability, transparency, and workflow efficiency through centralized tracking and reporting capabilities.
+        </p>
+        <hr class="si-divider">
+        <p>Developed and Designed by <a href="https://aljuneq.pages.dev/" target="_blank"
+            style="color:var(--blue);font-weight:600;text-decoration:none">Aljune.Q</a></p>
+        <p>© 2025 All Rights Reserved.</p>
+        <div class="si-key">Product License Key: JXD984877589390</div>
+      </div>
+      <div class="si-footer">
+        <button class="btn btn-primary" onclick="closeSysInfoModal()"
+          style="padding:8px 20px;font-size:13px">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== ALERT / CONFIRM MODAL HELPERS =====================
+    let _amConfirmCb = null;
+
+    function showAlertModal(title, message, type) {
+      // type: 'error' | 'success' | 'info' | 'warning'
+      const t = type || 'info';
+      const iconMap = { error: 'error', success: 'check_circle', info: 'info', warning: 'warning', danger: 'delete' };
+      document.getElementById('amTitle').textContent = title;
+      document.getElementById('amBody').innerHTML = message;
+      document.getElementById('amIcon').className = 'am-icon ' + t;
+      document.getElementById('amIconSymbol').textContent = iconMap[t] || 'info';
+      document.getElementById('amCancelBtn').style.display = 'none';
+      document.getElementById('amOkBtn').textContent = 'OK';
+      document.getElementById('amOkBtn').className = 'btn btn-primary';
+      _amConfirmCb = null;
+      document.getElementById('alertModal').classList.add('show');
+    }
+
+    function showConfirmModal(title, message, confirmLabel, type, onConfirm) {
+      const t = type || 'danger';
+      const iconMap = { danger: 'warning', info: 'help', warning: 'warning', error: 'error' };
+      document.getElementById('amTitle').textContent = title;
+      document.getElementById('amBody').innerHTML = message;
+      document.getElementById('amIcon').className = 'am-icon ' + (t === 'danger' ? 'error' : t);
+      document.getElementById('amIconSymbol').textContent = iconMap[t] || 'warning';
+      document.getElementById('amCancelBtn').style.display = '';
+      document.getElementById('amOkBtn').textContent = confirmLabel || 'Confirm';
+      document.getElementById('amOkBtn').className = 'btn ' + (t === 'danger' ? 'btn-primary' : 'btn-primary');
+      document.getElementById('amOkBtn').style.background = t === 'danger' ? 'var(--danger)' : '';
+      _amConfirmCb = onConfirm || null;
+      document.getElementById('alertModal').classList.add('show');
+    }
+
+    function closeAlertModal() {
+      document.getElementById('alertModal').classList.remove('show');
+      document.getElementById('amOkBtn').style.background = '';
+      _amConfirmCb = null;
+    }
+
+    // Close alert modal on backdrop click
+    document.getElementById('alertModal').addEventListener('click', function (e) {
+      if (e.target === this) closeAlertModal();
+    });
+
+    // System Info modal
+    function openSysInfoModal() {
+      document.getElementById('sysInfoModal').classList.add('show');
+    }
+    function closeSysInfoModal() {
+      document.getElementById('sysInfoModal').classList.remove('show');
+    }
+    document.getElementById('sysInfoModal').addEventListener('click', function (e) {
+      if (e.target === this) closeSysInfoModal();
+    });
+  </script>
+
+</body>
+
+</html>
