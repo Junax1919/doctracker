@@ -6108,9 +6108,15 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             // Roll back
             if (idx !== -1 && originalDoc) allDocs[idx] = originalDoc;
             populateTableFilters(); applyFilter(currentFilter); updateStats();
-            toast('Network error — changes not saved', 'error');
+            showAlertModal(
+              'Save Failed',
+              'Your changes could not be saved due to a connection issue.<br><br>' +
+              'Your local view has been restored. Please <strong>try saving again</strong> — ' +
+              'your form was already closed, so re-open the record and re-submit.',
+              'error'
+            );
           })
-          .updateDocument(id, data);
+          .updateDocument(id, data, _sessionToken);
       } else {
         // ── OPTIMISTIC ADD ────────────────────────────────────────────────────
         // Show success immediately; the server confirms (or we roll back).
@@ -6217,9 +6223,14 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             // Roll back
             allDocs = allDocs.filter(d => d['ID/Barcode'] !== tempId);
             populateTableFilters(); applyFilter(currentFilter); updateStats();
-            toast('Network error — document not saved', 'error');
+            showAlertModal(
+              'Save Failed',
+              'The document could not be saved due to a connection issue.<br><br>' +
+              'Please <strong>try adding the document again</strong>. Your data was not saved.',
+              'error'
+            );
           })
-          .addDocument(data);
+          .addDocument(data, _sessionToken);
       }
     }
     function deleteDoc(id) {
@@ -6236,7 +6247,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             } else toast('Delete failed', 'error');
           })
           .withFailureHandler(() => toast('Error', 'error'))
-          .deleteDocument(id);
+          .deleteDocument(id, _sessionToken);
       }); // end showConfirmModal
     }
     function handleFileSelect(e) {
@@ -6296,7 +6307,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           .withFailureHandler(function () {
             toast('PDF upload failed — document was saved without attachment', 'warning');
           })
-          .uploadPDFToGoogleDrive(b64, file.name, docId);
+          .uploadPDFToGoogleDrive(b64, file.name, docId, _sessionToken);
       };
       reader.readAsDataURL(file);
     }
