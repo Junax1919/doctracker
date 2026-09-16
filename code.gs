@@ -65,6 +65,15 @@ function getScriptUrl() {
   return ScriptApp.getService().getUrl();
 }
 
+// Lightweight warm-up ping — called by the frontend before the actual login
+// to pre-boot the GAS execution environment and open the spreadsheet handle.
+// Returns immediately after _getSS() so subsequent calls hit a warm instance.
+// Cost: ~200ms on cold start, <10ms when already warm.
+function warmUp() {
+  try { _getSS(); } catch(e) {}
+  return { ok: true };
+}
+
 // =====================================================================
 //  REST API ENDPOINT — handles JSON POST calls from standalone HTML
 //  (i.e., when index.html is opened directly, not via doGet)
@@ -85,9 +94,9 @@ function doPost(e) {
 
     const allowedMethods = [
       'checkLogin', 'checkSocialLogin', 'logout', 'getCurrentUser', 'updateUserProfile',
-      'sendResetEmail', 'validateResetToken', 'setNewPassword',
+      'sendResetEmail', 'validateResetToken', 'setNewPassword', 'warmUp',
       'getDropdownOptions', 'updateDropdownOptions', 'updateAllDropdownOptions',
-      'getAllDocuments', 'getDocumentById', 'getDocumentStats',
+      'getAllDocuments', 'getDocumentById', 'getDocumentStats', 'getDocsRevision',
       'addDocument', 'updateDocument', 'deleteDocument',
       'getDocumentHistory', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
@@ -323,7 +332,9 @@ function _getDefaultPermissions(role) {
   return                       { addDoc: true,  editDoc: true,  deleteDoc: false, viewDoc: true, printExport: false, manageSettings: false, manageUsers: false, viewAnalytics: false, trackHistory: true  };
 }
 
+let _usersSchemaVerified = false; // in-memory flag — reset on each new GAS execution context
 function _ensureUsersColumns(sheet) {
+  if (_usersSchemaVerified) return; // already confirmed this execution — skip the sheet read
   try {
     const lastCol = sheet.getLastColumn();
     const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
@@ -342,6 +353,7 @@ function _ensureUsersColumns(sheet) {
         }
       }
     });
+    _usersSchemaVerified = true; // mark done for the remainder of this execution
   } catch (e) { Logger.log('_ensureUsersColumns: ' + e); }
 }
 
@@ -454,17 +466,23 @@ function checkLogin(email, password) {
     const status = String(data[i][6] || 'Active');
     if (status.toLowerCase() === 'inactive')
       return { status: 'invalid', message: 'Account is deactivated. Contact your administrator.' };
-    const token = _createSession(userEmail);
-    // Pass the user's display name explicitly — at login time there is no active
-    // session token yet, so getCurrentUser() inside logActivity would return null
-    // and fall back to 'System'. We pass the name directly to avoid that.
+    const token    = _createSession(userEmail);
     const userName = String(data[i][3] || '').trim() || userEmail;
-    logActivity('Login', '', `User logged in: ${userEmail}`, userName);
-    return { status: 'success', token: token };
+    const role     = String(data[i][2] || 'Staff');
+    const perms    = _getDefaultPermissions(role);
+    try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
+    // Pre-warm the user-object cache so the immediately-following getInitialData()
+    // call resolves getCurrentUser() from cache — zero extra sheet reads.
+    const userObj = { email: data[i][0], name: userName, role, status, permissions: perms, team: String(data[i][10] || '').trim() };
+    try {
+      const ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
+      CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
+    } catch (e) {}
+    try { logActivity('Login', '', `User logged in: ${userEmail}`, userName); } catch (e) {}
+    return { status: 'success', token };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
 }
-
 function checkSocialLogin(email) {
   if (!email) return { status: 'invalid', message: 'No email provided' };
   const ss    = _getSS();
@@ -475,15 +493,22 @@ function checkSocialLogin(email) {
   for (let i = 1; i < data.length; i++) {
     const userEmail = String(data[i][0]).trim().toLowerCase();
     if (email.toLowerCase() !== userEmail) continue;
-    
     const status = String(data[i][6] || 'Active');
     if (status.toLowerCase() === 'inactive')
       return { status: 'invalid', message: 'Account is deactivated. Contact your administrator.' };
-      
-    const token = _createSession(userEmail);
+    const token    = _createSession(userEmail);
     const userName = String(data[i][3] || '').trim() || userEmail;
-    logActivity('Login', '', `User logged in via Social: ${userEmail}`, userName);
-    return { status: 'success', token: token };
+    const role     = String(data[i][2] || 'Staff');
+    const perms    = _getDefaultPermissions(role);
+    try { const c = data[i][7] ? JSON.parse(data[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
+    // Pre-warm user-object cache — same optimisation as checkLogin
+    const userObj = { email: data[i][0], name: userName, role, status, permissions: perms, team: String(data[i][10] || '').trim() };
+    try {
+      const ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
+      CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
+    } catch (e) {}
+    try { logActivity('Login', '', `User logged in via Social: ${userEmail}`, userName); } catch (e) {}
+    return { status: 'success', token };
   }
   return { status: 'invalid', message: 'Social login email not found. Contact Admin for approval.' };
 }
@@ -669,6 +694,7 @@ function getDocumentById(docId) {
 // =====================================================================
 //  ACTIVITY LOG
 // =====================================================================
+let _activityLogSheetReady = false; // in-memory flag — skips migration check after first call
 function initializeActivityLogSheet() {
   try {
     const ss = _getSS();
@@ -679,15 +705,17 @@ function initializeActivityLogSheet() {
       logSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
       logSheet.getRange(1, 1, 1, 7).setBackground('#f3f4f6');
       logSheet.setFrozenRows(1);
-    } else {
+      _activityLogSheetReady = true;
+    } else if (!_activityLogSheetReady) {
       // Migrate existing sheet: check if Doc No column already exists (col 5 header)
+      // Only runs once per execution context — never on subsequent calls in the same request
       const headers = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0];
       if (!headers.includes('Doc No')) {
-        // Insert Doc No column at position 5 (after Document ID col 4)
         logSheet.insertColumnAfter(4);
         logSheet.getRange(1, 5).setValue('Doc No');
         logSheet.getRange(1, 5).setFontWeight('bold').setBackground('#f3f4f6');
       }
+      _activityLogSheetReady = true;
     }
     return logSheet;
   } catch (error) {
@@ -1660,89 +1688,112 @@ function deleteUser(tokenParam, targetEmail) {
 function getInitialData(token) {
   try {
     _doPostToken = token || _doPostToken;
-    const user = getCurrentUser(token);
+
+    // ── Validate session (fast CacheService path first) ───────────────────────
+    const email = _validateSession(token);
+    if (!email) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+
+    // ── Read Users sheet exactly ONCE, reuse for user lookup + directory + users list ──
+    // Previously: getCurrentUser(), getUsers(), _getUserDirectory() each did their
+    // own sheet.getDataRange().getValues() — 3 reads. Now it's at most 1.
+    const ss         = _getSS();
+    const usersSheet = ss.getSheetByName(USERS_SHEET);
+    if (!usersSheet) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+
+    // Try warm-path user-object cache first (pre-warmed by checkLogin)
+    const cu_ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
+    let user = null;
+    try { const hit = CacheService.getScriptCache().get(cu_ck); if (hit) user = JSON.parse(hit); } catch (e) {}
+
+    // usersData is read lazily — only when the cache misses
+    let usersData = null;
+    if (!user) {
+      usersData = usersSheet.getDataRange().getValues();
+      for (let i = 1; i < usersData.length; i++) {
+        if (String(usersData[i][0]).trim().toLowerCase() !== email) continue;
+        const role   = String(usersData[i][2] || 'Staff');
+        const status = String(usersData[i][6] || 'Active');
+        if (status.toLowerCase() === 'inactive') return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+        const perms = _getDefaultPermissions(role);
+        try { const c = usersData[i][7] ? JSON.parse(usersData[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
+        user = { email: usersData[i][0], name: usersData[i][3] || 'User', role, status, permissions: perms, team: String(usersData[i][10] || '').trim() };
+        try { CacheService.getScriptCache().put(cu_ck, JSON.stringify(user), 3600); } catch (e) {}
+        break;
+      }
+    }
     if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
 
-    // ── Fast path: serve entirely from cache ─────────────────────────────────
-    const cache    = CacheService.getScriptCache();
+    // ── Docs + opts from cache (fast path) ────────────────────────────────────
+    const cache      = CacheService.getScriptCache();
     const docsCached = _cacheGet('all_docs');
     const optsCached = cache.get('dropdown_opts_v2');
+    let docs = null;
+    if (docsCached) { try { docs = JSON.parse(docsCached); } catch(e) {} }
+    let opts = null;
+    if (optsCached) { try { opts = JSON.parse(optsCached); } catch(e) {} }
 
-    if (docsCached && optsCached) {
-      // All data cached — zero sheet reads, returns in ~100ms
-      try {
-        const docs = JSON.parse(docsCached);
-        const opts = JSON.parse(optsCached);
-        let logs = [];
-        try { const lc = cache.get('all_activity_logs'); if (lc) logs = JSON.parse(lc); } catch(e) {}
-        let users = [];
-        if (user.permissions && user.permissions.manageUsers) {
-          try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
+    // ── Cold path: read sheets not yet cached ─────────────────────────────────
+    if (!docs || !opts) {
+      const sheetMap = {};
+      ss.getSheets().forEach(s => { sheetMap[s.getName()] = s; });
+      if (!docs) {
+        const docSheet = sheetMap[DOCS_SHEET];
+        docs = docSheet ? _parseDocsSheet(docSheet) : [];
+      }
+      if (!opts) {
+        opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
+        const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
+        if (cfgSheet) {
+          const cfgData = cfgSheet.getDataRange().getValues();
+          for (let i = 1; i < cfgData.length; i++) {
+            if (cfgData[i][0]) opts.docTypes.push(cfgData[i][0]);
+            if (cfgData[i][1]) opts.suppliers.push(cfgData[i][1]);
+            if (cfgData[i][2]) opts.offices.push(cfgData[i][2]);
+            if (cfgData[i][3]) opts.statuses.push(cfgData[i][3]);
+            if (cfgData[i][4]) opts.endUsers.push(cfgData[i][4]);
+            if (cfgData[i][5]) opts.docCategories.push(cfgData[i][5]);
+            if (cfgData[i][6]) opts.cashierStatuses.push(cfgData[i][6]);
+          }
+          try { cache.put('dropdown_opts_v2', JSON.stringify(opts), 600); } catch(e) {}
         }
-        const stats = _computeStatsGAS(docs, user.team);
-        const userDirectory = _getUserDirectory();
-        return { user, docs, opts, stats, logs, users, userDirectory };
-      } catch(e) {
-        // Cache parse error — fall through to cold path
       }
     }
 
-    // ── Cold path: read all needed sheets in ONE batch ────────────────────────
-    // Load all sheet data in one pass rather than sheet-by-sheet
-    const ss     = _getSS();
-    const sheets = ss.getSheets();
-    const sheetMap = {};
-    sheets.forEach(s => { sheetMap[s.getName()] = s; });
-
-    // Read docs sheet
-    let docs = [];
-    if (!docsCached) {
-      const docSheet = sheetMap[DOCS_SHEET];
-      if (docSheet) docs = _parseDocsSheet(docSheet);
-    } else {
-      try { docs = JSON.parse(docsCached); } catch(e) { docs = []; }
-    }
-
-    // Read config/dropdown sheet
-    let opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
-    if (!optsCached) {
-      const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
-      if (cfgSheet) {
-        const cfgData = cfgSheet.getDataRange().getValues();
-        for (let i = 1; i < cfgData.length; i++) {
-          if (cfgData[i][0]) opts.docTypes.push(cfgData[i][0]);
-          if (cfgData[i][1]) opts.suppliers.push(cfgData[i][1]);
-          if (cfgData[i][2]) opts.offices.push(cfgData[i][2]);
-          if (cfgData[i][3]) opts.statuses.push(cfgData[i][3]);
-          if (cfgData[i][4]) opts.endUsers.push(cfgData[i][4]);
-          if (cfgData[i][5]) opts.docCategories.push(cfgData[i][5]);
-          if (cfgData[i][6]) opts.cashierStatuses.push(cfgData[i][6]);
-        }
-        try { cache.put('dropdown_opts_v2', JSON.stringify(opts), 600); } catch(e) {}
-      }
-    } else {
-      try { opts = JSON.parse(optsCached); } catch(e) {}
-    }
-
-    // Logs: only from cache (not read on cold path — too slow for startup)
+    // ── Logs: cache only — never a cold sheet read at startup ─────────────────
     let logs = [];
     try { const lc = cache.get('all_activity_logs'); if (lc) logs = JSON.parse(lc); } catch(e) {}
 
-    // Users: only for admin/manager
+    // ── Users list + directory: reuse usersData (already read or one lazy read) ──
     let users = [];
-    if (user.permissions && user.permissions.manageUsers) {
-      try { const r = getUsers(token); users = (r && r.users) ? r.users : []; } catch(e) {}
+    let userDirectory = [];
+    // Ensure usersData is loaded — may still be null if user came from cache
+    if (!usersData) usersData = usersSheet.getDataRange().getValues();
+    for (let i = 1; i < usersData.length; i++) {
+      if (!usersData[i][0]) continue;
+      userDirectory.push({ email: String(usersData[i][0]).toLowerCase().trim(), name: usersData[i][3] || '' });
+      if (user.permissions && user.permissions.manageUsers) {
+        const rawPerms  = usersData[i][7] ? (() => { try { return JSON.parse(usersData[i][7]); } catch(e) { return null; } })() : null;
+        const basePerms = _getDefaultPermissions(usersData[i][2] || 'Staff');
+        if (rawPerms) Object.assign(basePerms, rawPerms);
+        users.push({
+          email:       usersData[i][0],
+          role:        usersData[i][2] || 'Staff',
+          name:        usersData[i][3] || '',
+          status:      usersData[i][6] || 'Active',
+          permissions: basePerms,
+          team:        String(usersData[i][10] || '').trim(),
+          createdAt:   usersData[i][8] ? String(usersData[i][8]).split('T')[0] : ''
+        });
+      }
     }
 
     const stats = _computeStatsGAS(docs, user.team);
-    const userDirectory = _getUserDirectory();
     return { user, docs, opts, stats, logs, users, userDirectory };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
     return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[] }, stats: {}, logs: [], users: [] };
   }
 }
-
 // Pure-GAS stats computation (server-side mirror of client _computeStats).
 // Rules:
 //   All Documents : total count, all statuses, all teams.
