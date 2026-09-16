@@ -4480,6 +4480,21 @@
     let visibleColumns = { overdue: true, id: true, docTs: true, type: true, no: true, prDate: true, docCat: true, desc: true, amount: true, endUser: true, req: true, poTs: true, dateRecvdBAC: true, poNo: true, poDate: true, poAmount: true, supplier: true, office: true, endorsementTs: true, status: true, dateEndAcctng: true, dateEndCMO: true, deliveryStatus: true, airNo: true, airDate: true, dateEndCOA: true, dateEndCTO: true, date: true, notes: true, cashierStatus: true, datePaid: true, checkNo: true, attachment: true };
     let currentUser = null, dropdownOptions = { docTypes: [], suppliers: [], offices: [], statuses: [], docCategories: [], cashierStatuses: [] }, selectedFile = null;
     let allLogs = [];
+    try {
+      const _cachedLogs = localStorage.getItem('docutracker_activity_logs');
+      if (_cachedLogs) allLogs = JSON.parse(_cachedLogs);
+    } catch (e) { }
+    try {
+      const _cachedDocs = localStorage.getItem('docutracker_all_docs');
+      if (_cachedDocs) allDocs = JSON.parse(_cachedDocs);
+    } catch (e) { }
+    try {
+      const _cachedOpts = localStorage.getItem('docutracker_dropdown_opts');
+      if (_cachedOpts) dropdownOptions = JSON.parse(_cachedOpts);
+    } catch (e) { }
+    function _saveDocsCache() {
+      try { localStorage.setItem('docutracker_all_docs', JSON.stringify(allDocs)); } catch (e) { }
+    }
     let _docCreatorMap = {};
     // Per-browser session token (UUID issued by the backend on login).
     // Stored in localStorage so it persists across refreshes but is NEVER
@@ -4532,11 +4547,17 @@
       google.script.run.withSuccessHandler(r => {
         if (r.status === 'success') {
           _sessionToken = r.token || '';
-          try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
-          // Transition immediately — the full-page loader handles the UX gap.
-          // No artificial delay: the server already pre-warmed the user cache,
-          // so the next getInitialData() call is a fast-path cache hit.
-          showView('dashboard'); _showDashLoader(); initDashboard();
+          try {
+            localStorage.setItem('docutracker_session_token', _sessionToken);
+            sessionStorage.removeItem('docutracker_active_tab');
+          } catch (e) { }
+          // Show dashboard immediately. If initialData is bundled with login, render records in 0 ms!
+          showView('dashboard');
+          if (r.initialData && r.initialData.user) {
+            _renderInitialData(r.initialData);
+          } else {
+            initDashboard();
+          }
         }
         else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
       }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
@@ -4567,9 +4588,17 @@
         google.script.run.withSuccessHandler(r => {
           if (r.status === 'success') {
             _sessionToken = r.token || '';
-            try { localStorage.setItem('docutracker_session_token', _sessionToken); } catch (e) { }
-            // Transition immediately — same as email login, no artificial delay.
-            showView('dashboard'); _showDashLoader(); initDashboard();
+            try {
+              localStorage.setItem('docutracker_session_token', _sessionToken);
+              sessionStorage.removeItem('docutracker_active_tab');
+            } catch (e) { }
+            // Show dashboard immediately. If initialData is bundled with login, render records in 0 ms!
+            showView('dashboard');
+            if (r.initialData && r.initialData.user) {
+              _renderInitialData(r.initialData);
+            } else {
+              initDashboard();
+            }
           } else {
             showNotif('loginNotif', r.message || 'Access denied', 'error');
             restoreBtn();
@@ -4765,9 +4794,9 @@
     // Called by both initDashboard (fresh login) and the session-restore path
     // (_attemptSessionCheck) so we never need two GAS round-trips on page refresh.
     function _renderInitialData(result) {
-      if (!result || !result.user) { _hideDashLoader(); showView('login'); return; }
+      if (!result || !result.user) { showView('login'); return; }
 
-      _setDashLoaderStep('Loading user profile…', 0.25);
+      // Populate user profile
       currentUser = result.user;
       document.getElementById('userName').textContent = result.user.name || 'User';
       document.getElementById('userRole').textContent = result.user.role || 'User';
@@ -4776,25 +4805,46 @@
       document.getElementById('profileEmail').value = result.user.email || '';
       document.getElementById('profileRole').value  = result.user.role  || '';
       applyPermissions(result.user.permissions || {}, result.user.role || 'Staff');
+      try {
+        localStorage.setItem('docutracker_user_data', JSON.stringify({
+          name: result.user.name,
+          role: result.user.role,
+          email: result.user.email,
+          permissions: result.user.permissions,
+          stats: result.stats
+        }));
+      } catch (e) { }
 
-      _setDashLoaderStep('Loading dropdown options…', 0.45);
-      if (result.opts) { dropdownOptions = result.opts; populateDropdowns(); populatePrintFilters(); }
+      // Populate dropdowns
+      if (result.opts) {
+        dropdownOptions = result.opts;
+        try { localStorage.setItem('docutracker_dropdown_opts', JSON.stringify(dropdownOptions)); } catch (e) { }
+        populateDropdowns();
+        populatePrintFilters();
+      }
 
-      _setDashLoaderStep('Computing statistics…', 0.60);
+      // Apply stats
       if (result.stats) _applyStats(result.stats);
 
+      // Cache users / directory / logs
       if (result.users  && result.users.length)       _allUsers       = result.users;
       if (result.userDirectory && result.userDirectory.length) _userDirectory = result.userDirectory;
-      if (result.logs   && result.logs.length)        { allLogs = result.logs; buildCreatorMap(); }
+      if (result.logs && result.logs.length) {
+        allLogs = result.logs;
+        try { localStorage.setItem('docutracker_activity_logs', JSON.stringify(allLogs)); } catch (e) { }
+        buildCreatorMap();
+      }
+      if (currentFilter === 'logs' || (document.getElementById('logsView') && document.getElementById('logsView').classList.contains('active'))) {
+        applyLogFilters();
+      }
 
-      _setDashLoaderStep('Rendering documents…', 0.80);
+      // Render documents immediately
       allDocs = result.docs || [];
+      _saveDocsCache();
       populateTableFilters();
       _applyStats(_computeStats(allDocs));
       _renderChunked(allDocs, currentFilter);
 
-      _setDashLoaderStep('Done!', 1);
-      setTimeout(_hideDashLoader, 300);
       _startRealtimeSync();
     }
 
@@ -4905,6 +4955,7 @@
       google.script.run
         .withSuccessHandler(d => {
           allDocs = d || [];
+          _saveDocsCache();
           populateTableFilters();
           applyFilter(currentFilter);
           // Compute stats locally — no extra server round-trip needed
@@ -4968,6 +5019,7 @@
       google.script.run
         .withSuccessHandler(function (d) {
           allDocs = d || [];
+          _saveDocsCache();
           populateTableFilters();
           applyFilter(currentFilter);          // re-applies current filter/sort/search/page
           _applyStats(_computeStats(allDocs));  // dashboard cards stay current too
@@ -5266,6 +5318,7 @@
     }
 
     function filterDocs(f, evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'documents'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       document.getElementById('documentsView').classList.add('active');
@@ -6329,7 +6382,14 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         // 2. Clear local session state immediately — this is instant
         currentUser = null;
         _sessionToken = '';
-        try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
+        try {
+          localStorage.removeItem('docutracker_session_token');
+          localStorage.removeItem('docutracker_activity_logs');
+          localStorage.removeItem('docutracker_all_docs');
+          localStorage.removeItem('docutracker_dropdown_opts');
+          localStorage.removeItem('docutracker_user_data');
+          sessionStorage.removeItem('docutracker_active_tab');
+        } catch (e) { }
 
         // 3. Set a sessionStorage logout flag so checkSession() knows to skip
         //    session restore and show the login page immediately.
@@ -6415,6 +6475,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
     // ===================== TRACK =====================
     function showTrack(evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'track'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active'));
@@ -6545,18 +6606,76 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     }
 
     // ===================== LOGS =====================
-    function showLogsView(evt) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if (evt) evt.target.closest('.nav-link').classList.add('active');['documentsView', 'trackView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active')); const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none'; document.getElementById('logsView').classList.add('active'); currentFilter = 'logs'; updatePageTitle(); loadLogs(false); }
-    // force=true → always refetch from server (Refresh button); force=false → use memory cache if available
+    function showLogsView(evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'logs'); } catch (e) { }
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt && evt.target) {
+        const item = evt.target.closest('.nav-link');
+        if (item) item.classList.add('active');
+      } else {
+        const link = document.querySelector('#logsMenuLink .nav-link');
+        if (link) link.classList.add('active');
+      }
+      ['documentsView', 'trackView', 'printView'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+      const uv = document.getElementById('usersView');
+      if (uv) uv.style.display = 'none';
+      document.getElementById('logsView').classList.add('active');
+      currentFilter = 'logs';
+      updatePageTitle();
+      loadLogs(false);
+    }
+
+    // force=true → refetch from server (Refresh button); force=false → use memory/localStorage cache if available
     function loadLogs(force) {
       if (!force && allLogs && allLogs.length > 0) {
-        // Data already in memory from getInitialData — render immediately (0 ms)
+        // Data already in memory from getInitialData or localStorage — render immediately (0 ms)
         applyLogFilters();
         return;
       }
-      document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading logs...</td></tr>';
+      if (!force) {
+        try {
+          const _saved = localStorage.getItem('docutracker_activity_logs');
+          if (_saved) {
+            allLogs = JSON.parse(_saved);
+            if (allLogs && allLogs.length > 0) {
+              applyLogFilters();
+              return;
+            }
+          }
+        } catch (e) { }
+      }
+
+      // If allLogs is empty, display shimmer skeleton rows for smooth UI
+      const tbody = document.getElementById('logsBody');
+      if (tbody && (!allLogs || allLogs.length === 0)) {
+        tbody.innerHTML = Array.from({ length: 8 }, () => `
+          <tr class="skeleton-row">
+            <td><div class="skeleton" style="height:14px;width:120px"></div></td>
+            <td><div class="skeleton" style="height:14px;width:100px"></div></td>
+            <td><div class="skeleton" style="height:14px;width:90px"></div></td>
+            <td><div class="skeleton" style="height:14px;width:110px"></div></td>
+            <td><div class="skeleton" style="height:14px;width:90px"></div></td>
+            <td><div class="skeleton" style="height:14px;width:180px"></div></td>
+          </tr>
+        `).join('');
+      }
+
       google.script.run
-        .withSuccessHandler(function (logs) { allLogs = logs || []; applyLogFilters(); })
-        .withFailureHandler(function () { document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>'; })
+        .withSuccessHandler(function (logs) {
+          allLogs = logs || [];
+          try { localStorage.setItem('docutracker_activity_logs', JSON.stringify(allLogs)); } catch (e) { }
+          buildCreatorMap();
+          applyLogFilters();
+        })
+        .withFailureHandler(function () {
+          if (!allLogs || allLogs.length === 0) {
+            const tb = document.getElementById('logsBody');
+            if (tb) tb.innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load logs.</td></tr>';
+          }
+        })
         .getAllActivityLogs();
     }
     function renderLogs(logs) { allLogs = logs || []; applyLogFilters(); }
@@ -6760,6 +6879,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
   <script>
     // ===================== PRINT REPORT =====================
     function showPrintView(evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'print'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active'));
@@ -7994,68 +8114,86 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       // If no session token stored, go straight to login without a server call
       if (!_sessionToken) { showView('login'); return; }
 
-      // Show a loading indicator while we verify the session
-      // This prevents the blank-screen / flash-to-login experience on refresh
-      const loadingEl = document.createElement('div');
-      loadingEl.id = 'sessionLoader';
-      loadingEl.style.cssText = 'position:fixed;inset:0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:Inter,sans-serif';
-      loadingEl.innerHTML = `
-        <div style="width:48px;height:48px;border-radius:10px;background:#0f172a;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
-          <span class="material-symbols-outlined" style="font-size:28px;color:#fff">flutter</span>
-        </div>
-        <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:8px">DocuTracker</div>
-        <div style="font-size:14px;color:#64748b;margin-bottom:20px">Restoring your session…</div>
-        <div style="width:200px;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden">
-          <div style="height:100%;background:#3b82f6;border-radius:2px;animation:loadBar 1.5s ease-in-out infinite" id="loadBar"></div>
-        </div>
-        <style>@keyframes loadBar{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}</style>`;
-      document.body.appendChild(loadingEl);
+      // ── Optimistic session restore ─────────────────────────────────────────
+      // Show the dashboard shell instantly.
+      // If we have cached documents, render them immediately (0 ms) so the user
+      // sees real data records INSTANTLY upon refresh with zero delay!
+      // In the background, getInitialData validates the session and synchronizes
+      // the latest data seamlessly.
+      showView('dashboard');
+      let _savedTab = '';
+      try { _savedTab = sessionStorage.getItem('docutracker_active_tab') || ''; } catch (e) { }
+      if (_savedTab === 'logs') {
+        showLogsView();
+      } else {
+        if (allDocs && allDocs.length > 0) {
+          try {
+            const _cachedUser = localStorage.getItem('docutracker_user_data');
+            if (_cachedUser) {
+              const u = JSON.parse(_cachedUser);
+              if (u.name) {
+                document.getElementById('userName').textContent = u.name;
+                document.getElementById('userRole').textContent = u.role || 'User';
+                document.getElementById('userAvatar').textContent = getInitials(u.name);
+                applyPermissions(u.permissions || {}, u.role || 'Staff');
+              }
+              if (u.stats) _applyStats(u.stats);
+            }
+          } catch (e) { }
+          if (dropdownOptions && dropdownOptions.docTypes && dropdownOptions.docTypes.length) {
+            populateDropdowns();
+            populatePrintFilters();
+          }
+          populateTableFilters();
+          _applyStats(_computeStats(allDocs));
+          _renderChunked(allDocs, currentFilter);
+        } else {
+          _showSkeleton(15);
+        }
+      }
 
-      // Normal session check — pass THIS browser's token (never shared with other browsers)
-      // Instead of calling getCurrentUser() + getInitialData() as two separate round-trips,
-      // call getInitialData() directly: it validates the token internally, returns null user
-      // if invalid/expired, and otherwise returns the full dashboard payload — so a valid
-      // session goes from TWO GAS round-trips to ONE.
-      // Retry up to 3 times with progressive back-off to handle GAS cold-start delays.
       let _sessionCheckAttempts = 0;
-      const _retryDelays = [800, 1500]; // ms — tightened from 1500/2500; GAS warm-starts resolve faster
+      const _retryDelays = [1000, 2000, 3000]; // ms — progressive back-off for GAS cold-start
+      const _maxAttempts = 3;
+
       function _attemptSessionCheck() {
         _sessionCheckAttempts++;
         google.script.run
           .withSuccessHandler(function (result) {
-            const loader = document.getElementById('sessionLoader');
             if (result && result.user) {
-              // Valid session AND full dashboard payload in one call — go straight to render
-              if (loader) loader.remove();
-              showView('dashboard');
-              _showDashLoader();
-              // Feed the already-fetched payload directly into the dashboard renderer
-              // so we don't need a second getInitialData() call from initDashboard().
+              // Valid session — render full dashboard payload returned in the same call
               _renderInitialData(result);
-            } else if (!result || (!result.user && _sessionCheckAttempts < 3)) {
-              // Null result — may be a GAS cold-start cache miss; retry
-              const delay = _retryDelays[_sessionCheckAttempts - 1] || 1500;
+            } else if (!result || (!result.user && _sessionCheckAttempts < _maxAttempts)) {
+              // Null result — GAS cold-start cache miss; retry silently with back-off
+              const delay = _retryDelays[_sessionCheckAttempts - 1] || 2000;
               setTimeout(_attemptSessionCheck, delay);
             } else {
-              // Genuinely invalid or expired session after 3 attempts
-              if (loader) loader.remove();
+              // Session genuinely invalid or expired after all retries — go to login
+              _hideDashLoader();
               _sessionToken = '';
-              try { localStorage.removeItem('docutracker_session_token'); } catch (e) { }
+              try {
+                localStorage.removeItem('docutracker_session_token');
+                localStorage.removeItem('docutracker_activity_logs');
+                localStorage.removeItem('docutracker_all_docs');
+                localStorage.removeItem('docutracker_dropdown_opts');
+                localStorage.removeItem('docutracker_user_data');
+                sessionStorage.removeItem('docutracker_active_tab');
+              } catch (e) { }
               showView('login');
             }
           })
           .withFailureHandler(function () {
-            const loader = document.getElementById('sessionLoader');
-            if (loader) {
-              loader.innerHTML = `
-                <div style="text-align:center;padding:32px">
-                  <div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div>
-                  <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Connection Error</div>
-                  <div style="font-size:14px;color:#64748b;margin-bottom:20px">Could not reach the server. Please check your internet connection.</div>
-                  <button onclick="location.reload()" style="padding:10px 24px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
-                  <button onclick="document.getElementById('sessionLoader').remove();showView('login');" style="margin-left:10px;padding:10px 24px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Login</button>
-                </div>`;
-            } else { showView('login'); }
+            // GAS cold-start / transient error — retry silently before giving up
+            if (_sessionCheckAttempts < _maxAttempts) {
+              const delay = _retryDelays[_sessionCheckAttempts - 1] || 2000;
+              setTimeout(_attemptSessionCheck, delay);
+            } else {
+              // All retries exhausted — show toast and offer reload, stay on dashboard
+              _hideDashLoader();
+              toast('Could not reach the server. Please check your connection and refresh.', 'error');
+              const tb = document.getElementById('docTable');
+              if (tb) tb.innerHTML = '<tr><td colspan="10" class="empty-state" style="padding:40px 0">⚠️ Unable to load data. <a href="javascript:location.reload()" style="color:#3b82f6;text-decoration:underline;cursor:pointer">Click here to retry.</a></td></tr>';
+            }
           })
           .getInitialData(_sessionToken);
       }
@@ -8068,6 +8206,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     let _isEditUser = false, _allUsers = [], _userDirectory = [];
 
     function showUsersView(evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'users'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'trackView', 'logsView', 'printView'].forEach(id => {
