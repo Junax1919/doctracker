@@ -479,7 +479,9 @@ function checkLogin(email, password) {
       CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
     } catch (e) {}
     try { logActivity('Login', '', `User logged in: ${userEmail}`, userName); } catch (e) {}
-    return { status: 'success', token };
+    let initialData = null;
+    try { initialData = getInitialData(token); } catch (e) { }
+    return { status: 'success', token, initialData };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
 }
@@ -508,7 +510,9 @@ function checkSocialLogin(email) {
       CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
     } catch (e) {}
     try { logActivity('Login', '', `User logged in via Social: ${userEmail}`, userName); } catch (e) {}
-    return { status: 'success', token };
+    let initialData = null;
+    try { initialData = getInitialData(token); } catch (e) { }
+    return { status: 'success', token, initialData };
   }
   return { status: 'invalid', message: 'Social login email not found. Contact Admin for approval.' };
 }
@@ -744,7 +748,7 @@ function logActivity(action, documentId, details, explicitUserName, docNo) {
       String(details    || '').trim(),
       ''                                  // Description column (reserved)
     ]);
-    CacheService.getScriptCache().remove('all_activity_logs');
+    _cacheDel('all_activity_logs');
     return true;
   } catch (error) {
     Logger.log('logActivity error: ' + error);
@@ -754,9 +758,7 @@ function logActivity(action, documentId, details, explicitUserName, docNo) {
 
 function getAllActivityLogs() {
   try {
-    // 30-second cache — activity logs are append-only; this is safe
-    const cache = CacheService.getScriptCache();
-    const hit   = cache.get('all_activity_logs');
+    const hit = _cacheGet('all_activity_logs');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
 
     const ss    = _getSS();
@@ -785,8 +787,7 @@ function getAllActivityLogs() {
       });
     }
     try {
-      const json = JSON.stringify(logs);
-      if (json.length < 98304) cache.put('all_activity_logs', json, 120);
+      _cacheSet('all_activity_logs', JSON.stringify(logs));
     } catch(e) {}
     return logs;
   } catch (error) { Logger.log('getAllActivityLogs error: ' + error); return []; }
@@ -827,7 +828,7 @@ function _logBoth(docId, histAction, histStatus, histUser, histRemarks, actActio
       logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), docNo, String(actDetails||'').trim(), '']);
     }
     // Invalidate activity cache
-    try { CacheService.getScriptCache().remove('all_activity_logs'); } catch(e) {}
+    try { _cacheDel('all_activity_logs'); } catch(e) {}
   } catch(e) { Logger.log('_logBoth error: ' + e); }
 }
 
@@ -954,6 +955,19 @@ function _cacheGet(key) {
     for (let i = 0; i < n; i++) { const p = cache.get(key + '_' + i); if (!p) return null; parts.push(p); }
     return parts.join('');
   } catch(e) { return null; }
+}
+
+function _cacheDel(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const nStr = cache.get(key + '_n');
+    if (nStr) {
+      const n = parseInt(nStr);
+      for (let i = 0; i < n; i++) cache.remove(key + '_' + i);
+      cache.remove(key + '_n');
+    }
+    cache.remove(key);
+  } catch(e) {}
 }
 
 function getAllDocuments() {
@@ -1759,9 +1773,15 @@ function getInitialData(token) {
       }
     }
 
-    // ── Logs: cache only — never a cold sheet read at startup ─────────────────
+    // ── Logs: fast path via cache, lazy fallback to getAllActivityLogs ─────────
     let logs = [];
-    try { const lc = cache.get('all_activity_logs'); if (lc) logs = JSON.parse(lc); } catch(e) {}
+    try {
+      const lc = _cacheGet('all_activity_logs');
+      if (lc) logs = JSON.parse(lc);
+    } catch(e) {}
+    if (!logs || !logs.length) {
+      logs = getAllActivityLogs();
+    }
 
     // ── Users list + directory: reuse usersData (already read or one lazy read) ──
     let users = [];
