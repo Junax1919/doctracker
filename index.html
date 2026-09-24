@@ -2171,113 +2171,11 @@
       visibility: hidden
     }
 
-    /* ── Dashboard loader overlay ── */
+    /* ── Dashboard loader overlay (permanently disabled for instant loading) ── */
     #dashLoader {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: radial-gradient(ellipse at 50% 40%, #1e293b 0%, #0f172a 70%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 1;
-      /* GPU layer — keeps the overlay composited so fade-out never repaints */
-      will-change: opacity;
-      transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    #dashLoader.dl-hiding {
-      opacity: 0;
-      pointer-events: none;
-    }
-    .dl-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-      width: 280px;
-    }
-    .dl-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .dl-logo .material-symbols-outlined {
-      font-size: 30px;
-      color: #3b82f6;
-    }
-    .dl-brand {
-      font-size: 21px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #f1f5f9;
-    }
-    /* Dual-ring spinner — two concentric arcs counter-rotating for depth */
-    .dl-spinner {
-      position: relative;
-      width: 52px;
-      height: 52px;
-      /* GPU promotion so rotation never triggers layout */
-      will-change: transform;
-    }
-    @keyframes dlSpinCW {
-      to { transform: rotate(360deg); }
-    }
-    @keyframes dlSpinCCW {
-      to { transform: rotate(-360deg); }
-    }
-    .dl-ring-outer {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      border-top-color: #3b82f6;
-      border-right-color: rgba(59,130,246,0.35);
-      will-change: transform;
-      animation: dlSpinCW 0.9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    .dl-ring-inner {
-      position: absolute;
-      inset: 8px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      border-bottom-color: #60a5fa;
-      border-left-color: rgba(96,165,250,0.3);
-      will-change: transform;
-      animation: dlSpinCCW 0.7s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    /* Step label — cross-fades between messages instead of snapping */
-    .dl-step {
-      font-size: 12.5px;
-      color: #64748b;
-      text-align: center;
-      margin: 0;
-      height: 18px;
-      /* opacity toggled by JS for cross-fade; transform avoids layout shift */
-      opacity: 1;
-      will-change: opacity, transform;
-      transition: opacity 0.18s ease, transform 0.18s ease;
-    }
-    .dl-step.dl-step-fade {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    /* Progress bar — uses scaleX on a 100%-wide element to avoid width reflows */
-    .dl-bar-track {
-      width: 100%;
-      height: 3px;
-      background: rgba(255,255,255,0.07);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .dl-bar {
-      height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
-      border-radius: 99px;
-      transform-origin: left center;
-      transform: scaleX(0);
-      will-change: transform;
-      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
 
     /* ── Print: prevent blank trailing page ── */
@@ -3140,6 +3038,262 @@
         print-color-adjust: exact;
       }
     }
+
+    /* ---- OFFICE AGING ANALYTICS VIEW ---- */
+    .office-aging-view {
+      display: none;
+      animation: fadeInUp 0.28s ease both
+    }
+    .office-aging-view.active {
+      display: block
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(14px) }
+      to   { opacity: 1; transform: translateY(0) }
+    }
+    .oa-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px
+    }
+    .oa-title-block {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+    .oa-title-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg,#3b82f6 0%,#6366f1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0
+    }
+    .oa-title-icon .material-symbols-outlined { font-size: 24px }
+    .oa-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text)
+    }
+    .oa-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px
+    }
+    .oa-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+    /* Summary stat cards */
+    .oa-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px
+    }
+    .oa-stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow .2s, transform .2s
+    }
+    .oa-stat-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-2px)
+    }
+    .oa-stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px
+    }
+    .oa-stat-card.accent-red::before   { background: linear-gradient(90deg,#ef4444,#f97316) }
+    .oa-stat-card.accent-orange::before{ background: linear-gradient(90deg,#f97316,#eab308) }
+    .oa-stat-card.accent-blue::before  { background: linear-gradient(90deg,#3b82f6,#6366f1) }
+    .oa-stat-card.accent-green::before { background: linear-gradient(90deg,#10b981,#06b6d4) }
+    .oa-stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px
+    }
+    .oa-stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text)
+    }
+    .oa-stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px
+    }
+    /* Main chart area */
+    .oa-content {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      margin-bottom: 20px
+    }
+    @media (max-width:1023px) {
+      .oa-content { grid-template-columns: 1fr }
+    }
+    .oa-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden
+    }
+    .oa-panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600
+    }
+    .oa-panel-header .material-symbols-outlined {
+      font-size: 18px;
+      color: var(--blue)
+    }
+    .oa-chart-area {
+      padding: 20px;
+      min-height: 320px
+    }
+    /* Bar chart rows */
+    .oa-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px
+    }
+    .oa-bar-label {
+      width: 140px;
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text)
+    }
+    .oa-bar-track {
+      flex: 1;
+      height: 28px;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative
+    }
+    .oa-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+      white-space: nowrap
+    }
+    .oa-bar-meta {
+      width: 90px;
+      flex-shrink: 0;
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted)
+    }
+    /* Ranking list */
+    .oa-rank-list {
+      padding: 8px 0
+    }
+    .oa-rank-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+      cursor: default
+    }
+    .oa-rank-item:last-child { border-bottom: none }
+    .oa-rank-item:hover { background: var(--bg) }
+    .oa-rank-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0
+    }
+    .oa-rank-badge.rank-1 { background:#fef2f2; color:#dc2626; border:2px solid #fca5a5 }
+    .oa-rank-badge.rank-2 { background:#fff7ed; color:#ea580c; border:2px solid #fdba74 }
+    .oa-rank-badge.rank-3 { background:#fffbeb; color:#ca8a04; border:2px solid #fde047 }
+    .oa-rank-badge.rank-other { background:var(--bg); color:var(--muted); border:1px solid var(--border) }
+    .oa-rank-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+    .oa-rank-days {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text)
+    }
+    .oa-rank-docs {
+      font-size: 11px;
+      color: var(--muted)
+    }
+    /* Detail table */
+    .oa-table-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 20px
+    }
+    .oa-aging-pill {
+      display: inline-flex;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600
+    }
+    .oa-aging-critical { background:#fef2f2; color:#dc2626 }
+    .oa-aging-high     { background:#fff7ed; color:#ea580c }
+    .oa-aging-medium   { background:#fffbeb; color:#ca8a04 }
+    .oa-aging-low      { background:#f0fdf4; color:#16a34a }
+    .oa-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted)
+    }
+    .oa-empty .material-symbols-outlined {
+      font-size: 64px;
+      opacity: .2;
+      display: block;
+      margin-bottom: 12px
+    }
   </style>
 
   <!-- Real-Time Social Login SDKs & Config -->
@@ -3338,6 +3492,8 @@
           <ul class="nav-menu">
             <li><a class="nav-link" onclick="showTrack(event)"><span
                   class="material-symbols-outlined">history</span><span class="nav-label">Track Document</span></a></li>
+            <li><a class="nav-link" id="officeAgingMenuLink" onclick="showOfficeAging(event)"><span
+                  class="material-symbols-outlined">leaderboard</span><span class="nav-label">Office Aging</span></a></li>
             <li><a class="nav-link" onclick="showPrintView(event)"><span
                   class="material-symbols-outlined">print</span><span class="nav-label">Print Report</span></a></li>
             <li id="logsMenuLink" style="display:none"><a class="nav-link" onclick="showLogsView(event)"><span
@@ -3690,6 +3846,109 @@
           </div>
         </div>
 
+        <!-- Office Aging Analytics View -->
+        <div class="office-aging-view" id="officeAgingView">
+          <div class="oa-header">
+            <div class="oa-title-block">
+              <div class="oa-title-icon"><span class="material-symbols-outlined">leaderboard</span></div>
+              <div>
+                <div class="oa-title">Office Document Aging</div>
+                <div class="oa-subtitle">Identifies which offices have documents remaining in the system the longest</div>
+              </div>
+            </div>
+            <div class="oa-actions">
+              <select id="oaStatusFilter" class="filter-select" onchange="renderOfficeAging()" title="Filter by Status">
+                <option value="">All Active Statuses</option>
+                <option value="incoming">Incoming</option>
+                <option value="received">Received</option>
+                <option value="hold">Hold</option>
+                <option value="in process">In Process</option>
+                <option value="in review">In Review</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+              </select>
+              <button class="btn btn-outline" onclick="renderOfficeAging()" title="Refresh">
+                <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
+                <span class="btn-label">Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Cards -->
+          <div class="oa-stats">
+            <div class="oa-stat-card accent-red">
+              <div class="oa-stat-label">Most Delayed Office</div>
+              <div class="oa-stat-value" id="oaTopOffice" style="font-size:18px;line-height:1.3">—</div>
+              <div class="oa-stat-sub" id="oaTopOfficeDays">Loading...</div>
+            </div>
+            <div class="oa-stat-card accent-orange">
+              <div class="oa-stat-label">Max Avg. Days Held</div>
+              <div class="oa-stat-value" id="oaMaxDays">0</div>
+              <div class="oa-stat-sub">days (longest average)</div>
+            </div>
+            <div class="oa-stat-card accent-blue">
+              <div class="oa-stat-label">Offices Tracked</div>
+              <div class="oa-stat-value" id="oaOfficeCount">0</div>
+              <div class="oa-stat-sub">with active documents</div>
+            </div>
+            <div class="oa-stat-card accent-green">
+              <div class="oa-stat-label">Docs Analyzed</div>
+              <div class="oa-stat-value" id="oaDocCount">0</div>
+              <div class="oa-stat-sub">non-completed documents</div>
+            </div>
+          </div>
+
+          <!-- Chart + Ranking -->
+          <div class="oa-content">
+            <div class="oa-panel">
+              <div class="oa-panel-header">
+                <span class="material-symbols-outlined">bar_chart</span>
+                Average Days Held — by Office
+              </div>
+              <div class="oa-chart-area" id="oaBarChart">
+                <div class="oa-empty"><span class="material-symbols-outlined">bar_chart</span><p>No data to display</p></div>
+              </div>
+            </div>
+            <div class="oa-panel">
+              <div class="oa-panel-header">
+                <span class="material-symbols-outlined">emoji_events</span>
+                Aging Ranking
+              </div>
+              <div class="oa-rank-list" id="oaRankList">
+                <div class="oa-empty"><span class="material-symbols-outlined">leaderboard</span><p>No data to display</p></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detail Table -->
+          <div class="oa-table-section">
+            <div class="oa-panel-header" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+              <span class="material-symbols-outlined">table_chart</span>
+              Office Aging Detail — All Active Documents
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th onclick="_oaSort('rank')" style="cursor:pointer" title="Sort by Rank">Rank</th>
+                    <th onclick="_oaSort('office')" style="cursor:pointer" title="Sort by Office">Office / Dept.</th>
+                    <th onclick="_oaSort('docs')" style="cursor:pointer" title="Sort by Doc Count">Active Docs</th>
+                    <th onclick="_oaSort('oldest')" style="cursor:pointer" title="Sort by Oldest Doc">Oldest Doc (Days)</th>
+                    <th onclick="_oaSort('avg')" style="cursor:pointer" title="Sort by Avg Days">Avg Days Held</th>
+                    <th onclick="_oaSort('total')" style="cursor:pointer" title="Sort by Total Days">Total Days</th>
+                    <th>Aging Level</th>
+                    <th>Oldest Doc ID</th>
+                  </tr>
+                </thead>
+                <tbody id="oaTableBody">
+                  <tr><td colspan="8" class="empty-state">Open Office Aging from the sidebar to load data.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- End Office Aging Analytics View -->
+
         <!-- Logs View -->
         <div class="logs-view" id="logsView">
           <div class="logs-container">
@@ -3915,21 +4174,8 @@
         target="_blank">ALJUNEQ</a></footer>
   </div><!-- end view-dashboard -->
 
-  <!-- ===== DASHBOARD LOADER OVERLAY ===== -->
-  <div id="dashLoader" style="display:none" role="status" aria-live="polite">
-    <div class="dl-box">
-      <div class="dl-logo">
-        <span class="material-symbols-outlined">flutter</span>
-        <span class="dl-brand">DocuTracker</span>
-      </div>
-      <div class="dl-spinner">
-        <div class="dl-ring-outer"></div>
-        <div class="dl-ring-inner"></div>
-      </div>
-      <p class="dl-step" id="dlStep">Connecting to server…</p>
-      <div class="dl-bar-track"><div class="dl-bar" id="dlBar"></div></div>
-    </div>
-  </div>
+  <!-- ===== DASHBOARD LOADER OVERLAY (REMOVED) ===== -->
+  <div id="dashLoader" style="display:none !important" aria-hidden="true"></div>
 
   <!-- ===== MODALS ===== -->
   <!-- Add/Edit Document Modal -->
@@ -4539,30 +4785,93 @@
     }
 
     // Login
-    document.getElementById('loginBtn').addEventListener('click', function () {
-      const email = document.getElementById('loginEmail').value.trim();
-      const pwd = document.getElementById('loginPassword').value.trim();
-      if (!email || !pwd) { showNotif('loginNotif', 'Please enter email and password', 'error'); return; }
-      this.disabled = true; this.textContent = 'Signing in...';
-      google.script.run.withSuccessHandler(r => {
-        if (r.status === 'success') {
-          _sessionToken = r.token || '';
-          try {
-            localStorage.setItem('docutracker_session_token', _sessionToken);
-            sessionStorage.removeItem('docutracker_active_tab');
-          } catch (e) { }
-          // Show dashboard immediately. If initialData is bundled with login, render records in 0 ms!
-          showView('dashboard');
-          if (r.initialData && r.initialData.user) {
-            _renderInitialData(r.initialData);
-          } else {
-            initDashboard();
+    // ── in-flight guard — prevents duplicate submissions on rapid clicks ──────
+    let _loginInFlight = false;
+
+    function _resetLoginBtn() {
+      _loginInFlight = false;
+      const btn = document.getElementById('loginBtn');
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Sign in'; }
+    }
+
+    function _optimisticRenderOrSkeleton() {
+      if (allDocs && allDocs.length > 0) {
+        try {
+          const _cachedUser = localStorage.getItem('docutracker_user_data');
+          if (_cachedUser) {
+            const u = JSON.parse(_cachedUser);
+            if (u.name) {
+              document.getElementById('userName').textContent = u.name;
+              document.getElementById('userRole').textContent = u.role || 'User';
+              document.getElementById('userAvatar').textContent = getInitials(u.name);
+              applyPermissions(u.permissions || {}, u.role || 'Staff');
+            }
+            if (u.stats) _applyStats(u.stats);
           }
+        } catch (e) { }
+        if (dropdownOptions && dropdownOptions.docTypes && dropdownOptions.docTypes.length) {
+          populateDropdowns();
+          populatePrintFilters();
         }
-        else { showNotif('loginNotif', r.message || 'Invalid email or password', 'error'); this.disabled = false; this.textContent = 'Sign in'; }
-      }).withFailureHandler(e => { showNotif('loginNotif', 'An error occurred. Please try again.', 'error'); this.disabled = false; this.textContent = 'Sign in'; }).checkLogin(email, pwd);
+        populateTableFilters();
+        _applyStats(_computeStats(allDocs));
+        _renderChunked(allDocs, currentFilter);
+      } else {
+        _showSkeleton(15);
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', function () {
+      if (_loginInFlight) return;                   // block duplicate calls
+      const btn = this;                             // capture button reference — safe inside regular function
+      const email = document.getElementById('loginEmail').value.trim();
+      const pwd   = document.getElementById('loginPassword').value;  // ⚠ do NOT trim — passwords may contain spaces
+      if (!email || !pwd) { showNotif('loginNotif', 'Please enter email and password', 'error'); return; }
+
+      _loginInFlight = true;
+      btn.disabled   = true;
+      btn.innerHTML  = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; font-size: 16px; vertical-align: -3px; margin-right: 6px;">sync</span>Signing in…';
+
+      // ── Safety timeout — re-enables button if GAS takes too long ──────────
+      const _loginTimeout = setTimeout(function () {
+        if (!_loginInFlight) return;               // already finished normally
+        showNotif('loginNotif', 'Server is taking too long. Please try again.', 'error');
+        _resetLoginBtn();
+      }, 30000);
+
+      google.script.run
+        .withSuccessHandler(function (r) {
+          clearTimeout(_loginTimeout);
+          if (r && r.status === 'success') {
+            _sessionToken = r.token || '';
+            try {
+              localStorage.setItem('docutracker_session_token', _sessionToken);
+              sessionStorage.removeItem('docutracker_active_tab');
+            } catch (e) { }
+            _resetLoginBtn();
+
+            // Transition to dashboard immediately with 0 delay — no loading screen
+            showView('dashboard');
+            if (r.initialData && r.initialData.user) {
+              _renderInitialData(r.initialData);
+            } else {
+              _optimisticRenderOrSkeleton();
+              initDashboard();
+            }
+          } else {
+            showNotif('loginNotif', (r && r.message) || 'Invalid email or password', 'error');
+            _resetLoginBtn();
+          }
+        })
+        .withFailureHandler(function () {
+          clearTimeout(_loginTimeout);
+          showNotif('loginNotif', 'Connection error. Please check your network and try again.', 'error');
+          _resetLoginBtn();
+        })
+        .checkLogin(email, pwd);
     });
-    ['loginEmail', 'loginPassword'].forEach(id => document.getElementById(id).addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); }));
+    ['loginEmail', 'loginPassword'].forEach(id =>
+      document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); }));
 
     // Real-Time Social Login Handlers
     window.handleSocialLogin = function (provider) {
@@ -4592,11 +4901,13 @@
               localStorage.setItem('docutracker_session_token', _sessionToken);
               sessionStorage.removeItem('docutracker_active_tab');
             } catch (e) { }
-            // Show dashboard immediately. If initialData is bundled with login, render records in 0 ms!
+            restoreBtn();
+            // Show dashboard immediately with 0 delay
             showView('dashboard');
             if (r.initialData && r.initialData.user) {
               _renderInitialData(r.initialData);
             } else {
+              _optimisticRenderOrSkeleton();
               initDashboard();
             }
           } else {
@@ -4750,36 +5061,12 @@
     document.getElementById('backToLogin').addEventListener('click', e => { e.preventDefault(); showView('login'); });
 
     // ===================== DASHBOARD INIT =====================
-    // ── Dashboard loader — shows real fetch progress after login ──────────
-    function _showDashLoader() {
-      const el = document.getElementById('dashLoader');
-      if (!el) return;
-      el.classList.remove('dl-hiding');
-      el.style.display = 'flex';
-      // Force a reflow so the initial opacity:1 is painted before any transition fires
-      void el.offsetHeight;
-      _setDashLoaderStep('Connecting to server…', 0.05);
-    }
-    function _setDashLoaderStep(msg, pct) {
-      const step = document.getElementById('dlStep');
-      const bar  = document.getElementById('dlBar');
-      // Progress bar: scaleX never triggers layout — pure compositor animation
-      if (bar) bar.style.transform = 'scaleX(' + (pct || 0) + ')';
-      if (!step || step.textContent === msg) return;
-      // Cross-fade the label: fade out → swap text → fade in
-      step.classList.add('dl-step-fade');
-      setTimeout(function () {
-        step.textContent = msg;
-        step.classList.remove('dl-step-fade');
-      }, 190); // slightly longer than the CSS transition (0.18s) to avoid flash
-    }
+    // ── Dashboard loader (disabled for instant, smooth loading) ──────────
+    function _showDashLoader() { }
+    function _setDashLoaderStep() { }
     function _hideDashLoader() {
       const el = document.getElementById('dashLoader');
-      if (!el) return;
-      // CSS transition on opacity handles the smooth fade — no JS animation loop
-      el.classList.add('dl-hiding');
-      // Remove from layout after the transition completes (0.55s defined in CSS)
-      setTimeout(function () { el.style.display = 'none'; el.classList.remove('dl-hiding'); }, 580);
+      if (el) el.style.display = 'none';
     }
 
     // ── Skeleton row generator — fills the table with shimmer rows instantly ──
@@ -4837,6 +5124,9 @@
       if (currentFilter === 'logs' || (document.getElementById('logsView') && document.getElementById('logsView').classList.contains('active'))) {
         applyLogFilters();
       }
+      if (currentFilter === 'officeAging' || (document.getElementById('officeAgingView') && document.getElementById('officeAgingView').classList.contains('active'))) {
+        if (typeof renderOfficeAging === 'function') renderOfficeAging();
+      }
 
       // Render documents immediately
       allDocs = result.docs || [];
@@ -4849,14 +5139,17 @@
     }
 
     function initDashboard() {
-      _showSkeleton(15);
+      if (!allDocs || allDocs.length === 0) {
+        _showSkeleton(15);
+      }
       google.script.run
         .withSuccessHandler(_renderInitialData)
         .withFailureHandler(function () {
-          _hideDashLoader();
           toast('Failed to load dashboard data', 'error');
           const tb = document.getElementById('docTable');
-          if (tb) tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
+          if (tb && (!allDocs || allDocs.length === 0)) {
+            tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
+          }
         })
         .getInitialData(_sessionToken);
     }
@@ -5024,6 +5317,9 @@
           applyFilter(currentFilter);          // re-applies current filter/sort/search/page
           _applyStats(_computeStats(allDocs));  // dashboard cards stay current too
           if (typeof updateBadges === 'function') updateBadges();
+          if (currentFilter === 'officeAging' || (document.getElementById('officeAgingView') && document.getElementById('officeAgingView').classList.contains('active'))) {
+            if (typeof renderOfficeAging === 'function') renderOfficeAging();
+          }
         })
         .withFailureHandler(function () { /* silent — next poll cycle will retry */ })
         .getAllDocuments();
@@ -5325,11 +5621,12 @@
       document.getElementById('trackView').classList.remove('active');
       document.getElementById('logsView').classList.remove('active');
       document.getElementById('printView').classList.remove('active');
+      const oav = document.getElementById('officeAgingView'); if (oav) oav.classList.remove('active');
       const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
       applyFilter(f);
     }
 
-    function updatePageTitle() { const t = { all: 'All Documents', incoming: 'Incoming Documents', received: 'Received Documents', outgoing: 'Outgoing Documents', hold: 'Documents on Hold', complete: 'Completed Documents', track: 'Track Document History', logs: 'Activity Logs', print: 'Print Report' }; document.getElementById('pageTitle').textContent = t[currentFilter] || 'Dashboard'; if (!['track', 'logs', 'print'].includes(currentFilter)) document.getElementById('sectionTitle').textContent = t[currentFilter] || 'Recent Documents'; }
+    function updatePageTitle() { const t = { all: 'All Documents', incoming: 'Incoming Documents', received: 'Received Documents', outgoing: 'Outgoing Documents', hold: 'Documents on Hold', complete: 'Completed Documents', track: 'Track Document History', logs: 'Activity Logs', print: 'Print Report', officeAging: 'Office Document Aging Analytics' }; document.getElementById('pageTitle').textContent = t[currentFilter] || 'Dashboard'; if (!['track', 'logs', 'print', 'officeAging'].includes(currentFilter)) document.getElementById('sectionTitle').textContent = t[currentFilter] || 'Recent Documents'; }
 
     function sortTable(col) { if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; else { sortColumn = col; sortDirection = 'asc'; } applySorting(); renderTable(); }
 
@@ -6479,6 +6776,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'logsView', 'printView'].forEach(id => document.getElementById(id).classList.remove('active'));
+      const oav = document.getElementById('officeAgingView'); if (oav) oav.classList.remove('active');
       const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
       document.getElementById('trackView').classList.add('active');
       currentFilter = 'track'; updatePageTitle();
@@ -6620,6 +6918,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
       });
+      const oav = document.getElementById('officeAgingView'); if (oav) oav.classList.remove('active');
       const uv = document.getElementById('usersView');
       if (uv) uv.style.display = 'none';
       document.getElementById('logsView').classList.add('active');
@@ -6877,12 +7176,266 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     document.getElementById('logsSearch').addEventListener('input', applyLogFilters);
   </script>
   <script>
+    // ===================== OFFICE AGING ANALYTICS =====================
+    // Computes how long non-completed documents have been sitting at each
+    // office/department. All math is done client-side from allDocs — zero
+    // extra server round-trips. The "age" of a document is the number of
+    // calendar days from its Endorsement Timestamp (when it was last routed
+    // to that office) to today. If no endorsement timestamp is found, it
+    // falls back to Doc Time Stamp, then Date Received.
+
+    let _oaSortKey = 'avg';    // current sort column
+    let _oaSortDir = 'desc';   // 'asc' | 'desc'
+    let _oaData    = [];        // last-computed office rows for re-sort
+
+    // Colour palette for the horizontal bar chart (cycles for many offices)
+    const OA_BAR_COLORS = [
+      '#3b82f6','#6366f1','#8b5cf6','#ec4899','#f97316',
+      '#eab308','#10b981','#06b6d4','#0ea5e9','#14b8a6'
+    ];
+
+    function showOfficeAging(evt) {
+      try { sessionStorage.setItem('docutracker_active_tab', 'officeAging'); } catch (e) {}
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      if (evt && evt.target) {
+        const item = evt.target.closest('.nav-link');
+        if (item) item.classList.add('active');
+      } else {
+        const link = document.getElementById('officeAgingMenuLink');
+        if (link) link.classList.add('active');
+      }
+      ['documentsView', 'trackView', 'logsView', 'printView'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+      const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
+      const oav = document.getElementById('officeAgingView');
+      if (oav) oav.classList.add('active');
+      currentFilter = 'officeAging';
+      updatePageTitle();
+      if (window.innerWidth < 768) closeMobileSidebar();
+      renderOfficeAging();
+    }
+
+    // ── Core computation ──────────────────────────────────────────────────────
+    function _daysSince(dateStr) {
+      if (!dateStr) return null;
+      // Parse both Date objects and string representations
+      const d = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diff = today - d;
+      return Math.max(0, Math.floor(diff / 86400000));
+    }
+
+    function _bestDate(doc) {
+      // Prefer Endorsement Timestamp (most accurate — set when routed to office)
+      const candidates = [
+        doc['Endorsement Time Stamp'],
+        doc['Doc Time Stamp'],
+        doc['Date Received']
+      ];
+      for (const c of candidates) {
+        const d = _daysSince(c);
+        if (d !== null) return d;
+      }
+      return 0;
+    }
+
+    function _computeOfficeAging() {
+      // Statuses considered "still in the system" (not yet completed/forwarded)
+      const ACTIVE_STATUSES = new Set([
+        'incoming','received','in process','in review',
+        'hold','pending','approved','forwarded'
+      ]);
+      // Read optional status filter from the dropdown
+      const statusFilter = (document.getElementById('oaStatusFilter')
+        ? document.getElementById('oaStatusFilter').value : '').toLowerCase().trim();
+
+      const officeMap = {}; // key: office name → { docs:[], totalDays, oldestDays, oldestId }
+
+      (allDocs || []).forEach(doc => {
+        const status = (doc.Status || '').toLowerCase().trim();
+        // Skip completed
+        if (status === 'completed') return;
+        // Apply optional status filter
+        if (statusFilter && status !== statusFilter) return;
+        // Must have an office/department
+        const office = (doc['Endorsed To'] || '').trim();
+        if (!office) return;
+
+        const days = _bestDate(doc);
+        if (!officeMap[office]) {
+          officeMap[office] = { office, docs: 0, totalDays: 0, oldestDays: 0, oldestId: '' };
+        }
+        const entry = officeMap[office];
+        entry.docs++;
+        entry.totalDays += days;
+        if (days > entry.oldestDays) {
+          entry.oldestDays = days;
+          entry.oldestId   = doc['ID/Barcode'] || doc['Doc No'] || '';
+        }
+      });
+
+      // Convert to array + compute avg
+      const rows = Object.values(officeMap).map(r => ({
+        ...r,
+        avg: r.docs > 0 ? Math.round(r.totalDays / r.docs) : 0
+      }));
+
+      // Default sort: avg days descending (most delayed first)
+      rows.sort((a, b) => b.avg - a.avg || b.oldestDays - a.oldestDays);
+
+      // Assign rank
+      rows.forEach((r, i) => { r.rank = i + 1; });
+
+      return rows;
+    }
+
+    // ── Aging level helper ────────────────────────────────────────────────────
+    function _agingLevel(avgDays) {
+      if (avgDays >= 30) return { cls: 'oa-aging-critical', label: 'Critical (30+ days)' };
+      if (avgDays >= 14) return { cls: 'oa-aging-high',     label: 'High (14–29 days)'   };
+      if (avgDays >=  7) return { cls: 'oa-aging-medium',   label: 'Medium (7–13 days)'  };
+      return                     { cls: 'oa-aging-low',      label: 'Low (< 7 days)'      };
+    }
+
+    // ── Main render function ──────────────────────────────────────────────────
+    function renderOfficeAging() {
+      _oaData = _computeOfficeAging();
+      _renderOaContent(_oaData);
+    }
+
+    function _renderOaContent(rows) {
+      // ── Summary cards ────────────────────────────────────────────────────────
+      const totalDocs  = rows.reduce((s, r) => s + r.docs, 0);
+      const topOffice  = rows[0] || null;
+      const maxAvg     = topOffice ? topOffice.avg : 0;
+
+      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setText('oaTopOffice',     topOffice ? topOffice.office        : '—');
+      setText('oaTopOfficeDays', topOffice ? `Avg ${topOffice.avg} day(s) — ${topOffice.docs} doc(s)` : 'No active documents');
+      setText('oaMaxDays',       maxAvg);
+      setText('oaOfficeCount',   rows.length);
+      setText('oaDocCount',      totalDocs);
+
+      // ── Bar chart ────────────────────────────────────────────────────────────
+      const barEl = document.getElementById('oaBarChart');
+      if (barEl) {
+        if (rows.length === 0) {
+          barEl.innerHTML = '<div class="oa-empty"><span class="material-symbols-outlined">bar_chart</span><p>No active documents to analyze.</p></div>';
+        } else {
+          const maxVal = maxAvg || 1;
+          const SHOW = Math.min(rows.length, 10); // cap at 10 bars for readability
+          barEl.innerHTML = rows.slice(0, SHOW).map((r, i) => {
+            const pct = Math.max(6, Math.round((r.avg / maxVal) * 100));
+            const color = OA_BAR_COLORS[i % OA_BAR_COLORS.length];
+            const label = r.avg >= 1 ? `${r.avg}d avg` : '<1d';
+            return `<div class="oa-bar-row">
+              <div class="oa-bar-label" title="${r.office}">${r.office}</div>
+              <div class="oa-bar-track">
+                <div class="oa-bar-fill" style="width:0%;background:${color}" data-pct="${pct}">
+                  ${r.avg >= 4 ? label : ''}
+                </div>
+              </div>
+              <div class="oa-bar-meta">${r.avg}d &nbsp;·&nbsp; ${r.docs} doc${r.docs !== 1 ? 's' : ''}</div>
+            </div>`;
+          }).join('');
+          // Animate bars after paint using rAF
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              barEl.querySelectorAll('.oa-bar-fill').forEach(el => {
+                el.style.width = el.dataset.pct + '%';
+              });
+            });
+          });
+        }
+      }
+
+      // ── Ranking list ─────────────────────────────────────────────────────────
+      const rankEl = document.getElementById('oaRankList');
+      if (rankEl) {
+        if (rows.length === 0) {
+          rankEl.innerHTML = '<div class="oa-empty"><span class="material-symbols-outlined">leaderboard</span><p>No data to rank.</p></div>';
+        } else {
+          rankEl.innerHTML = rows.slice(0, 8).map((r, i) => {
+            const badgeCls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+            const icon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            return `<div class="oa-rank-item">
+              <div class="oa-rank-badge ${badgeCls}">${icon}</div>
+              <div class="oa-rank-name" title="${r.office}">${r.office}</div>
+              <div style="text-align:right">
+                <div class="oa-rank-days">${r.avg}d avg</div>
+                <div class="oa-rank-docs">${r.docs} doc${r.docs !== 1 ? 's' : ''}</div>
+              </div>
+            </div>`;
+          }).join('');
+        }
+      }
+
+      // ── Detail table ─────────────────────────────────────────────────────────
+      _renderOaTable(rows);
+    }
+
+    function _renderOaTable(rows) {
+      const tbody = document.getElementById('oaTableBody');
+      if (!tbody) return;
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No active documents found for the selected filter.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const ag = _agingLevel(r.avg);
+        return `<tr>
+          <td style="font-weight:700;text-align:center">${r.rank}</td>
+          <td><strong>${r.office}</strong></td>
+          <td style="text-align:center">${r.docs}</td>
+          <td style="text-align:center;font-weight:600;color:${r.oldestDays >= 30 ? 'var(--danger)' : r.oldestDays >= 14 ? '#ea580c' : 'var(--text)'}">${r.oldestDays}</td>
+          <td style="text-align:center;font-weight:700">${r.avg}</td>
+          <td style="text-align:center;color:var(--muted)">${r.totalDays}</td>
+          <td><span class="oa-aging-pill ${ag.cls}">${ag.label}</span></td>
+          <td style="font-family:monospace;font-size:11px;color:var(--muted)">${r.oldestId || '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── Table column sorter ───────────────────────────────────────────────────
+    function _oaSort(key) {
+      if (_oaSortKey === key) {
+        _oaSortDir = _oaSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        _oaSortKey = key;
+        _oaSortDir = key === 'office' ? 'asc' : 'desc'; // text defaults asc, numbers default desc
+      }
+      const sorted = [..._oaData];
+      sorted.sort((a, b) => {
+        let va, vb;
+        switch (key) {
+          case 'rank':   va = a.rank;       vb = b.rank;       break;
+          case 'office': va = a.office.toLowerCase(); vb = b.office.toLowerCase(); break;
+          case 'docs':   va = a.docs;       vb = b.docs;       break;
+          case 'oldest': va = a.oldestDays; vb = b.oldestDays; break;
+          case 'avg':    va = a.avg;        vb = b.avg;        break;
+          case 'total':  va = a.totalDays;  vb = b.totalDays;  break;
+          default:       va = a.avg;        vb = b.avg;
+        }
+        if (va < vb) return _oaSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return _oaSortDir === 'asc' ?  1 : -1;
+        return 0;
+      });
+      // Re-assign rank based on original avg-descending order (don't change rank on re-sort)
+      _renderOaTable(sorted);
+    }
+  </script>
+  <script>
     // ===================== PRINT REPORT =====================
     function showPrintView(evt) {
       try { sessionStorage.setItem('docutracker_active_tab', 'print'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
       ['documentsView', 'trackView', 'logsView'].forEach(id => document.getElementById(id).classList.remove('active'));
+      const oav = document.getElementById('officeAgingView'); if (oav) oav.classList.remove('active');
       const uv = document.getElementById('usersView'); if (uv) uv.style.display = 'none';
       document.getElementById('printView').classList.add('active');
       currentFilter = 'print';
@@ -8125,6 +8678,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       try { _savedTab = sessionStorage.getItem('docutracker_active_tab') || ''; } catch (e) { }
       if (_savedTab === 'logs') {
         showLogsView();
+      } else if (_savedTab === 'officeAging') {
+        if (typeof showOfficeAging === 'function') showOfficeAging();
       } else {
         if (allDocs && allDocs.length > 0) {
           try {
@@ -8209,7 +8764,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       try { sessionStorage.setItem('docutracker_active_tab', 'users'); } catch (e) { }
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       if (evt) evt.target.closest('.nav-link').classList.add('active');
-      ['documentsView', 'trackView', 'logsView', 'printView'].forEach(id => {
+      ['documentsView', 'trackView', 'logsView', 'printView', 'officeAgingView'].forEach(id => {
         const el = document.getElementById(id); if (el) el.classList.remove('active');
       });
       const uv = document.getElementById('usersView');
