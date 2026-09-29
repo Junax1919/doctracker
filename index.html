@@ -2102,6 +2102,263 @@
       cursor: pointer
     }
 
+    /* ── Custom Report: Editable Title ── */
+    #customReportTitleRow {
+      display: none;
+      margin-bottom: 14px;
+    }
+    #customReportTitleRow .form-label {
+      margin-bottom: 6px;
+      display: block;
+    }
+    #customReportTitle {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .2s;
+      outline: none;
+    }
+    #customReportTitle:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+
+    /* ── Custom Report: Drag-and-Drop Column Ordering ── */
+    #colOrderList {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 0;
+      margin: 0;
+    }
+    .col-order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      cursor: grab;
+      user-select: none;
+      transition: box-shadow .15s, border-color .15s, opacity .2s, background .15s;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    .col-order-item:hover {
+      border-color: var(--blue);
+      box-shadow: 0 2px 8px rgba(59,130,246,.10);
+    }
+    .col-order-item.dragging {
+      opacity: .45;
+      cursor: grabbing;
+    }
+    .col-order-item.drag-over {
+      border-color: var(--blue);
+      background: var(--blue-light);
+      box-shadow: 0 0 0 2px rgba(59,130,246,.25);
+    }
+    .col-drag-handle {
+      color: #94a3b8;
+      font-size: 18px;
+      flex-shrink: 0;
+      line-height: 1;
+      cursor: grab;
+    }
+    .col-order-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .col-order-item.col-disabled .col-order-badge {
+      background: #cbd5e1;
+    }
+    .col-order-item.col-disabled {
+      opacity: .65;
+    }
+    .col-order-checkbox {
+      margin-left: auto;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .col-order-label {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Custom Report: Saved Configs ── */
+    #savedConfigsPanel {
+      display: none;
+      margin-top: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      overflow: hidden;
+    }
+    #savedConfigsPanel .scp-header {
+      padding: 9px 14px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #savedConfigsList {
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .saved-config-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      transition: background .15s;
+    }
+    .saved-config-item:last-child { border-bottom: none; }
+    .saved-config-item:hover { background: var(--bg); }
+    .sci-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sci-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sci-name {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sci-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sci-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sci-badge-retained {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .sci-load-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border: 1px solid #bfdbfe;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background .15s;
+    }
+    .sci-load-btn:hover { background: #dbeafe; }
+    .sci-retain-btn {
+      padding: 4px 9px;
+      font-size: 11.5px;
+      border-radius: 5px;
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: background .15s;
+    }
+    .sci-retain-btn:hover { background: #d1fae5; }
+    .sci-unretain-btn {
+      padding: 4px 9px;
+      font-size: 11.5px;
+      border-radius: 5px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: background .15s;
+    }
+    .sci-unretain-btn:hover { background: #e2e8f0; }
+    .sci-del-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 5px;
+      background: #fee2e2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: background .15s;
+    }
+    .sci-del-btn:hover { background: #fecaca; }
+    #scpEmpty {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .btn-admin-action {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+
     .print-actions {
       display: flex;
       gap: 12px;
@@ -3334,7 +3591,7 @@
     </div>
     <div class="auth-card">
       <h2>Welcome back</h2>
-      <p class="subtitle">Login to your DocuTracker account</p>
+      <p class="subtitle">City General Services Office</p>
       <div class="input-group">
         <label>Email</label>
         <input type="email" id="loginEmail" placeholder="m@example.com">
@@ -4058,7 +4315,8 @@
                     <option value="overdue">Overdue Documents Report</option>
                     <option value="office">PR/PO Status Report</option>
                     <option value="cashierReport">Cashier Status Report</option>
-                    <option value="custom">Custom Report</option>
+                    <option value="custom">Custom Report (New)</option>
+                    <optgroup id="savedCustomReportsOptgroup" label="Saved Custom Reports"></optgroup>
                   </select>
                 </div>
                 <div class="form-group"><label class="form-label">Date From</label><input type="date" class="form-input"
@@ -4114,50 +4372,39 @@
                 </button>
               </div>
               <div id="printColumnsSection" style="display:none">
-                <label class="form-label" style="margin-bottom:12px;display:block">Select Columns to Include</label>
-                <div class="columns-grid">
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-overdue"> Overdue</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-id"> ID/Barcode</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-docTs"> Doc Time Stamp</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-type"> Doc Type</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-no"> Doc No</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-prDate"> PR Date</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-docCat"> Doc Category</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-desc"> Description</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-amount"> Amount</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-endUser"> EndUser</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-req"> Requisitioner</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poTs"> PO Time Stamp</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateRecvdBAC"> Date Received
-                    From BAC</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poNo"> PO No</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poDate"> PO Date</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-poAmount"> PO Amount</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-supplier"> Supplier</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-office"> Endorsed To</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-endorsementTs"> Endorsement Time
-                    Stamp</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-status"> Status</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndAcctng"> Date End. To
-                    Acctng</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCMO"> Date End. From
-                    CMO</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-deliveryStatus"> Delivery
-                    Status</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-airNo"> AIR No.</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-airDate"> AIR Date</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCOA"> Date End. To
-                    COA</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-dateEndCTO"> Date End. To
-                    CTO</label>
-                  <label class="checkbox-label"><input type="checkbox" checked id="pcol-date"> Date Received</label>
-                  <label class="checkbox-label"><input type="checkbox" id="pcol-notes"> Notes</label>
-                  <label class="checkbox-label"><input type="checkbox" id="pcol-cashierStatus"> Cashier Status</label>
-                  <label class="checkbox-label"><input type="checkbox" id="pcol-datePaid"> Date Paid</label>
-                  <label class="checkbox-label"><input type="checkbox" id="pcol-checkNo"> Check No.</label>
+                <!-- Editable Report Title (Custom Report only) -->
+                <div id="customReportTitleRow">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+                    <label class="form-label" for="customReportTitle" style="margin:0"><span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;margin-right:4px">title</span>Report Title</label>
+                    <div id="customReportMetaBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap"></div>
+                  </div>
+                  <input type="text" id="customReportTitle" placeholder="e.g. Custom Documents Report" maxlength="120" value="Custom Report">
+                </div>
+
+                <!-- Column ordering (drag-and-drop) -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+                  <label class="form-label" style="margin:0"><span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;margin-right:4px">drag_indicator</span>Columns &amp; Order <span style="font-size:12px;color:var(--muted);font-weight:400">(drag to reorder · toggle to include)</span></label>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="selectAllCustomCols(true)" title="Check all columns"><span class="material-symbols-outlined" style="font-size:14px">done_all</span> All</button>
+                    <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="selectAllCustomCols(false)" title="Uncheck all columns"><span class="material-symbols-outlined" style="font-size:14px">remove_done</span> None</button>
+                    <button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="resetCustomColOrder()" title="Reset to default order"><span class="material-symbols-outlined" style="font-size:14px">restart_alt</span> Reset</button>
+                  </div>
+                </div>
+                <ul id="colOrderList"></ul>
+
+                <!-- Saved Configs -->
+                <div id="savedConfigsPanel">
+                  <div class="scp-header"><span class="material-symbols-outlined" style="font-size:17px">bookmarks</span>Saved Configurations</div>
+                  <div id="savedConfigsList"><p id="scpEmpty">No saved configurations yet.</p></div>
                 </div>
               </div>
               <div class="print-actions">
+                <button id="btnToggleSavedConfigs" class="btn btn-outline" style="display:none" onclick="toggleSavedConfigsPanel()" title="View saved configurations">
+                  <span class="material-symbols-outlined">bookmarks</span><span class="btn-label">Saved</span>
+                </button>
+                <button id="btnSaveCustomConfig" class="btn btn-outline" style="display:none" onclick="saveCustomReportConfig()" title="Save current configuration">
+                  <span class="material-symbols-outlined">save</span><span class="btn-label">Save Config</span>
+                </button>
                 <button class="btn btn-outline" onclick="generatePreview()"><span
                     class="material-symbols-outlined">visibility</span>Generate Preview</button>
                 <button class="btn btn-primary" onclick="printReport()"><span
@@ -4855,6 +5102,13 @@
             if (r.initialData && r.initialData.user) {
               _renderInitialData(r.initialData);
             } else {
+              if (r.user) {
+                currentUser = r.user;
+                const un = document.getElementById('userName'); if (un) un.textContent = r.user.name || 'User';
+                const ur = document.getElementById('userRole'); if (ur) ur.textContent = r.user.role || 'User';
+                const ua = document.getElementById('userAvatar'); if (ua) ua.textContent = getInitials(r.user.name);
+                applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
+              }
               _optimisticRenderOrSkeleton();
               initDashboard();
             }
@@ -4863,9 +5117,10 @@
             _resetLoginBtn();
           }
         })
-        .withFailureHandler(function () {
+        .withFailureHandler(function (err) {
           clearTimeout(_loginTimeout);
-          showNotif('loginNotif', 'Connection error. Please check your network and try again.', 'error');
+          console.error('Login error:', err);
+          showNotif('loginNotif', (err && err.message) ? err.message : 'Connection error. Please check your network and try again.', 'error');
           _resetLoginBtn();
         })
         .checkLogin(email, pwd);
@@ -4907,6 +5162,13 @@
             if (r.initialData && r.initialData.user) {
               _renderInitialData(r.initialData);
             } else {
+              if (r.user) {
+                currentUser = r.user;
+                const un = document.getElementById('userName'); if (un) un.textContent = r.user.name || 'User';
+                const ur = document.getElementById('userRole'); if (ur) ur.textContent = r.user.role || 'User';
+                const ua = document.getElementById('userAvatar'); if (ua) ua.textContent = getInitials(r.user.name);
+                applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
+              }
               _optimisticRenderOrSkeleton();
               initDashboard();
             }
@@ -4915,7 +5177,8 @@
             restoreBtn();
           }
         }).withFailureHandler(e => {
-          showNotif('loginNotif', 'An error occurred. Please try again.', 'error');
+          console.error('Social login error:', e);
+          showNotif('loginNotif', (e && e.message) ? e.message : 'An error occurred. Please try again.', 'error');
           restoreBtn();
         }).checkSocialLogin(socialEmail.trim());
       };
@@ -5109,6 +5372,12 @@
         populateDropdowns();
         populatePrintFilters();
       }
+
+      // Populate custom reports (server-persisted across sessions)
+      if (result.customReports && Array.isArray(result.customReports)) {
+        _saveAllSavedConfigs(result.customReports);
+      }
+      syncCustomReportDropdown();
 
       // Apply stats
       if (result.stats) _applyStats(result.stats);
@@ -5664,12 +5933,52 @@
     function formatAmountDisplay(a) { if (!a || a === '') return '-'; const n = parseFloat(a.toString().replace(/[^\d.-]/g, '')); if (isNaN(n)) return a; return '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
     function formatTimestampDisplay(d) { if (!d) return ''; const dt = (d instanceof Date) ? d : new Date(d); if (isNaN(dt)) return String(d); const pad = n => String(n).padStart(2, '0'); return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`; }
 
+    const _MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function _parseDateSafe(val) {
+      if (!val) return null;
+      if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+      const s = String(val).trim();
+      if (!s || s === '-') return null;
+      const dm = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+      if (dm) {
+        const moMap = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+        const mo = moMap[dm[2].toLowerCase()];
+        if (mo !== undefined) {
+          let yr = parseInt(dm[3], 10);
+          if (yr < 100) yr += 2000;
+          return new Date(yr, mo, parseInt(dm[1], 10));
+        }
+      }
+      const ym = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (ym) {
+        return new Date(parseInt(ym[1], 10), parseInt(ym[2], 10) - 1, parseInt(ym[3], 10));
+      }
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDateDisplay(d) {
+      if (!d) return '-';
+      if (typeof d === 'string') {
+        const trimmed = d.trim();
+        if (!trimmed || trimmed === '-') return '-';
+        if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(trimmed)) return trimmed;
+      }
+      const dt = _parseDateSafe(d);
+      if (!dt) return typeof d === 'string' ? d : '-';
+      const day = String(dt.getDate()).padStart(2, '0');
+      const mon = _MONTH_NAMES_SHORT[dt.getMonth()];
+      const yr = String(dt.getFullYear()).slice(-2);
+      return `${day}-${mon}-${yr}`;
+    }
+
     function renderTable() {
       const tb = document.getElementById('docTable');
       if (!filteredDocs || filteredDocs.length === 0) { tb.innerHTML = '<tr><td colspan="27" class="loading">No documents found</td></tr>'; updatePageInfo(0, 0, 0); renderPageNums(0); return; }
       const tot = filteredDocs.length, pp = perPage === 'all' ? tot : parseInt(perPage), tpg = Math.ceil(tot / pp), st = (currentPage - 1) * pp, en = perPage === 'all' ? tot : Math.min(st + pp, tot), pd = filteredDocs.slice(st, en);
       tb.innerHTML = pd.map(d => {
-        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = d['PR Date'] || '', docCat = d['Document Category'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = d['Date Received From BAC'] || '', poNo = d['PO No'] || '', poDate = d['PO Date'] || '', poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = d['Date Endorsed To Acctng'] || '', dateEndCMO = d['Date Endorsed From CMO'] || '', dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = d['AIR Date'] || '', dateEndCOA = d['Date Endorse To COA'] || '', dateEndCTO = d['Date Endorse To CTO'] || '', dt = d['Date Received'] || '', nt = d.Notes || '-', cStatus = d['Cashier Status'] || '-', dPaid = d['Date Paid'] || '-', checkNo = d['Check No.'] || '-', pdf = d['PDF Link'] || '';
+        const ov = d.Overdue || 'On time', id = d['ID/Barcode'] || '', docTs = d['Doc Time Stamp'] || '', ty = d['Doc Type'] || '', no = d['Doc No'] || '', prDate = formatDateDisplay(d['PR Date']), docCat = d['Document Category'] || '', ds = d.Description || '', am = formatAmountDisplay(d.Amount), eu = d['EndUser'] || '', rq = d.Requisitioner || '', poTs = d['PO Time Stamp'] || '', dateRcvdBAC = formatDateDisplay(d['Date Received From BAC']), poNo = d['PO No'] || '', poDate = formatDateDisplay(d['PO Date']), poAm = formatAmountDisplay(d['PO Amount']), sp = d.Supplier || '-', of = d['Endorsed To'] || '', endorsementTs = d['Endorsement Time Stamp'] || '', sta = d.Status || '', dateEndAcctng = formatDateDisplay(d['Date Endorsed To Acctng']), dateEndCMO = formatDateDisplay(d['Date Endorsed From CMO']), dlvStatus = d['Delivery Status'] || '', airNo = d['AIR No.'] || '', airDate = formatDateDisplay(d['AIR Date']), dateEndCOA = formatDateDisplay(d['Date Endorse To COA']), dateEndCTO = formatDateDisplay(d['Date Endorse To CTO']), dt = formatDateDisplay(d['Date Received']), nt = d.Notes || '-', cStatus = d['Cashier Status'] || '-', dPaid = formatDateDisplay(d['Date Paid']), checkNo = d['Check No.'] || '-', pdf = d['PDF Link'] || '';
         const sc = sta.toLowerCase().replace(/\s+/g, '-'), oc = ov !== 'On time' ? 'var(--danger)' : 'var(--success)';
         const att = pdf
           ? `<a href="${pdf}" target="_blank" onclick="event.stopPropagation()"
@@ -5740,7 +6049,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       viewingDocId = id;
 
       // ── Formatters ───────────────────────────────────────────────────────────
-      const fmtDate = v => v ? String(v).trim() || '—' : '—';
+      const fmtDate = v => (v && v !== '—') ? formatDateDisplay(v) : '—';
       const fmtAmt = v => {
         if (!v || v === '') return '—';
         const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
@@ -5871,7 +6180,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           ${single('Supplier', val('Supplier'))}
           ${single('Delivery Status', `<strong>${val('Delivery Status')}</strong>`)}
           ${single('AIR No.', `<strong>${val('AIR No.')}</strong>`)}
-          ${single('AIR Date', `<strong>${val('AIR Date')}</strong>`)}
+          ${single('AIR Date', `<strong>${fmtDate(val('AIR Date'))}</strong>`)}
         </div>
 
         <!-- ④ Endorsements section -->
@@ -6837,18 +7146,18 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           </div>
           <div class="doc-info-grid">
             <div class="doc-info-item"><span class="doc-info-label">Doc Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['Doc Time Stamp'] || '-'}</span></div>
-            <div class="doc-info-item"><span class="doc-info-label">PR Date</span><span class="doc-info-value">${doc['PR Date'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PR Date</span><span class="doc-info-value">${formatDateDisplay(doc['PR Date'])}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Description</span><span class="doc-info-value">${doc.Description || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Amount</span><span class="doc-info-value">${formatAmountDisplay(doc.Amount)}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">End User</span><span class="doc-info-value">${doc['EndUser'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Requisitioner</span><span class="doc-info-value">${doc.Requisitioner || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['PO Time Stamp'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">PO No</span><span class="doc-info-value">${doc['PO No'] || '-'}</span></div>
-            <div class="doc-info-item"><span class="doc-info-label">PO Date</span><span class="doc-info-value">${doc['PO Date'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">PO Date</span><span class="doc-info-value">${formatDateDisplay(doc['PO Date'])}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Supplier</span><span class="doc-info-value">${doc.Supplier || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Endorsed To</span><span class="doc-info-value">${doc['Endorsed To'] || '-'}</span></div>
             <div class="doc-info-item"><span class="doc-info-label">Endorsement Time Stamp</span><span class="doc-info-value" style="font-family:monospace;font-size:12px">${doc['Endorsement Time Stamp'] || '-'}</span></div>
-            <div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${doc['Date Received'] || '-'}</span></div>
+            <div class="doc-info-item"><span class="doc-info-label">Date Received</span><span class="doc-info-value">${formatDateDisplay(doc['Date Received'])}</span></div>
           </div>
         </div>
         <div class="timeline-container">
@@ -7441,9 +7750,32 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       currentFilter = 'print';
       // Refresh print filter dropdowns from latest allDocs data every time the tab opens
       populatePrintFilters();
+      syncCustomReportDropdown();
       updatePageTitle();
     }
-    function updatePrintOptions() { document.getElementById('printColumnsSection').style.display = document.getElementById('reportType').value === 'custom' ? 'block' : 'none'; }
+    function updatePrintOptions() {
+      const typeVal = document.getElementById('reportType').value;
+      const isCustom = typeVal === 'custom' || typeVal.startsWith('custom_cfg_');
+      document.getElementById('printColumnsSection').style.display = isCustom ? 'block' : 'none';
+      // Show/hide custom-report-only elements
+      const titleRow = document.getElementById('customReportTitleRow');
+      const btnSave = document.getElementById('btnSaveCustomConfig');
+      const btnSaved = document.getElementById('btnToggleSavedConfigs');
+      if (titleRow) titleRow.style.display = isCustom ? 'block' : 'none';
+      if (btnSave) btnSave.style.display = isCustom ? '' : 'none';
+      if (btnSaved) btnSaved.style.display = isCustom ? '' : 'none';
+      // If a saved custom config is selected from the dropdown, load it
+      if (typeVal.startsWith('custom_cfg_')) {
+        const cfgId = typeVal.replace('custom_cfg_', '');
+        loadCustomReportConfig(cfgId, false);
+      } else if (typeVal === 'custom') {
+        const list = document.getElementById('colOrderList');
+        if (list && list.children.length === 0) initColOrderList();
+        renderAdminReportActionToolbar(null);
+      } else {
+        renderAdminReportActionToolbar(null);
+      }
+    }
     function populatePrintFilters() {
       // Build End User list from actual document data (not just configured options)
       // so filters are always in sync with what's really in allDocs.
@@ -7517,6 +7849,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         ).join('');
       }
       if (document.getElementById('printCashierStatusLabel')) document.getElementById('printCashierStatusLabel').innerText = 'All Cashier Statuses';
+      syncCustomReportDropdown();
     }
     function getPrintFilteredData() {
       const dfRaw = document.getElementById('printDateFrom').value;   // 'YYYY-MM-DD' or ''
@@ -7535,15 +7868,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const dtMs = dtRaw ? new Date(dtRaw + 'T23:59:59').getTime() : null;
 
       // Helper: parse a doc's Date Received field to a timestamp (handles Date objects,
-      // ISO strings, 'YYYY-MM-DD', 'Jan 15, 2025', and other formats)
+      // dd-MMM-yy, ISO strings, 'YYYY-MM-DD', and other formats)
       function parseDateReceived(val) {
-        if (!val) return null;
-        if (val instanceof Date) return isNaN(val) ? null : val.getTime();
-        const s = String(val).trim();
-        if (!s) return null;
-        // Try direct parse (handles ISO, YYYY-MM-DD, full date strings)
-        const d = new Date(s);
-        return isNaN(d.getTime()) ? null : d.getTime();
+        const dt = _parseDateSafe(val);
+        return dt ? dt.getTime() : null;
       }
 
       let result = [...allDocs];
@@ -7671,11 +7999,11 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${formatDateDisplay(d['PR Date'])}</td>
           <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
-          <td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${formatDateDisplay(d['PO Date'])}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
           <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
-          <td>${d.Supplier || '-'}</td><td>${d['Cashier Status'] || '-'}</td><td>${d['Date Paid'] || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+          <td>${d.Supplier || '-'}</td><td>${d['Cashier Status'] || '-'}</td><td>${formatDateDisplay(d['Date Paid'])}</td><td>${d.Notes || '-'}</td></tr>`;
       });
       h += `<tr style="font-weight:bold;background:#f3f4f6;">
           <td colspan="2" style="text-align:right">GRAND TOTAL:</td>
@@ -7702,13 +8030,13 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
         totalAmt += amt; totalPoAmt += poAmt;
-        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+        h += `<tr><td>${d['Doc No'] || '-'}</td><td>${formatDateDisplay(d['PR Date'])}</td>
           <td style="text-align:right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
-          <td>${d['PO Date'] || '-'}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
+          <td>${formatDateDisplay(d['PO Date'])}</td><td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
           <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
-          <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
-          <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${d['AIR Date'] || '-'}</td>
-          <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
+          <td>${d.Supplier || '-'}</td><td>${formatDateDisplay(d['Date Endorsed To Acctng'])}</td>
+          <td>${formatDateDisplay(d['Date Endorsed From CMO'])}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${formatDateDisplay(d['AIR Date'])}</td>
+          <td>${formatDateDisplay(d['Date Endorse To COA'])}</td><td>${formatDateDisplay(d['Date Endorse To CTO'])}</td>
           <td>${d.Notes || '-'}</td></tr>`;
       });
       h += `<tr style="font-weight:bold;background:#f3f4f6;">
@@ -7735,14 +8063,14 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       od.forEach(d => {
         h += `<tr>
           <td>${d['Doc No'] || '-'}</td>
-          <td>${d['PR Date'] || '-'}</td>
+          <td>${formatDateDisplay(d['PR Date'])}</td>
           <td>${d['PO No'] || '-'}</td>
-          <td>${d['PO Date'] || '-'}</td>
+          <td>${formatDateDisplay(d['PO Date'])}</td>
           <td>${d.Description || '-'}</td>
           <td>${d.EndUser || d['End User'] || '-'}</td>
           <td>${d['Endorsed To'] || '-'}</td>
           <td>${d.Status || '-'}</td>
-          <td>${d['Date Received'] || '-'}</td>
+          <td>${formatDateDisplay(d['Date Received'])}</td>
           <td style="color:#dc2626;font-weight:700">${d.Overdue || '-'}</td>
         </tr>`;
       });
@@ -7789,16 +8117,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           const overdueBold = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
           return `<tr>
             <td>${d['Doc No'] || '-'}</td>
-            <td>${d['PR Date'] || '-'}</td>
+            <td>${formatDateDisplay(d['PR Date'])}</td>
             <td style="text-align:right">${fmtAmt(d.Amount)}</td>
             <td>${d['PO No'] || '-'}</td>
-            <td>${d['PO Date'] || '-'}</td>
+            <td>${formatDateDisplay(d['PO Date'])}</td>
             <td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
             <td>${d.Description || '-'}</td>
             <td>${d.EndUser || d['End User'] || '-'}</td>
             <td>${d.Supplier || '-'}</td>
             <td>${d.Status || '-'}</td>
-            <td>${d['Date Received'] || '-'}</td>
+            <td>${formatDateDisplay(d['Date Received'])}</td>
             <td style="color:${overdueColor};${overdueBold}">${d.Overdue || 'On time'}</td>
           </tr>`;
         }).join('');
@@ -7885,16 +8213,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           grandAmt += amt; grandPoAmt += poAmt;
           return `<tr>
             <td>${d['Doc No'] || '-'}</td>
-            <td>${d['PR Date'] || '-'}</td>
+            <td>${formatDateDisplay(d['PR Date'])}</td>
             <td style="text-align:right">${fmtAmt(d.Amount)}</td>
             <td>${d['PO No'] || '-'}</td>
-            <td>${d['PO Date'] || '-'}</td>
+            <td>${formatDateDisplay(d['PO Date'])}</td>
             <td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>
             <td>${d.Description || '-'}</td>
             <td>${d.EndUser || d['End User'] || '-'}</td>
             <td>${d.Supplier || '-'}</td>
             <td style="font-weight:600">${d['Cashier Status'] || '-'}</td>
-            <td>${d['Date Paid'] || '-'}</td>
+            <td>${formatDateDisplay(d['Date Paid'])}</td>
             <td>${d['Check No.'] || '-'}</td>
             <td>${d.Notes || '-'}</td>
           </tr>`;
@@ -7948,111 +8276,527 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
 
       return h;
     }
-    function generateCustomReport(data) {
-      const cols = {
-        overdue: document.getElementById('pcol-overdue').checked,
-        id: document.getElementById('pcol-id').checked,
-        docTs: document.getElementById('pcol-docTs').checked,
-        type: document.getElementById('pcol-type').checked,
-        no: document.getElementById('pcol-no').checked,
-        prDate: document.getElementById('pcol-prDate').checked,
-        docCat: document.getElementById('pcol-docCat') ? document.getElementById('pcol-docCat').checked : false,
-        desc: document.getElementById('pcol-desc').checked,
-        amount: document.getElementById('pcol-amount').checked,
-        endUser: document.getElementById('pcol-endUser').checked,
-        req: document.getElementById('pcol-req').checked,
-        poTs: document.getElementById('pcol-poTs').checked,
-        dateRecvdBAC: document.getElementById('pcol-dateRecvdBAC') ? document.getElementById('pcol-dateRecvdBAC').checked : false,
-        poNo: document.getElementById('pcol-poNo').checked,
-        poDate: document.getElementById('pcol-poDate').checked,
-        poAmount: document.getElementById('pcol-poAmount') ? document.getElementById('pcol-poAmount').checked : false,
-        supplier: document.getElementById('pcol-supplier').checked,
-        office: document.getElementById('pcol-office').checked,
-        status: document.getElementById('pcol-status').checked,
-        dateEndAcctng: document.getElementById('pcol-dateEndAcctng') ? document.getElementById('pcol-dateEndAcctng').checked : false,
-        dateEndCMO: document.getElementById('pcol-dateEndCMO') ? document.getElementById('pcol-dateEndCMO').checked : false,
-        deliveryStatus: document.getElementById('pcol-deliveryStatus') ? document.getElementById('pcol-deliveryStatus').checked : false,
-        airNo: document.getElementById('pcol-airNo') ? document.getElementById('pcol-airNo').checked : false,
-        airDate: document.getElementById('pcol-airDate') ? document.getElementById('pcol-airDate').checked : false,
-        dateEndCOA: document.getElementById('pcol-dateEndCOA') ? document.getElementById('pcol-dateEndCOA').checked : false,
-        dateEndCTO: document.getElementById('pcol-dateEndCTO') ? document.getElementById('pcol-dateEndCTO').checked : false,
-        date: document.getElementById('pcol-date').checked,
-        notes: document.getElementById('pcol-notes').checked,
-        cashierStatus: document.getElementById('pcol-cashierStatus') ? document.getElementById('pcol-cashierStatus').checked : false,
-        datePaid: document.getElementById('pcol-datePaid') ? document.getElementById('pcol-datePaid').checked : false
-      };
+    // ── Master column definition list for Custom Report ─────────────────────
+    const _CUSTOM_COLS_DEF = [
+      { key: 'overdue',        label: 'Overdue',                   defaultOn: true  },
+      { key: 'id',             label: 'ID/Barcode',                defaultOn: true  },
+      { key: 'docTs',          label: 'Doc Time Stamp',            defaultOn: true  },
+      { key: 'type',           label: 'Doc Type',                  defaultOn: true  },
+      { key: 'no',             label: 'Doc No',                    defaultOn: true  },
+      { key: 'prDate',         label: 'PR Date',                   defaultOn: true  },
+      { key: 'docCat',         label: 'Doc Category',              defaultOn: true  },
+      { key: 'desc',           label: 'Description',               defaultOn: true  },
+      { key: 'amount',         label: 'Amount',                    defaultOn: true  },
+      { key: 'endUser',        label: 'End User',                  defaultOn: true  },
+      { key: 'req',            label: 'Requisitioner',             defaultOn: true  },
+      { key: 'poTs',           label: 'PO Time Stamp',             defaultOn: true  },
+      { key: 'dateRecvdBAC',   label: 'Date Received From BAC',    defaultOn: true  },
+      { key: 'poNo',           label: 'PO No',                     defaultOn: true  },
+      { key: 'poDate',         label: 'PO Date',                   defaultOn: true  },
+      { key: 'poAmount',       label: 'PO Amount',                 defaultOn: true  },
+      { key: 'supplier',       label: 'Supplier',                  defaultOn: true  },
+      { key: 'office',         label: 'Endorsed To',               defaultOn: true  },
+      { key: 'endorsementTs',  label: 'Endorsement Time Stamp',    defaultOn: true  },
+      { key: 'status',         label: 'Status',                    defaultOn: true  },
+      { key: 'dateEndAcctng',  label: 'Date End. To Acctng',       defaultOn: true  },
+      { key: 'dateEndCMO',     label: 'Date End. From CMO',        defaultOn: true  },
+      { key: 'deliveryStatus', label: 'Delivery Status',           defaultOn: true  },
+      { key: 'airNo',          label: 'AIR No.',                   defaultOn: true  },
+      { key: 'airDate',        label: 'AIR Date',                  defaultOn: true  },
+      { key: 'dateEndCOA',     label: 'Date End. To COA',          defaultOn: true  },
+      { key: 'dateEndCTO',     label: 'Date End. To CTO',          defaultOn: true  },
+      { key: 'date',           label: 'Date Received',             defaultOn: true  },
+      { key: 'notes',          label: 'Notes',                     defaultOn: false },
+      { key: 'cashierStatus',  label: 'Cashier Status',            defaultOn: false },
+      { key: 'datePaid',       label: 'Date Paid',                 defaultOn: false },
+      { key: 'checkNo',        label: 'Check No.',                 defaultOn: false }
+    ];
 
-      let h = getReportHeader('Custom Report');
-      h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p><table class="print-table"><thead><tr>`;
-      if (cols.overdue) h += `<th>Overdue</th>`;
-      if (cols.id) h += `<th>ID/Barcode</th>`;
-      if (cols.docTs) h += `<th>Doc Time Stamp</th>`;
-      if (cols.type) h += `<th>Doc Type</th>`;
-      if (cols.no) h += `<th>Doc No</th>`;
-      if (cols.prDate) h += `<th>PR Date</th>`;
-      if (cols.docCat) h += `<th>Doc Category</th>`;
-      if (cols.desc) h += `<th>Description</th>`;
-      if (cols.amount) h += `<th>Amount</th>`;
-      if (cols.endUser) h += `<th>EndUser</th>`;
-      if (cols.req) h += `<th>Requisitioner</th>`;
-      if (cols.poTs) h += `<th>PO Time Stamp</th>`;
-      if (cols.dateRecvdBAC) h += `<th>Date Received From BAC</th>`;
-      if (cols.poNo) h += `<th>PO No</th>`;
-      if (cols.poDate) h += `<th>PO Date</th>`;
-      if (cols.poAmount) h += `<th>PO Amount</th>`;
-      if (cols.supplier) h += `<th>Supplier</th>`;
-      if (cols.office) h += `<th>Endorsed To</th>`;
-      if (cols.status) h += `<th>Status</th>`;
-      if (cols.dateEndAcctng) h += `<th>Date Endorsed To Acctng</th>`;
-      if (cols.dateEndCMO) h += `<th>Date Endorsed From CMO</th>`;
-      if (cols.deliveryStatus) h += `<th>Delivery Status</th>`;
-      if (cols.airNo) h += `<th>AIR No.</th>`;
-      if (cols.airDate) h += `<th>AIR Date</th>`;
-      if (cols.dateEndCOA) h += `<th>Date Endorse To COA</th>`;
-      if (cols.dateEndCTO) h += `<th>Date Endorse To CTO</th>`;
-      if (cols.date) h += `<th>Date Received</th>`;
-      if (cols.notes) h += `<th>Notes</th>`;
-      if (cols.cashierStatus) h += `<th>Cashier Status</th>`;
-      if (cols.datePaid) h += `<th>Date Paid</th>`;
+    // Drag state
+    let _dragSrc = null;
+
+    function initColOrderList(colDefs) {
+      const defs = colDefs || _CUSTOM_COLS_DEF;
+      const list = document.getElementById('colOrderList');
+      if (!list) return;
+      list.innerHTML = '';
+      defs.forEach((col, idx) => {
+        list.appendChild(buildColOrderItem(col, idx + 1, col.checked !== undefined ? col.checked : col.defaultOn));
+      });
+    }
+
+    function buildColOrderItem(col, badge, checked) {
+      const li = document.createElement('li');
+      li.className = 'col-order-item' + (checked ? '' : ' col-disabled');
+      li.draggable = true;
+      li.dataset.key = col.key;
+      li.innerHTML = `
+        <span class="material-symbols-outlined col-drag-handle" title="Drag to reorder">drag_indicator</span>
+        <span class="col-order-badge">${badge}</span>
+        <span class="col-order-label">${col.label}</span>
+        <input type="checkbox" class="col-order-checkbox" title="Include in report" ${checked ? 'checked' : ''}>
+      `;
+      const cb = li.querySelector('.col-order-checkbox');
+      cb.addEventListener('change', () => {
+        li.classList.toggle('col-disabled', !cb.checked);
+        rebadgeColOrderList();
+      });
+      // Drag-and-drop handlers
+      li.addEventListener('dragstart', e => {
+        _dragSrc = li;
+        li.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      li.addEventListener('dragend', () => {
+        li.classList.remove('dragging');
+        document.querySelectorAll('.col-order-item').forEach(el => el.classList.remove('drag-over'));
+        _dragSrc = null;
+        rebadgeColOrderList();
+      });
+      li.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (_dragSrc && _dragSrc !== li) li.classList.add('drag-over');
+      });
+      li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+      li.addEventListener('drop', e => {
+        e.preventDefault();
+        li.classList.remove('drag-over');
+        if (!_dragSrc || _dragSrc === li) return;
+        const list = document.getElementById('colOrderList');
+        const items = [...list.children];
+        const srcIdx = items.indexOf(_dragSrc);
+        const tgtIdx = items.indexOf(li);
+        if (srcIdx < tgtIdx) list.insertBefore(_dragSrc, li.nextSibling);
+        else list.insertBefore(_dragSrc, li);
+        rebadgeColOrderList();
+      });
+      return li;
+    }
+
+    function rebadgeColOrderList() {
+      const items = document.querySelectorAll('#colOrderList .col-order-item');
+      let pos = 1;
+      items.forEach(li => {
+        const cb = li.querySelector('.col-order-checkbox');
+        const badge = li.querySelector('.col-order-badge');
+        if (cb && cb.checked) {
+          badge.textContent = pos++;
+          badge.style.background = '';
+        } else {
+          badge.textContent = '–';
+          badge.style.background = '#cbd5e1';
+        }
+      });
+    }
+
+    function selectAllCustomCols(val) {
+      document.querySelectorAll('#colOrderList .col-order-checkbox').forEach(cb => {
+        cb.checked = val;
+        cb.closest('.col-order-item').classList.toggle('col-disabled', !val);
+      });
+      rebadgeColOrderList();
+    }
+
+    function resetCustomColOrder() {
+      initColOrderList();
+    }
+
+    // Returns ordered array of active column keys from the drag-and-drop list
+    function getActiveCustomCols() {
+      const result = [];
+      document.querySelectorAll('#colOrderList .col-order-item').forEach(li => {
+        const cb = li.querySelector('.col-order-checkbox');
+        if (cb && cb.checked) result.push(li.dataset.key);
+      });
+      return result;
+    }
+
+    // ── Cell renderer map — key → function(d) returning TD html string ───────
+    const _CUSTOM_COL_RENDER = {
+      overdue:        d => `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td>`,
+      id:             d => `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`,
+      docTs:          d => `<td style="font-family:monospace;font-size:11px">${d['Doc Time Stamp'] || '-'}</td>`,
+      type:           d => `<td>${d['Doc Type'] || '-'}</td>`,
+      no:             d => `<td>${d['Doc No'] || '-'}</td>`,
+      prDate:         d => `<td>${formatDateDisplay(d['PR Date'])}</td>`,
+      docCat:         d => `<td>${d['Document Category'] || '-'}</td>`,
+      desc:           d => `<td>${d.Description || '-'}</td>`,
+      amount:         d => `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`,
+      endUser:        d => `<td>${d['EndUser'] || d['End User'] || '-'}</td>`,
+      req:            d => `<td>${d.Requisitioner || '-'}</td>`,
+      poTs:           d => `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`,
+      dateRecvdBAC:   d => `<td>${formatDateDisplay(d['Date Received From BAC'])}</td>`,
+      poNo:           d => `<td>${d['PO No'] || '-'}</td>`,
+      poDate:         d => `<td>${formatDateDisplay(d['PO Date'])}</td>`,
+      poAmount:       d => `<td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>`,
+      supplier:       d => `<td>${d.Supplier || '-'}</td>`,
+      office:         d => `<td>${d['Endorsed To'] || '-'}</td>`,
+      endorsementTs:  d => `<td style="font-family:monospace;font-size:11px">${d['Endorsement Time Stamp'] || '-'}</td>`,
+      status:         d => `<td>${d.Status || '-'}</td>`,
+      dateEndAcctng:  d => `<td>${formatDateDisplay(d['Date Endorsed To Acctng'])}</td>`,
+      dateEndCMO:     d => `<td>${formatDateDisplay(d['Date Endorsed From CMO'])}</td>`,
+      deliveryStatus: d => `<td>${d['Delivery Status'] || '-'}</td>`,
+      airNo:          d => `<td>${d['AIR No.'] || '-'}</td>`,
+      airDate:        d => `<td>${formatDateDisplay(d['AIR Date'])}</td>`,
+      dateEndCOA:     d => `<td>${formatDateDisplay(d['Date Endorse To COA'])}</td>`,
+      dateEndCTO:     d => `<td>${formatDateDisplay(d['Date Endorse To CTO'])}</td>`,
+      date:           d => `<td>${formatDateDisplay(d['Date Received'])}</td>`,
+      notes:          d => `<td>${d.Notes || '-'}</td>`,
+      cashierStatus:  d => `<td>${d['Cashier Status'] || '-'}</td>`,
+      datePaid:       d => `<td>${formatDateDisplay(d['Date Paid'])}</td>`,
+      checkNo:        d => `<td>${d['Check No.'] || '-'}</td>`
+    };
+
+    // Column header labels for each key
+    const _CUSTOM_COL_HDR = {
+      overdue: 'Overdue', id: 'ID/Barcode', docTs: 'Doc Time Stamp', type: 'Doc Type',
+      no: 'Doc No', prDate: 'PR Date', docCat: 'Doc Category', desc: 'Description',
+      amount: 'Amount', endUser: 'End User', req: 'Requisitioner', poTs: 'PO Time Stamp',
+      dateRecvdBAC: 'Date Rcvd From BAC', poNo: 'PO No', poDate: 'PO Date', poAmount: 'PO Amount',
+      supplier: 'Supplier', office: 'Endorsed To', endorsementTs: 'Endorsement TS',
+      status: 'Status', dateEndAcctng: 'Date End. Acctng', dateEndCMO: 'Date End. CMO',
+      deliveryStatus: 'Delivery Status', airNo: 'AIR No.', airDate: 'AIR Date',
+      dateEndCOA: 'Date End. COA', dateEndCTO: 'Date End. CTO', date: 'Date Received',
+      notes: 'Notes', cashierStatus: 'Cashier Status', datePaid: 'Date Paid', checkNo: 'Check No.'
+    };
+
+    function generateCustomReport(data) {
+      // Ensure the column list is initialised (in case the user never toggled the type)
+      const list = document.getElementById('colOrderList');
+      if (list && list.children.length === 0) initColOrderList();
+
+      const activeCols = getActiveCustomCols();
+      if (activeCols.length === 0) return '<p style="text-align:center;padding:40px;color:#64748b">No columns selected. Please check at least one column.</p>';
+
+      const reportTitle = (document.getElementById('customReportTitle') || {}).value || 'Custom Report';
+      let h = getReportHeader(reportTitle.trim() || 'Custom Report');
+      h += `<p style="margin-bottom:20px">Total: <strong>${data.length}</strong></p>`;
+      h += `<div style="overflow-x:auto"><table class="print-table"><thead><tr>`;
+      activeCols.forEach(key => { h += `<th>${_CUSTOM_COL_HDR[key] || key}</th>`; });
       h += `</tr></thead><tbody>`;
       data.forEach(d => {
         h += `<tr>`;
-        if (cols.overdue) h += `<td style="color:${d.Overdue && d.Overdue !== 'On time' ? '#dc2626' : '#059669'};font-weight:600">${d.Overdue || 'On time'}</td>`;
-        if (cols.id) h += `<td style="font-family:monospace">${d['ID/Barcode'] || '-'}</td>`;
-        if (cols.docTs) h += `<td style="font-family:monospace;font-size:11px">${d['Doc Time Stamp'] || '-'}</td>`;
-        if (cols.type) h += `<td>${d['Doc Type'] || '-'}</td>`;
-        if (cols.no) h += `<td>${d['Doc No'] || '-'}</td>`;
-        if (cols.prDate) h += `<td>${d['PR Date'] || '-'}</td>`;
-        if (cols.docCat) h += `<td>${d['Document Category'] || '-'}</td>`;
-        if (cols.desc) h += `<td>${d.Description || '-'}</td>`;
-        if (cols.amount) h += `<td style="text-align:right">${fmtAmt(d.Amount)}</td>`;
-        if (cols.endUser) h += `<td>${d['EndUser'] || '-'}</td>`;
-        if (cols.req) h += `<td>${d.Requisitioner || '-'}</td>`;
-        if (cols.poTs) h += `<td style="font-family:monospace;font-size:11px">${d['PO Time Stamp'] || '-'}</td>`;
-        if (cols.dateRecvdBAC) h += `<td>${d['Date Received From BAC'] || '-'}</td>`;
-        if (cols.poNo) h += `<td>${d['PO No'] || '-'}</td>`;
-        if (cols.poDate) h += `<td>${d['PO Date'] || '-'}</td>`;
-        if (cols.poAmount) h += `<td style="text-align:right">${fmtAmt(d['PO Amount'])}</td>`;
-        if (cols.supplier) h += `<td>${d.Supplier || '-'}</td>`;
-        if (cols.office) h += `<td>${d['Endorsed To'] || '-'}</td>`;
-        if (cols.status) h += `<td>${d.Status || '-'}</td>`;
-        if (cols.dateEndAcctng) h += `<td>${d['Date Endorsed To Acctng'] || '-'}</td>`;
-        if (cols.dateEndCMO) h += `<td>${d['Date Endorsed From CMO'] || '-'}</td>`;
-        if (cols.deliveryStatus) h += `<td>${d['Delivery Status'] || '-'}</td>`;
-        if (cols.airNo) h += `<td>${d['AIR No.'] || '-'}</td>`;
-        if (cols.airDate) h += `<td>${d['AIR Date'] || '-'}</td>`;
-        if (cols.dateEndCOA) h += `<td>${d['Date Endorse To COA'] || '-'}</td>`;
-        if (cols.dateEndCTO) h += `<td>${d['Date Endorse To CTO'] || '-'}</td>`;
-        if (cols.date) h += `<td>${d['Date Received'] || '-'}</td>`;
-        if (cols.notes) h += `<td>${d.Notes || '-'}</td>`;
-        if (cols.cashierStatus) h += `<td>${d['Cashier Status'] || '-'}</td>`;
-        if (cols.datePaid) h += `<td>${d['Date Paid'] || '-'}</td>`;
+        activeCols.forEach(key => {
+          const fn = _CUSTOM_COL_RENDER[key];
+          h += fn ? fn(d) : `<td>-</td>`;
+        });
         h += `</tr>`;
       });
-      h += `</tbody></table>`;
+      h += `</tbody></table></div>`;
       return h;
     }
-    function generatePreview() { const type = document.getElementById('reportType').value, data = getPrintFilteredData(); let h = ''; switch (type) { case 'summary': h = generateSummaryReport(data); break; case 'detailed': h = generateDetailedReport(data); break; case 'overdue': h = generateOverdueReport(data); break; case 'office': h = generateOfficeReport(data); break; case 'cashierReport': h = generateCashierReport(data); break; case 'custom': h = generateCustomReport(data); break; }const prev = document.getElementById('reportPreview'); prev.innerHTML = h; prev.classList.add('show'); prev.scrollIntoView({ behavior: 'smooth' }); }
+
+    // ── Saved Configurations (LocalStorage + Server Sheet Persistence) ────────
+    const _SAVED_CFG_KEY = 'doctrack_custom_report_configs';
+
+    function _loadAllSavedConfigs() {
+      try { return JSON.parse(localStorage.getItem(_SAVED_CFG_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function _saveAllSavedConfigs(arr) {
+      try { localStorage.setItem(_SAVED_CFG_KEY, JSON.stringify(arr)); } catch(e) {}
+    }
+
+    function syncCustomReportDropdown() {
+      const sel = document.getElementById('reportType');
+      if (!sel) return;
+      let optgroup = document.getElementById('savedCustomReportsOptgroup');
+      if (!optgroup) {
+        optgroup = document.createElement('optgroup');
+        optgroup.id = 'savedCustomReportsOptgroup';
+        optgroup.label = 'Saved Custom Reports';
+        sel.appendChild(optgroup);
+      }
+      const all = _loadAllSavedConfigs();
+      optgroup.innerHTML = '';
+      if (all.length === 0) {
+        optgroup.style.display = 'none';
+      } else {
+        optgroup.style.display = '';
+        all.forEach(cfg => {
+          const opt = document.createElement('option');
+          opt.value = 'custom_cfg_' + cfg.id;
+          const retainedTag = cfg.retained ? ' [Retained]' : '';
+          opt.textContent = `${cfg.name || cfg.title || 'Custom Report'}${retainedTag}`;
+          optgroup.appendChild(opt);
+        });
+      }
+    }
+
+    function renderAdminReportActionToolbar(cfg) {
+      const bar = document.getElementById('customReportMetaBar');
+      if (!bar) return;
+      if (!cfg) {
+        bar.style.display = 'none';
+        bar.innerHTML = '';
+        return;
+      }
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      const myName = (currentUser ? (currentUser.name || currentUser.email) : '').toLowerCase();
+      const owner = (cfg.createdBy || '').toLowerCase();
+      const isOwner = (owner && myName && (owner === myName));
+      const canDelete = isAdmin || (isOwner && !cfg.retained);
+      const safeId = String(cfg.id).replace(/'/g, "\\'");
+
+      const dt = cfg.createdAt ? formatDateDisplay(cfg.createdAt) : '';
+      let html = `<span style="font-size:11.5px;color:var(--muted)">By <strong>${cfg.createdBy || 'User'}</strong>${dt ? ' · ' + dt : ''}</span>`;
+      if (cfg.retained) {
+        html += `<span class="sci-badge-retained" title="This custom report has been verified & retained by an Administrator"><span class="material-symbols-outlined" style="font-size:12px">verified</span> Retained by Admin</span>`;
+      }
+      if (isAdmin) {
+        if (!cfg.retained) {
+          html += `<button type="button" class="btn btn-outline btn-admin-action" style="color:#059669;border-color:#a7f3d0;background:#ecfdf5" onclick="toggleRetainCustomReport('${safeId}', true)" title="Retain this report configuration for the organization"><span class="material-symbols-outlined" style="font-size:13px">check_circle</span> Retain</button>`;
+        } else {
+          html += `<button type="button" class="btn btn-outline btn-admin-action" style="color:#475569;border-color:#cbd5e1;background:#f8fafc" onclick="toggleRetainCustomReport('${safeId}', false)" title="Release Retained status"><span class="material-symbols-outlined" style="font-size:13px">cancel</span> Release Retain</button>`;
+        }
+      }
+      if (canDelete) {
+        html += `<button type="button" class="btn btn-outline btn-admin-action" style="color:var(--danger);border-color:#fecaca;background:#fee2e2" onclick="deleteCustomReportConfig('${safeId}')" title="${isAdmin ? 'Admin: Delete this report for all users' : 'Delete your custom report'}"><span class="material-symbols-outlined" style="font-size:13px">delete</span> Delete</button>`;
+      }
+      bar.innerHTML = html;
+      bar.style.display = 'flex';
+    }
+
+    function saveCustomReportConfig() {
+      const currentTitle = (document.getElementById('customReportTitle') || {}).value || 'Custom Report';
+      const name = prompt('Enter a name for this custom report:', currentTitle);
+      if (name === null) return; // cancelled
+      const trimmed = name.trim();
+      if (!trimmed) { showAlertModal('Save Configuration', 'Please enter a valid report name.', 'warning'); return; }
+
+      const list = document.getElementById('colOrderList');
+      if (!list) return;
+      const colState = [...list.children].map(li => ({
+        key: li.dataset.key,
+        checked: li.querySelector('.col-order-checkbox').checked
+      }));
+      const titleVal = (document.getElementById('customReportTitle') || {}).value || trimmed;
+      const currentUserName = currentUser ? (currentUser.name || currentUser.email) : 'User';
+
+      const all = _loadAllSavedConfigs();
+      const existingIdx = all.findIndex(c => c.name.toLowerCase() === trimmed.toLowerCase());
+      let cfgId = 'cr_' + Date.now();
+      let wasRetained = false;
+      if (existingIdx >= 0) {
+        cfgId = all[existingIdx].id || cfgId;
+        wasRetained = !!all[existingIdx].retained;
+      }
+
+      const cfg = {
+        id: cfgId,
+        name: trimmed,
+        title: titleVal,
+        cols: colState,
+        createdBy: existingIdx >= 0 ? (all[existingIdx].createdBy || currentUserName) : currentUserName,
+        createdAt: existingIdx >= 0 ? (all[existingIdx].createdAt || new Date().toISOString()) : new Date().toISOString(),
+        retained: wasRetained
+      };
+
+      if (existingIdx >= 0) all[existingIdx] = cfg;
+      else all.push(cfg);
+
+      _saveAllSavedConfigs(all);
+      syncCustomReportDropdown();
+
+      const repSel = document.getElementById('reportType');
+      if (repSel) repSel.value = 'custom_cfg_' + cfg.id;
+
+      renderSavedConfigsList();
+      renderAdminReportActionToolbar(cfg);
+      toast(`Custom report "${trimmed}" saved!`, 'success');
+
+      // Sync to Google Apps Script / Google Spreadsheet backend
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res && res.status === 'success' && res.id) {
+              const fresh = _loadAllSavedConfigs();
+              const fIdx = fresh.findIndex(c => c.name.toLowerCase() === trimmed.toLowerCase());
+              if (fIdx >= 0) {
+                fresh[fIdx].id = res.id;
+                _saveAllSavedConfigs(fresh);
+                syncCustomReportDropdown();
+                if (repSel && repSel.value === 'custom_cfg_' + cfgId) {
+                  repSel.value = 'custom_cfg_' + res.id;
+                }
+              }
+            }
+          })
+          .withFailureHandler(err => {
+            console.warn('[DocTrack] Backend saveCustomReport failed, preserved in local storage:', err);
+          })
+          .saveCustomReport(cfg, _sessionToken);
+      }
+    }
+
+    function loadCustomReportConfig(idOrName, updateDropdown = true) {
+      const all = _loadAllSavedConfigs();
+      const cfg = all.find(c => c.id === idOrName || c.name === idOrName);
+      if (!cfg) return;
+
+      // Restore title
+      const titleEl = document.getElementById('customReportTitle');
+      if (titleEl) titleEl.value = cfg.title || cfg.name;
+
+      // Restore column order & checked state
+      const defs = (cfg.cols || []).map(c => {
+        const def = _CUSTOM_COLS_DEF.find(d => d.key === c.key);
+        return { key: c.key, label: def ? def.label : c.key, checked: c.checked };
+      });
+      initColOrderList(defs);
+
+      // Select in dropdown if requested
+      if (updateDropdown) {
+        const sel = document.getElementById('reportType');
+        if (sel) sel.value = 'custom_cfg_' + cfg.id;
+      }
+
+      renderAdminReportActionToolbar(cfg);
+    }
+
+    function deleteCustomReportConfig(idOrName) {
+      const all = _loadAllSavedConfigs();
+      const cfg = all.find(c => c.id === idOrName || c.name === idOrName);
+      if (!cfg) return;
+
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      const myName = (currentUser ? (currentUser.name || currentUser.email) : '').toLowerCase();
+      const owner = (cfg.createdBy || '').toLowerCase();
+      const isOwner = (owner && myName && (owner === myName));
+
+      if (!isAdmin) {
+        if (cfg.retained) {
+          showAlertModal('Cannot Delete', `"${cfg.name}" has been retained by an Administrator and cannot be deleted.`, 'warning');
+          return;
+        }
+        if (!isOwner && myName !== '') {
+          showAlertModal('Permission Denied', 'You can only delete custom reports that you created.', 'warning');
+          return;
+        }
+      }
+
+      const promptMsg = isAdmin 
+        ? `Are you sure you want to delete "${cfg.name}"? As an Administrator, this will permanently remove it for all users.`
+        : `Are you sure you want to delete your custom report "${cfg.name}"?`;
+
+      showConfirmModal('Delete Custom Report', promptMsg, 'Delete', 'danger', () => {
+        const updated = _loadAllSavedConfigs().filter(c => c.id !== cfg.id && c.name !== cfg.name);
+        _saveAllSavedConfigs(updated);
+
+        const sel = document.getElementById('reportType');
+        if (sel && sel.value === 'custom_cfg_' + cfg.id) {
+          sel.value = 'custom';
+          updatePrintOptions();
+        }
+
+        syncCustomReportDropdown();
+        renderSavedConfigsList();
+        renderAdminReportActionToolbar(null);
+        toast(`Report "${cfg.name}" deleted.`, 'success');
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withFailureHandler(err => console.warn('[DocTrack] Backend deleteCustomReport failed:', err))
+            .deleteCustomReport(cfg.id, _sessionToken);
+        }
+      });
+    }
+
+    function toggleRetainCustomReport(reportId, isRetain) {
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      if (!isAdmin) {
+        showAlertModal('Permission Denied', 'Only Admins can retain or release custom reports.', 'warning');
+        return;
+      }
+      const all = _loadAllSavedConfigs();
+      const cfg = all.find(c => c.id === reportId || c.name === reportId);
+      if (!cfg) return;
+
+      cfg.retained = !!isRetain;
+      _saveAllSavedConfigs(all);
+      syncCustomReportDropdown();
+      renderSavedConfigsList();
+      renderAdminReportActionToolbar(cfg);
+
+      toast(isRetain ? `Report "${cfg.name}" has been retained.` : `Retain status removed for "${cfg.name}".`, 'success');
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withFailureHandler(err => console.warn('[DocTrack] Backend retainCustomReport failed:', err))
+          .retainCustomReport(cfg.id, !!isRetain, _sessionToken);
+      }
+    }
+
+    function toggleSavedConfigsPanel() {
+      const panel = document.getElementById('savedConfigsPanel');
+      if (!panel) return;
+      const isOpen = panel.style.display !== 'none';
+      panel.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) renderSavedConfigsList();
+    }
+
+    function renderSavedConfigsList() {
+      const container = document.getElementById('savedConfigsList');
+      if (!container) return;
+      const all = _loadAllSavedConfigs();
+      if (all.length === 0) {
+        container.innerHTML = '<p id="scpEmpty">No saved configurations yet.</p>';
+        return;
+      }
+      const isAdmin = currentUser && (currentUser.role || '').toLowerCase() === 'admin';
+      const myName = (currentUser ? (currentUser.name || currentUser.email) : '').toLowerCase();
+
+      container.innerHTML = all.map(cfg => {
+        const dt = cfg.createdAt || cfg.savedAt ? formatDateDisplay(cfg.createdAt || cfg.savedAt) : '';
+        const safeId = String(cfg.id).replace(/'/g, "\\'");
+        const owner = (cfg.createdBy || '').toLowerCase();
+        const isOwner = (owner && myName && (owner === myName));
+        const canDelete = isAdmin || (isOwner && !cfg.retained);
+
+        return `<div class="saved-config-item">
+          <div class="sci-info">
+            <div class="sci-name-row">
+              <span class="sci-name" title="${cfg.name}">${cfg.name}</span>
+              ${cfg.retained ? '<span class="sci-badge-retained" title="Retained by Admin"><span class="material-symbols-outlined" style="font-size:12px">verified</span> Retained</span>' : ''}
+            </div>
+            <div class="sci-meta">
+              <span>By <strong>${cfg.createdBy || 'User'}</strong></span>${dt ? `<span>· ${dt}</span>` : ''}
+            </div>
+          </div>
+          <div class="sci-actions">
+            <button class="sci-load-btn" onclick="loadCustomReportConfig('${safeId}', true)" title="Load into Custom Report builder">Load</button>
+            ${isAdmin ? (
+              cfg.retained
+                ? `<button class="sci-unretain-btn" onclick="toggleRetainCustomReport('${safeId}', false)" title="Release Retained status">Retained</button>`
+                : `<button class="sci-retain-btn" onclick="toggleRetainCustomReport('${safeId}', true)" title="Retain this custom report for all users">Retain</button>`
+            ) : ''}
+            ${canDelete ? `<button class="sci-del-btn" onclick="deleteCustomReportConfig('${safeId}')" title="${isAdmin ? 'Admin: Delete report' : 'Delete your report'}">Delete</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function generatePreview() {
+      const type = document.getElementById('reportType').value, data = getPrintFilteredData();
+      let h = '';
+      switch (type) {
+        case 'summary': h = generateSummaryReport(data); break;
+        case 'detailed': h = generateDetailedReport(data); break;
+        case 'overdue': h = generateOverdueReport(data); break;
+        case 'office': h = generateOfficeReport(data); break;
+        case 'cashierReport': h = generateCashierReport(data); break;
+        case 'custom': h = generateCustomReport(data); break;
+        default:
+          if (type.startsWith('custom_cfg_')) {
+            h = generateCustomReport(data);
+          }
+          break;
+      }
+      const prev = document.getElementById('reportPreview');
+      prev.innerHTML = h;
+      prev.classList.add('show');
+      prev.scrollIntoView({ behavior: 'smooth' });
+    }
 
     // Shared CSS for all print windows — landscape, repeat headers, black header row
     function _printWindowCSS() {
@@ -8141,11 +8885,11 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           totalAmt += amt; totalPoAmt += poAmt;
-          return `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+          return `<tr><td>${d['Doc No'] || '-'}</td><td>${formatDateDisplay(d['PR Date'])}</td>
             <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
-            <td>${d['PO Date'] || '-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${formatDateDisplay(d['PO Date'])}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
             <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
-            <td>${d.Supplier || '-'}</td><td>${d['Cashier Status'] || '-'}</td><td>${d['Date Paid'] || '-'}</td><td>${d.Notes || '-'}</td></tr>`;
+            <td>${d.Supplier || '-'}</td><td>${d['Cashier Status'] || '-'}</td><td>${formatDateDisplay(d['Date Paid'])}</td><td>${d.Notes || '-'}</td></tr>`;
         }).join('');
         html = orgHeader + `<h3>Summary Report</h3><p>As of ${now}</p></div>
           <p>Total Documents: <strong>${data.length}</strong></p>
@@ -8164,13 +8908,13 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           const amt = parseFloat((d.Amount || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           const poAmt = parseFloat((d['PO Amount'] || '').toString().replace(/[^0-9.-]/g, '')) || 0;
           totalAmt += amt; totalPoAmt += poAmt;
-          return `<tr><td>${d['Doc No'] || '-'}</td><td>${d['PR Date'] || '-'}</td>
+          return `<tr><td>${d['Doc No'] || '-'}</td><td>${formatDateDisplay(d['PR Date'])}</td>
             <td class="text-right">${fmtAmt(d.Amount)}</td><td>${d['PO No'] || '-'}</td>
-            <td>${d['PO Date'] || '-'}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
+            <td>${formatDateDisplay(d['PO Date'])}</td><td class="text-right">${fmtAmt(d['PO Amount'])}</td>
             <td>${d.Description || '-'}</td><td>${d.EndUser || d['End User'] || '-'}</td>
-            <td>${d.Supplier || '-'}</td><td>${d['Date Endorsed To Acctng'] || '-'}</td>
-            <td>${d['Date Endorsed From CMO'] || '-'}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${d['AIR Date'] || '-'}</td>
-            <td>${d['Date Endorse To COA'] || '-'}</td><td>${d['Date Endorse To CTO'] || '-'}</td>
+            <td>${d.Supplier || '-'}</td><td>${formatDateDisplay(d['Date Endorsed To Acctng'])}</td>
+            <td>${formatDateDisplay(d['Date Endorsed From CMO'])}</td><td>${d['Delivery Status'] || '-'}</td><td>${d['AIR No.'] || '-'}</td><td>${formatDateDisplay(d['AIR Date'])}</td>
+            <td>${formatDateDisplay(d['Date Endorse To COA'])}</td><td>${formatDateDisplay(d['Date Endorse To CTO'])}</td>
             <td>${d.Notes || '-'}</td></tr>`;
         }).join('');
         html = orgHeader + `<h3>Detailed Document List</h3><p>As of ${now}</p></div>
@@ -8190,14 +8934,14 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         const od = data.filter(d => d.Overdue && d.Overdue !== 'On time');
         const rows = od.map(d => `<tr>
           <td>${d['Doc No'] || '-'}</td>
-          <td>${d['PR Date'] || '-'}</td>
+          <td>${formatDateDisplay(d['PR Date'])}</td>
           <td>${d['PO No'] || '-'}</td>
-          <td>${d['PO Date'] || '-'}</td>
+          <td>${formatDateDisplay(d['PO Date'])}</td>
           <td>${d.Description || '-'}</td>
           <td>${d.EndUser || d['End User'] || '-'}</td>
           <td>${d['Endorsed To'] || '-'}</td>
           <td>${d.Status || '-'}</td>
-          <td>${d['Date Received'] || '-'}</td>
+          <td>${formatDateDisplay(d['Date Received'])}</td>
           <td class="text-danger">${d.Overdue || '-'}</td>
         </tr>`).join('');
         html = orgHeader + `<h3>Overdue Documents Report</h3><p>As of ${now}</p></div>
@@ -8243,16 +8987,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             const overdueBold = d.Overdue && d.Overdue !== 'On time' ? 'font-weight:700;' : '';
             return `<tr>
               <td>${d['Doc No'] || '-'}</td>
-              <td>${d['PR Date'] || '-'}</td>
+              <td>${formatDateDisplay(d['PR Date'])}</td>
               <td class="text-right">${fmtAmt(d.Amount)}</td>
               <td>${d['PO No'] || '-'}</td>
-              <td>${d['PO Date'] || '-'}</td>
+              <td>${formatDateDisplay(d['PO Date'])}</td>
               <td class="text-right">${fmtAmt(d['PO Amount'])}</td>
               <td>${d.Description || '-'}</td>
               <td>${d.EndUser || d['End User'] || '-'}</td>
               <td>${d.Supplier || '-'}</td>
               <td>${d.Status || '-'}</td>
-              <td>${d['Date Received'] || '-'}</td>
+              <td>${formatDateDisplay(d['Date Received'])}</td>
               <td style="color:${overdueColor};${overdueBold}">${d.Overdue || 'On time'}</td>
             </tr>`;
           }).join('');
@@ -8326,16 +9070,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             grandAmt += amt; grandPoAmt += poAmt;
             return `<tr>
               <td>${d['Doc No'] || '-'}</td>
-              <td>${d['PR Date'] || '-'}</td>
+              <td>${formatDateDisplay(d['PR Date'])}</td>
               <td class="text-right">${fmtAmt(d.Amount)}</td>
               <td>${d['PO No'] || '-'}</td>
-              <td>${d['PO Date'] || '-'}</td>
+              <td>${formatDateDisplay(d['PO Date'])}</td>
               <td class="text-right">${fmtAmt(d['PO Amount'])}</td>
               <td>${d.Description || '-'}</td>
               <td>${d.EndUser || d['End User'] || '-'}</td>
               <td>${d.Supplier || '-'}</td>
               <td>${d['Cashier Status'] || '-'}</td>
-              <td>${d['Date Paid'] || '-'}</td>
+              <td>${formatDateDisplay(d['Date Paid'])}</td>
               <td>${d['Check No.'] || '-'}</td>
               <td>${d.Notes || '-'}</td>
             </tr>`;
@@ -8383,10 +9127,11 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
           <p>Total Status Groups: <strong>${groupOrder.length}</strong> &nbsp;|&nbsp; Total Documents: <strong>${data.length}</strong></p>
           ${sections}${grandTotalRow}`;
 
-      } else if (type === 'custom') {
+      } else if (type === 'custom' || type.startsWith('custom_cfg_')) {
         const previewContent = document.getElementById('reportPreview').innerHTML;
         html = previewContent;
-        _openPrintWindow('Custom Report', html);
+        const customTitle = ((document.getElementById('customReportTitle') || {}).value || 'Custom Report').trim() || 'Custom Report';
+        _openPrintWindow(customTitle, html);
         return;
       }
 
@@ -8429,11 +9174,13 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const rows = [hdrs];
       filteredDocs.forEach(doc => {
         const row = [];
+        const _dateCols = new Set(['PR Date', 'PO Date', 'Date Received From BAC', 'AIR Date', 'Date Endorsed To Acctng', 'Date Endorsed From CMO', 'Date Endorse To COA', 'Date Endorse To CTO', 'Date Received', 'Due Date', 'Date Paid']);
         cols.forEach(col => {
           let v = doc[col];
           if (v === null || v === undefined) v = '';
           else v = String(v);
           if ((col === 'Amount' || col === 'PO Amount') && v) v = v.replace(/[₱,]/g, '');
+          if (_dateCols.has(col) && v) v = formatDateDisplay(v);
           row.push(v);
         });
         rows.push(row);
