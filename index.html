@@ -5150,38 +5150,44 @@
 
     document.getElementById('loginBtn').addEventListener('click', function () {
       if (_loginInFlight) return;                   // block duplicate calls
-      const btn = this;                             // capture button reference — safe inside regular function
+      const btn = this;
       const email = document.getElementById('loginEmail').value.trim();
-      const pwd   = document.getElementById('loginPassword').value;  // ⚠ do NOT trim — passwords may contain spaces
+      const pwd   = document.getElementById('loginPassword').value;
       if (!email || !pwd) { showNotif('loginNotif', 'Please enter email and password', 'error'); return; }
 
       _loginInFlight = true;
       btn.disabled   = true;
       btn.innerHTML  = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; font-size: 16px; vertical-align: -3px; margin-right: 6px;">sync</span>Signing in…';
 
-      // ── Safety timeout — re-enables button if GAS takes too long ──────────
-      const _loginTimeout = setTimeout(function () {
-        if (!_loginInFlight) return;               // already finished normally
-        showNotif('loginNotif', 'Server is taking too long. Please try again.', 'error');
-        _resetLoginBtn();
-      }, 30000);
+      let _loginAttempt = 0;
+      const _MAX_LOGIN_ATTEMPTS = 2;
 
-      google.script.run
-        .withSuccessHandler(function (r) {
-          clearTimeout(_loginTimeout);
-          if (r && r.status === 'success') {
-            _sessionToken = r.token || '';
-            try {
-              localStorage.setItem('docutracker_session_token', _sessionToken);
-              sessionStorage.removeItem('docutracker_active_tab');
-            } catch (e) { }
+      function _doLoginCall() {
+        _loginAttempt++;
+        // ── Safety timeout: 12s is ample for credential check only ──────────
+        const _loginTimeout = setTimeout(function () {
+          if (!_loginInFlight) return;
+          if (_loginAttempt < _MAX_LOGIN_ATTEMPTS) {
+            // Auto-retry once silently
+            _doLoginCall();
+          } else {
+            showNotif('loginNotif', 'Server is taking too long. Please check your connection and try again.', 'error');
             _resetLoginBtn();
+          }
+        }, 12000);
 
-            // Transition to dashboard immediately with 0 delay — no loading screen
-            showView('dashboard');
-            if (r.initialData && r.initialData.user) {
-              _renderInitialData(r.initialData);
-            } else {
+        google.script.run
+          .withSuccessHandler(function (r) {
+            clearTimeout(_loginTimeout);
+            if (r && r.status === 'success') {
+              _sessionToken = r.token || '';
+              try {
+                localStorage.setItem('docutracker_session_token', _sessionToken);
+                sessionStorage.removeItem('docutracker_active_tab');
+              } catch (e) { }
+              _resetLoginBtn();
+
+              // ── Set user info immediately from the fast login response ────
               if (r.user) {
                 currentUser = r.user;
                 const un = document.getElementById('userName'); if (un) un.textContent = r.user.name || 'User';
@@ -5189,32 +5195,43 @@
                 const ua = document.getElementById('userAvatar'); if (ua) ua.textContent = getInitials(r.user.name);
                 applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
               }
+
+              // Show dashboard immediately, render cached docs or skeleton
+              showView('dashboard');
               _optimisticRenderOrSkeleton();
+
+              // Now fetch full data in the background — session is warm so this is fast
               initDashboard(1, true);
+
+            } else {
+              showNotif('loginNotif', (r && r.message) || 'Invalid email or password', 'error');
+              _resetLoginBtn();
             }
-          } else {
-            showNotif('loginNotif', (r && r.message) || 'Invalid email or password', 'error');
-            _resetLoginBtn();
-          }
-        })
-        .withFailureHandler(function (err) {
-          clearTimeout(_loginTimeout);
-          console.error('Login error:', err);
-          let msg = 'Connection error. Please check your network and try again.';
-          if (err && err.message) {
-            const m = String(err.message).toLowerCase();
+          })
+          .withFailureHandler(function (err) {
+            clearTimeout(_loginTimeout);
+            const m = err && err.message ? String(err.message).toLowerCase() : '';
+            const isBusy = m.includes('busy') || m.includes('503') || m.includes('429');
+            if ((isBusy || m.includes('failed to fetch') || m.includes('networkerror')) && _loginAttempt < _MAX_LOGIN_ATTEMPTS) {
+              // Silent retry on transient network/busy error
+              setTimeout(_doLoginCall, 1500);
+              return;
+            }
+            let msg = 'Connection error. Please check your network and try again.';
             if (m.includes('failed to fetch') || m.includes('networkerror')) {
               msg = 'Unable to connect to the server. Please check your internet connection and try again.';
-            } else if (m.includes('busy') || m.includes('503') || m.includes('429')) {
+            } else if (isBusy) {
               msg = 'Server is currently busy. Please wait a moment and try again.';
-            } else {
+            } else if (err && err.message) {
               msg = err.message;
             }
-          }
-          showNotif('loginNotif', msg, 'error');
-          _resetLoginBtn();
-        })
-        .checkLogin(email, pwd);
+            showNotif('loginNotif', msg, 'error');
+            _resetLoginBtn();
+          })
+          .checkLogin(email, pwd);
+      }
+
+      _doLoginCall();
     });
     ['loginEmail', 'loginPassword'].forEach(id =>
       document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); }));
@@ -5240,19 +5257,19 @@
           restoreBtn();
           return;
         }
-        google.script.run.withSuccessHandler(r => {
-          if (r.status === 'success') {
-            _sessionToken = r.token || '';
-            try {
-              localStorage.setItem('docutracker_session_token', _sessionToken);
-              sessionStorage.removeItem('docutracker_active_tab');
-            } catch (e) { }
-            restoreBtn();
-            // Show dashboard immediately with 0 delay
-            showView('dashboard');
-            if (r.initialData && r.initialData.user) {
-              _renderInitialData(r.initialData);
-            } else {
+        let _socialAttempt = 0;
+        const _MAX_SOCIAL_ATTEMPTS = 2;
+        function _doSocialCall() {
+          _socialAttempt++;
+          google.script.run.withSuccessHandler(r => {
+            if (r.status === 'success') {
+              _sessionToken = r.token || '';
+              try {
+                localStorage.setItem('docutracker_session_token', _sessionToken);
+                sessionStorage.removeItem('docutracker_active_tab');
+              } catch (e) { }
+              restoreBtn();
+              // Set user info immediately from fast login response
               if (r.user) {
                 currentUser = r.user;
                 const un = document.getElementById('userName'); if (un) un.textContent = r.user.name || 'User';
@@ -5260,29 +5277,33 @@
                 const ua = document.getElementById('userAvatar'); if (ua) ua.textContent = getInitials(r.user.name);
                 applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
               }
+              showView('dashboard');
               _optimisticRenderOrSkeleton();
               initDashboard(1, true);
+            } else {
+              showNotif('loginNotif', r.message || 'Access denied', 'error');
+              restoreBtn();
             }
-          } else {
-            showNotif('loginNotif', r.message || 'Access denied', 'error');
-            restoreBtn();
-          }
-        }).withFailureHandler(e => {
-          console.error('Social login error:', e);
-          let msg = 'An error occurred. Please try again.';
-          if (e && e.message) {
-            const m = String(e.message).toLowerCase();
+          }).withFailureHandler(e => {
+            const m = e && e.message ? String(e.message).toLowerCase() : '';
+            const isBusy = m.includes('busy') || m.includes('503') || m.includes('429');
+            if ((isBusy || m.includes('failed to fetch') || m.includes('networkerror')) && _socialAttempt < _MAX_SOCIAL_ATTEMPTS) {
+              setTimeout(_doSocialCall, 1500);
+              return;
+            }
+            let msg = 'An error occurred. Please try again.';
             if (m.includes('failed to fetch') || m.includes('networkerror')) {
               msg = 'Unable to connect to the server. Please check your internet connection and try again.';
-            } else if (m.includes('busy') || m.includes('503') || m.includes('429')) {
+            } else if (isBusy) {
               msg = 'Server is currently busy. Please wait a moment and try again.';
-            } else {
+            } else if (e && e.message) {
               msg = e.message;
             }
-          }
-          showNotif('loginNotif', msg, 'error');
-          restoreBtn();
-        }).checkSocialLogin(socialEmail.trim());
+            showNotif('loginNotif', msg, 'error');
+            restoreBtn();
+          }).checkSocialLogin(socialEmail.trim());
+        }
+        _doSocialCall();
       };
 
       if (provider === 'Google') {
@@ -7178,6 +7199,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         // 2. Clear local session state immediately — this is instant
         currentUser = null;
         _sessionToken = '';
+        allDocs = [];
+        dropdownOptions = { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] };
         try {
           localStorage.removeItem('docutracker_session_token');
           localStorage.removeItem('docutracker_activity_logs');

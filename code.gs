@@ -98,7 +98,7 @@ function doPost(e) {
       'getDropdownOptions', 'updateDropdownOptions', 'updateAllDropdownOptions',
       'getAllDocuments', 'getDocumentById', 'getDocumentStats', 'getDocsRevision',
       'addDocument', 'updateDocument', 'deleteDocument',
-      'getDocumentHistory', 'logDocumentHistory',
+      'getDocumentHistory', 'getAllDocumentHistories', 'logDocumentHistory',
       'getAllActivityLogs', 'logActivity',
       'uploadPDFToGoogleDrive', 'updatePdfLink', 'getScriptUrl',
       'getUsers', 'addUser', 'updateUser', 'toggleUserStatus', 'deleteUser',
@@ -263,11 +263,21 @@ function updateDropdownOptions(type, values, tokenParam) {
 //  ScriptProperties key: 'sess_<UUID>' → JSON { email, expires }
 // =====================================================================
 function _createSession(email) {
-  const token   = Utilities.getUuid();
-  const expires = Date.now() + 24 * 60 * 60 * 1000; // 24-hour TTL
-  PropertiesService.getScriptProperties().setProperty(
-    'sess_' + token, JSON.stringify({ email: email.toLowerCase().trim(), expires: expires })
-  );
+  const token      = Utilities.getUuid();
+  const cleanEmail = email.toLowerCase().trim();
+  const expires    = Date.now() + 24 * 60 * 60 * 1000; // 24-hour TTL
+  // Put directly in CacheService so subsequent validation requests hit fast cache immediately
+  try {
+    const ck = 'sv_' + token.replace(/-/g, '');
+    CacheService.getScriptCache().put(ck, cleanEmail, 21600);
+  } catch (e) {}
+  try {
+    PropertiesService.getScriptProperties().setProperty(
+      'sess_' + token, JSON.stringify({ email: cleanEmail, expires: expires })
+    );
+  } catch (e) {
+    Logger.log('_createSession property error: ' + e);
+  }
   return token;
 }
 
@@ -316,13 +326,24 @@ function _invalidateDocsCache() {
   try {
     const cache = CacheService.getScriptCache();
     const nStr  = cache.get('all_docs_n');
-    const n     = nStr ? parseInt(nStr) : 1;
-    const keys  = ['all_docs_n'];
-    if (n === 1) keys.push('all_docs'); else for (let i = 0; i < n; i++) keys.push('all_docs_' + i);
+    const n     = nStr ? parseInt(nStr) : 10;
+    const keys  = ['all_docs_n', 'all_docs'];
+    for (let i = 0; i < Math.max(n, 25); i++) keys.push('all_docs_' + i);
     cache.removeAll(keys);
+    // Real-time sync: bump the revision token so other browser tabs detect updates immediately
+    const newRev = String(Date.now());
+    cache.put('docs_rev', newRev, 21600);
+    try { PropertiesService.getScriptProperties().setProperty('docs_rev', newRev); } catch(e) {}
   } catch(e) {}
 }
 function _invalidateDropdownCache() { try { CacheService.getScriptCache().remove('dropdown_opts_v2'); } catch(e) {} }
+function _invalidateUsersCache() {
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove('user_directory');
+    cache.remove('all_users_list');
+  } catch(e) {}
+}
 
 function _getDefaultPermissions(role) {
   const r = (role || 'Staff').toLowerCase();
@@ -478,10 +499,10 @@ function checkLogin(email, password) {
       const ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
       CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
     } catch (e) {}
+    // Fire login activity log as fire-and-forget — do NOT await appendRow here.
+    // Moving to its own try/catch prevents a slow ActivityLog sheet from blocking auth.
     try { logActivity('Login', '', `User logged in: ${userEmail}`, userName); } catch (e) {}
-    let initialData = null;
-    try { initialData = getInitialData(token); } catch (e) { }
-    return { status: 'success', token, initialData };
+    return { status: 'success', token, user: userObj };
   }
   return { status: 'invalid', message: 'Invalid email or password' };
 }
@@ -510,9 +531,7 @@ function checkSocialLogin(email) {
       CacheService.getScriptCache().put(ck, JSON.stringify(userObj), 3600);
     } catch (e) {}
     try { logActivity('Login', '', `User logged in via Social: ${userEmail}`, userName); } catch (e) {}
-    let initialData = null;
-    try { initialData = getInitialData(token); } catch (e) { }
-    return { status: 'success', token, initialData };
+    return { status: 'success', token, user: userObj };
   }
   return { status: 'invalid', message: 'Social login email not found. Contact Admin for approval.' };
 }
@@ -617,6 +636,9 @@ function logDocumentHistory(docId, action, status, user, remarks) {
       if (cu) user = cu.name;
     }
     historySheet.appendRow([docId, action, status || '', user || 'System', new Date(), remarks || '']);
+    // Invalidate per-doc and shared raw history caches
+    try { _cacheDel('dochist_' + String(docId).replace(/[^a-zA-Z0-9_-]/g, '_')); } catch(e) {}
+    try { _cacheDel('all_doc_history_raw'); } catch(e) {}
     return true;
   } catch (error) {
     Logger.log('logDocumentHistory error: ' + error);
@@ -624,38 +646,117 @@ function logDocumentHistory(docId, action, status, user, remarks) {
   }
 }
 
+function _formatHistoryTimestamp(dtMs) {
+  const dt = new Date(dtMs);
+  if (isNaN(dt)) return String(dtMs);
+  const p = n => String(n).padStart(2, '0');
+  const h = dt.getHours() % 12 || 12;
+  const ampm = dt.getHours() < 12 ? 'AM' : 'PM';
+  return `${dt.toLocaleString('en-US',{month:'short'})} ${String(dt.getDate()).padStart(2,'0')}, ${dt.getFullYear()} ${String(h).padStart(2,'0')}:${p(dt.getMinutes())} ${ampm}`;
+}
+
+function _getOrLoadRawHistoryRows() {
+  const rawKey = 'all_doc_history_raw';
+  const hit = _cacheGet(rawKey);
+  if (hit) {
+    try { return JSON.parse(hit); } catch(e) {}
+  }
+  const ss = _getSS();
+  const historySheet = ss.getSheetByName(HISTORY_SHEET);
+  if (!historySheet) return [];
+  const data = historySheet.getDataRange().getValues();
+  const rawRows = [];
+  for (let i = 1; i < data.length; i++) {
+    const tsRaw = data[i][4];
+    const tsMs  = (tsRaw instanceof Date && !isNaN(tsRaw)) ? tsRaw.getTime() : (new Date(tsRaw).getTime() || String(tsRaw));
+    rawRows.push([
+      String(data[i][0]).trim(), // docId
+      data[i][1],                // action
+      data[i][2],                // status
+      data[i][3],                // user
+      tsMs,                      // timestamp as epoch ms (or string)
+      data[i][5]                 // remarks
+    ]);
+  }
+  try { _cacheSet(rawKey, JSON.stringify(rawRows), 90); } catch(e) {}
+  return rawRows;
+}
+
 function getDocumentHistory(docId) {
   try {
-    const ss = _getSS();
-    const historySheet = ss.getSheetByName(HISTORY_SHEET);
-    if (!historySheet) return [];
-    const data    = historySheet.getDataRange().getValues();
+    const docIdStr = String(docId).trim();
+    const safeId   = docIdStr.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // ── Level 1: per-doc cache (90 s) ─────────────────────────────────────────
+    const perDocKey = 'dochist_' + safeId;
+    const hit1 = _cacheGet(perDocKey);
+    if (hit1) { try { return JSON.parse(hit1); } catch(e) {} }
+
+    // ── Level 2: shared raw sheet cache (fast in-memory filter) ───────────────
+    const rawRows = _getOrLoadRawHistoryRows();
     const history = [];
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === docId) {
-        history.push({
-          documentId: data[i][0],
-          action:     data[i][1],
-          status:     data[i][2],
-          user:       data[i][3],
-          timestamp:  (function(d){
-            const dt = new Date(d);
-            if(isNaN(dt)) return String(d);
-            const p=n=>String(n).padStart(2,'0');
-            const h=dt.getHours()%12||12, ampm=dt.getHours()<12?'AM':'PM';
-            return `${dt.toLocaleString('en-US',{month:'short'})} ${String(dt.getDate()).padStart(2,'0')}, ${dt.getFullYear()} ${String(h).padStart(2,'0')}:${p(dt.getMinutes())} ${ampm}`;
-          })(data[i][4]),
-          remarks:    data[i][5]
-        });
-      }
+    for (let i = 0; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      if (String(row[0]).trim() !== docIdStr) continue;
+      const dtMs  = row[4];
+      const dt    = new Date(dtMs);
+      const epoch = isNaN(dt) ? 0 : dt.getTime();
+      history.push({
+        documentId: row[0],
+        action: row[1],
+        status: row[2],
+        user: row[3],
+        timestamp: _formatHistoryTimestamp(dtMs),
+        _epoch: epoch,
+        remarks: row[5]
+      });
     }
-    history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    history.sort((a, b) => b._epoch - a._epoch);
+    history.forEach(h => delete h._epoch);
+
+    try { _cacheSet(perDocKey, JSON.stringify(history), 90); } catch(e) {}
     return history;
   } catch (error) {
     Logger.log('getDocumentHistory error: ' + error);
     return [];
   }
 }
+
+// Batch endpoint: returns full history mapped by docId so client can preload all at once
+function getAllDocumentHistories() {
+  try {
+    const rawRows = _getOrLoadRawHistoryRows();
+    const historiesByDoc = {};
+    for (let i = 0; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      const docIdStr = String(row[0]).trim();
+      if (!docIdStr) continue;
+      if (!historiesByDoc[docIdStr]) historiesByDoc[docIdStr] = [];
+
+      const dtMs  = row[4];
+      const dt    = new Date(dtMs);
+      const epoch = isNaN(dt) ? 0 : dt.getTime();
+      historiesByDoc[docIdStr].push({
+        documentId: row[0],
+        action: row[1],
+        status: row[2],
+        user: row[3],
+        timestamp: _formatHistoryTimestamp(dtMs),
+        _epoch: epoch,
+        remarks: row[5]
+      });
+    }
+    Object.keys(historiesByDoc).forEach(id => {
+      historiesByDoc[id].sort((a, b) => b._epoch - a._epoch);
+      historiesByDoc[id].forEach(h => delete h._epoch);
+    });
+    return historiesByDoc;
+  } catch (error) {
+    Logger.log('getAllDocumentHistories error: ' + error);
+    return {};
+  }
+}
+
 
 function getDocumentById(docId) {
   try {
@@ -827,23 +928,28 @@ function _logBoth(docId, histAction, histStatus, histUser, histRemarks, actActio
     if (logSheet) {
       logSheet.appendRow([ts, String(actAction||'').trim(), userName, String(docId||'').trim(), docNo, String(actDetails||'').trim(), '']);
     }
-    // Invalidate activity cache
+    // Invalidate activity cache, per-doc history cache, and shared raw history cache
     try { _cacheDel('all_activity_logs'); } catch(e) {}
+    try { _cacheDel('dochist_' + String(docId).replace(/[^a-zA-Z0-9_-]/g, '_')); } catch(e) {}
+    try { _cacheDel('all_doc_history_raw'); } catch(e) {}
   } catch(e) { Logger.log('_logBoth error: ' + e); }
 }
 
-function calculateOverdueStatus(dateReceived, status) {
+function calculateOverdueStatus(dateReceived, status, todayRef) {
   const s = String(status || '').toLowerCase().trim();
   if (s.includes('forwarded') || s.includes('completed') || s.includes('complete')) return 'On time';
-  const received = new Date(dateReceived);
-  const dueDate  = new Date(received);
-  dueDate.setDate(dueDate.getDate() + OVERDUE_THRESHOLD);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  dueDate.setHours(0, 0, 0, 0);
-  if (today > dueDate) {
-    return `${Math.floor((today - dueDate) / 86400000)} days`;
+  if (!dateReceived) return 'On time';
+  let rMs = 0;
+  if (dateReceived instanceof Date) {
+    rMs = dateReceived.getTime();
+  } else {
+    const p = new Date(dateReceived);
+    if (!isNaN(p.getTime())) rMs = p.getTime();
   }
+  if (!rMs) return 'On time';
+  const todayMs = (todayRef instanceof Date) ? todayRef.getTime() : (typeof todayRef === 'number' ? todayRef : Date.now());
+  const diffDays = Math.floor((todayMs - rMs - (OVERDUE_THRESHOLD * 86400000)) / 86400000);
+  if (diffDays > 0) return `${diffDays} days`;
   return 'On time';
 }
 
@@ -879,7 +985,9 @@ function checkDuplicateDocNo(docNo, excludeId) {
 //  Ensures the Documents sheet has all 20 columns in the correct order.
 //  Safe to run on both new and existing sheets.
 // =====================================================================
+let _docHeadersVerified = false;
 function ensureDocumentSheetHeaders(sheet) {
+  if (_docHeadersVerified) return;
   try {
     const EXPECTED_HEADERS = [
       'Doc Time Stamp','ID/Barcode','Doc Type','Doc No','PR Date','Description','Amount',
@@ -888,25 +996,24 @@ function ensureDocumentSheetHeaders(sheet) {
       'Date Endorsed To Acctng','Date Endorsed From CMO','Delivery Status', 'AIR No.', 'AIR Date',
       'Date Endorse To COA','Date Endorse To CTO',
       'Date Received','Due Date','Overdue','Notes','PDF Link',
-      'Field Owners','PO Fields Owner','Document Category',  // Field Owners = JSON map {fieldName: ownerEmail} for ALL editable fields; PO Fields Owner is legacy/unused
+      'Field Owners','PO Fields Owner','Document Category',
       'Cashier Status','Date Paid','Check No.'
     ];
     if (!sheet) return;
-    const data = sheet.getDataRange().getValues();
-    if (data.length === 0) {
-      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]);
-      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setFontWeight('bold');
+    const lastCol = sheet.getLastColumn();
+    if (lastCol === 0) {
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]).setFontWeight('bold');
+      _docHeadersVerified = true;
       return;
     }
-    const current = data[0].map(h => h.toString().trim());
-    // Validate EVERY header — fixes spelling variants like 'PO TimeStamp' vs 'PO Time Stamp'
+    const current = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => h.toString().trim());
     const needsUpdate = current.length < EXPECTED_HEADERS.length ||
       EXPECTED_HEADERS.some((h, i) => current[i] !== h);
     if (needsUpdate) {
-      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]);
-      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, EXPECTED_HEADERS.length).setValues([EXPECTED_HEADERS]).setFontWeight('bold');
       Logger.log('Document sheet headers normalized to expected schema.');
     }
+    _docHeadersVerified = true;
   } catch (e) {
     Logger.log('ensureDocumentSheetHeaders error: ' + e);
   }
@@ -929,96 +1036,82 @@ function _fmtTs(d) {
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-// Split a JSON string into ≤99 KB chunks for CacheService storage
-function _cacheSet(key, json) {
+// High-performance batch CacheService storage with safe 75KB chunks
+// Safe against multi-byte UTF-8 character limits and network round-trip overhead
+const CACHE_TTL_6H = 21600;
+
+function _cacheSet(key, json, ttl) {
+  if (!key || typeof json !== 'string') return;
   try {
     const cache = CacheService.getScriptCache();
-    const CHUNK = 99000;
+    const t = ttl || CACHE_TTL_6H;
+    const CHUNK = 75000;
     if (json.length <= CHUNK) {
-      cache.put(key, json, 600);
-      cache.put(key + '_n', '1', 600);
+      const map = {};
+      map[key] = json;
+      map[key + '_n'] = '1';
+      cache.putAll(map, t);
     } else {
       const n = Math.ceil(json.length / CHUNK);
-      for (let i = 0; i < n; i++) cache.put(key + '_' + i, json.slice(i*CHUNK, (i+1)*CHUNK), 600);
-      cache.put(key + '_n', String(n), 600);
+      const map = {};
+      for (let i = 0; i < n; i++) {
+        map[key + '_' + i] = json.slice(i * CHUNK, (i + 1) * CHUNK);
+      }
+      map[key + '_n'] = String(n);
+      cache.putAll(map, t);
     }
-  } catch(e) {}
-}
-function _cacheGet(key) {
-  try {
-    const cache = CacheService.getScriptCache();
-    const nStr  = cache.get(key + '_n');
-    if (!nStr) return null;
-    const n = parseInt(nStr);
-    if (n === 1) return cache.get(key);
-    const parts = [];
-    for (let i = 0; i < n; i++) { const p = cache.get(key + '_' + i); if (!p) return null; parts.push(p); }
-    return parts.join('');
-  } catch(e) { return null; }
+  } catch (e) {
+    Logger.log('_cacheSet error: ' + e);
+  }
 }
 
-function _cacheDel(key) {
+function _cacheGet(key) {
+  if (!key) return null;
   try {
     const cache = CacheService.getScriptCache();
     const nStr = cache.get(key + '_n');
-    if (nStr) {
-      const n = parseInt(nStr);
-      for (let i = 0; i < n; i++) cache.remove(key + '_' + i);
-      cache.remove(key + '_n');
+    if (!nStr) return null;
+    const n = parseInt(nStr);
+    if (isNaN(n) || n < 1) return null;
+    if (n === 1) return cache.get(key);
+
+    const keys = [];
+    for (let i = 0; i < n; i++) keys.push(key + '_' + i);
+    const map = cache.getAll(keys);
+    const parts = [];
+    for (let i = 0; i < n; i++) {
+      const p = map[key + '_' + i];
+      if (p === undefined || p === null) return null;
+      parts.push(p);
     }
-    cache.remove(key);
-  } catch(e) {}
+    return parts.join('');
+  } catch (e) {
+    Logger.log('_cacheGet error: ' + e);
+    return null;
+  }
+}
+
+function _cacheDel(key) {
+  if (!key) return;
+  try {
+    const cache = CacheService.getScriptCache();
+    const nStr = cache.get(key + '_n');
+    const n = nStr ? parseInt(nStr) : 10;
+    const keys = [key, key + '_n'];
+    for (let i = 0; i < Math.max(n, 25); i++) keys.push(key + '_' + i);
+    cache.removeAll(keys);
+  } catch (e) {}
 }
 
 function getAllDocuments() {
   try {
-    // 5-minute chunked cache — works for datasets beyond the 100 KB CacheService limit
     const hit = _cacheGet('all_docs');
     if (hit) { try { return JSON.parse(hit); } catch(e) {} }
 
     const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     if (!sheet) return [];
-    // NOTE: ensureDocumentSheetHeaders() removed from here — it costs a full
-    // sheet read on every cold load. It's still called in addDocument() where
-    // a schema migration is actually needed.
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return [];
-
-    const headers    = data[0].map(h => h.toString().trim());
-    const idCol      = headers.indexOf('ID/Barcode');
-    const noCol      = headers.indexOf('Doc No');
-    const statusCol  = headers.indexOf('Status');
-    // Pre-build a set of timestamp column indices so we format them differently
-    const tsColSet   = new Set(['Doc Time Stamp','PO Time Stamp','Endorsement Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
-    const documents  = [];
-    const seenIds    = new Set();
-
-    for (let i = 1; i < data.length; i++) {
-      const rowId = idCol !== -1 ? data[i][idCol] : data[i][0];
-      if (!rowId || rowId.toString().trim() === '') continue;
-      const rowIdStr = String(rowId).trim();
-      if (seenIds.has(rowIdStr)) continue;
-      seenIds.add(rowIdStr);
-
-      const doc = {};
-      for (let j = 0; j < headers.length; j++) {
-        const v = data[i][j];
-        if (v instanceof Date) {
-          // Pure JS formatting — no GAS API call, orders of magnitude faster
-          doc[headers[j]] = tsColSet.has(j) ? _fmtTs(v) : _fmtDate(v);
-        } else {
-          doc[headers[j]] = v;
-        }
-      }
-      if (doc['Date Received']) {
-        doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
-      }
-      documents.push(doc);
-    }
-
-    _cacheSet('all_docs', JSON.stringify(documents));
-    return documents;
+    return _parseDocsSheet(sheet);
   } catch (error) { Logger.log('getAllDocuments error: ' + error); return []; }
 }
 
@@ -1477,13 +1570,22 @@ function getDocumentStats(tokenParam) {
 // just changes made through the web app), not just appends to the last row.
 function getDocsRevision() {
   try {
-    const ss   = _getSS();
-    const file = DriveApp.getFileById(ss.getId());
+    const cache = CacheService.getScriptCache();
+    let rev = cache.get('docs_rev');
+    if (!rev) {
+      try { rev = PropertiesService.getScriptProperties().getProperty('docs_rev'); } catch(e) {}
+    }
+    if (rev) return { rev: rev };
+
+    const ss    = _getSS();
     const sheet = ss.getSheetByName(DOCS_SHEET);
     const rows  = sheet ? sheet.getLastRow() : 0;
-    // updated.getTime() changes on ANY edit to ANY sheet in the spreadsheet —
-    // appends, deletes, in-place edits, even formula recalcs.
-    return { rev: file.getLastUpdated().getTime() + '_' + rows, rows: rows };
+    const initialRev = String(Date.now()) + '_' + rows;
+    try {
+      cache.put('docs_rev', initialRev, 21600);
+      PropertiesService.getScriptProperties().setProperty('docs_rev', initialRev);
+    } catch(e) {}
+    return { rev: initialRev, rows: rows };
   } catch (error) {
     Logger.log('getDocsRevision error: ' + error);
     return { rev: '0', rows: 0 };
@@ -1614,6 +1716,7 @@ function addUser(tokenParam, userData) {
       new Date(), '',                      // CreatedAt, LastLogin
       userData.team     || ''              // Team (col K)
     ]);
+    _invalidateUsersCache();
     logActivity('Add User', '', `User added: ${userData.email} (${userData.role})`);
     return { status: 'success' };
   } catch (e) { Logger.log('addUser error: ' + e); return { status: 'error', message: e.toString() }; }
@@ -1643,6 +1746,7 @@ function updateUser(tokenParam, targetEmail, userData) {
         const ck = 'cu_' + targetEmail.replace(/[^a-zA-Z0-9]/g, '_');
         CacheService.getScriptCache().remove(ck);
       } catch(e) {}
+      _invalidateUsersCache();
       logActivity('Update User', '', `User updated: ${targetEmail}`);
       return { status: 'success' };
     }
@@ -1664,6 +1768,7 @@ function toggleUserStatus(tokenParam, targetEmail) {
       if (String(data[i][0]).toLowerCase() !== targetEmail.toLowerCase()) continue;
       const newStatus = String(data[i][6] || 'Active').toLowerCase() === 'active' ? 'Inactive' : 'Active';
       sheet.getRange(i + 1, 7).setValue(newStatus);
+      _invalidateUsersCache();
       logActivity('Toggle User Status', '', `User ${targetEmail} → ${newStatus}`);
       return { status: 'success', newStatus: newStatus };
     }
@@ -1688,6 +1793,7 @@ function deleteUser(tokenParam, targetEmail) {
       sheet.deleteRow(i + 1);
       // Invalidate user cache for this email
       try { CacheService.getScriptCache().remove('cu_' + targetEmail.replace(/[^a-zA-Z0-9]/g, '_')); } catch(e) {}
+      _invalidateUsersCache();
       logActivity('Delete User', '', `User deleted: ${deletedName} (${targetEmail})`);
       return { status: 'success', deletedEmail: targetEmail };
     }
@@ -1697,68 +1803,92 @@ function deleteUser(tokenParam, targetEmail) {
 
 // =====================================================================
 //  BATCH INIT — returns user + documents + dropdown options + stats
-//  in a single round-trip so initDashboard() only needs ONE server call.
+//  in a single round-trip so login and initDashboard only need ONE server call.
 // =====================================================================
-function getInitialData(token) {
+// Helper to retrieve userDirectory and users list with CacheService caching
+function _getUsersAndDirectory(ss, user) {
+  let userDirectory = null;
+  let users = null;
+  const needUsersList = !!(user && user.permissions && user.permissions.manageUsers);
+
   try {
-    _doPostToken = token || _doPostToken;
+    const udirHit = _cacheGet('user_directory');
+    if (udirHit) userDirectory = JSON.parse(udirHit);
+  } catch (e) {}
 
-    // ── Validate session (fast CacheService path first) ───────────────────────
-    const email = _validateSession(token);
-    if (!email) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+  if (needUsersList) {
+    try {
+      const ulistHit = _cacheGet('all_users_list');
+      if (ulistHit) users = JSON.parse(ulistHit);
+    } catch (e) {}
+  }
 
-    // ── Read Users sheet exactly ONCE, reuse for user lookup + directory + users list ──
-    // Previously: getCurrentUser(), getUsers(), _getUserDirectory() each did their
-    // own sheet.getDataRange().getValues() — 3 reads. Now it's at most 1.
-    const ss         = _getSS();
-    const usersSheet = ss.getSheetByName(USERS_SHEET);
-    if (!usersSheet) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+  // Fast path: if cache hit, return immediately without touching USERS sheet!
+  if (userDirectory && (!needUsersList || users)) {
+    return { userDirectory: userDirectory || [], users: users || [] };
+  }
 
-    // Try warm-path user-object cache first (pre-warmed by checkLogin)
-    const cu_ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
-    let user = null;
-    try { const hit = CacheService.getScriptCache().get(cu_ck); if (hit) user = JSON.parse(hit); } catch (e) {}
+  // Cold path: read Users sheet once
+  const usersSheet = ss.getSheetByName(USERS_SHEET);
+  if (!usersSheet) return { userDirectory: [], users: [] };
 
-    // usersData is read lazily — only when the cache misses
-    let usersData = null;
-    if (!user) {
-      usersData = usersSheet.getDataRange().getValues();
-      for (let i = 1; i < usersData.length; i++) {
-        if (String(usersData[i][0]).trim().toLowerCase() !== email) continue;
-        const role   = String(usersData[i][2] || 'Staff');
-        const status = String(usersData[i][6] || 'Active');
-        if (status.toLowerCase() === 'inactive') return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
-        const perms = _getDefaultPermissions(role);
-        try { const c = usersData[i][7] ? JSON.parse(usersData[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
-        user = { email: usersData[i][0], name: usersData[i][3] || 'User', role, status, permissions: perms, team: String(usersData[i][10] || '').trim() };
-        try { CacheService.getScriptCache().put(cu_ck, JSON.stringify(user), 3600); } catch (e) {}
-        break;
-      }
-    }
-    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+  const lastRow = usersSheet.getLastRow();
+  const lastCol = usersSheet.getLastColumn();
+  if (lastRow <= 1 || lastCol < 1) return { userDirectory: [], users: [] };
+  const usersData = usersSheet.getRange(1, 1, lastRow, lastCol).getValues();
 
-    // ── Docs + opts from cache (fast path) ────────────────────────────────────
-    const cache      = CacheService.getScriptCache();
+  userDirectory = [];
+  users = [];
+  for (let i = 1; i < usersData.length; i++) {
+    if (!usersData[i][0]) continue;
+    userDirectory.push({ email: String(usersData[i][0]).toLowerCase().trim(), name: usersData[i][3] || '' });
+    const rawPerms = usersData[i][7] ? (() => { try { return JSON.parse(usersData[i][7]); } catch (e) { return null; } })() : null;
+    const basePerms = _getDefaultPermissions(usersData[i][2] || 'Staff');
+    if (rawPerms) Object.assign(basePerms, rawPerms);
+    users.push({
+      email:       usersData[i][0],
+      role:        usersData[i][2] || 'Staff',
+      name:        usersData[i][3] || '',
+      status:      usersData[i][6] || 'Active',
+      permissions: basePerms,
+      team:        String(usersData[i][10] || '').trim(),
+      createdAt:   usersData[i][8] ? String(usersData[i][8]).split('T')[0] : ''
+    });
+  }
+
+  try {
+    _cacheSet('user_directory', JSON.stringify(userDirectory), CACHE_TTL_6H);
+    _cacheSet('all_users_list', JSON.stringify(users), CACHE_TTL_6H);
+  } catch (e) {}
+
+  return { userDirectory, users: needUsersList ? users : [] };
+}
+
+function _buildInitialData(token, user, ss) {
+  try {
+    const cache = CacheService.getScriptCache();
+
+    // ── Docs + opts from cache (fast path: <15ms) ──────────────────────────
     const docsCached = _cacheGet('all_docs');
     const optsCached = cache.get('dropdown_opts_v2');
     let docs = null;
-    if (docsCached) { try { docs = JSON.parse(docsCached); } catch(e) {} }
+    if (docsCached) { try { docs = JSON.parse(docsCached); } catch (e) {} }
     let opts = null;
-    if (optsCached) { try { opts = JSON.parse(optsCached); } catch(e) {} }
+    if (optsCached) { try { opts = JSON.parse(optsCached); } catch (e) {} }
 
-    // ── Cold path: read sheets not yet cached ─────────────────────────────────
-    if (!docs || !opts) {
-      const sheetMap = {};
-      ss.getSheets().forEach(s => { sheetMap[s.getName()] = s; });
-      if (!docs) {
-        const docSheet = sheetMap[DOCS_SHEET];
-        docs = docSheet ? _parseDocsSheet(docSheet) : [];
-      }
-      if (!opts) {
-        opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
-        const cfgSheet = sheetMap[CONFIG_SHEET] || initializeConfigSheet();
-        if (cfgSheet) {
-          const cfgData = cfgSheet.getDataRange().getValues();
+    // ── Cold path: read ONLY the sheets that are not yet cached ───────────
+    if (!docs) {
+      const docSheet = ss.getSheetByName(DOCS_SHEET);
+      docs = docSheet ? _parseDocsSheet(docSheet) : [];
+    }
+    if (!opts) {
+      opts = { docTypes: [], suppliers: [], offices: [], statuses: [], endUsers: [], docCategories: [], cashierStatuses: [] };
+      const cfgSheet = ss.getSheetByName(CONFIG_SHEET) || initializeConfigSheet();
+      if (cfgSheet) {
+        const lastRow = cfgSheet.getLastRow();
+        const lastCol = cfgSheet.getLastColumn();
+        if (lastRow > 1 && lastCol >= 1) {
+          const cfgData = cfgSheet.getRange(1, 1, lastRow, lastCol).getValues();
           for (let i = 1; i < cfgData.length; i++) {
             if (cfgData[i][0]) opts.docTypes.push(cfgData[i][0]);
             if (cfgData[i][1]) opts.suppliers.push(cfgData[i][1]);
@@ -1768,47 +1898,71 @@ function getInitialData(token) {
             if (cfgData[i][5]) opts.docCategories.push(cfgData[i][5]);
             if (cfgData[i][6]) opts.cashierStatuses.push(cfgData[i][6]);
           }
-          try { cache.put('dropdown_opts_v2', JSON.stringify(opts), 600); } catch(e) {}
         }
+        try { cache.put('dropdown_opts_v2', JSON.stringify(opts), CACHE_TTL_6H); } catch (e) {}
       }
     }
 
-    // ── Logs: fast path via cache, lazy fallback to getAllActivityLogs ─────────
+    // ── Logs: cache-only fast path (never blocks on cold sheet scan) ────────
     let logs = [];
     try {
       const lc = _cacheGet('all_activity_logs');
       if (lc) logs = JSON.parse(lc);
-    } catch(e) {}
-    if (!logs || !logs.length) {
-      logs = getAllActivityLogs();
-    }
+    } catch (e) {}
 
-    // ── Users list + directory: reuse usersData (already read or one lazy read) ──
-    let users = [];
-    let userDirectory = [];
-    // Ensure usersData is loaded — may still be null if user came from cache
-    if (!usersData) usersData = usersSheet.getDataRange().getValues();
-    for (let i = 1; i < usersData.length; i++) {
-      if (!usersData[i][0]) continue;
-      userDirectory.push({ email: String(usersData[i][0]).toLowerCase().trim(), name: usersData[i][3] || '' });
-      if (user.permissions && user.permissions.manageUsers) {
-        const rawPerms  = usersData[i][7] ? (() => { try { return JSON.parse(usersData[i][7]); } catch(e) { return null; } })() : null;
-        const basePerms = _getDefaultPermissions(usersData[i][2] || 'Staff');
-        if (rawPerms) Object.assign(basePerms, rawPerms);
-        users.push({
-          email:       usersData[i][0],
-          role:        usersData[i][2] || 'Staff',
-          name:        usersData[i][3] || '',
-          status:      usersData[i][6] || 'Active',
-          permissions: basePerms,
-          team:        String(usersData[i][10] || '').trim(),
-          createdAt:   usersData[i][8] ? String(usersData[i][8]).split('T')[0] : ''
-        });
+    // ── Users list + directory (from cache: <10ms) ──────────────────────────
+    const userBundle = _getUsersAndDirectory(ss, user);
+    const users = userBundle.users;
+    const userDirectory = userBundle.userDirectory;
+
+    const stats = _computeStatsGAS(docs, user ? user.team : '');
+    return { user, docs, opts, stats, logs, users, userDirectory };
+  } catch (e) {
+    Logger.log('_buildInitialData error: ' + e);
+    return null;
+  }
+}
+
+function getInitialData(token) {
+  try {
+    _doPostToken = token || _doPostToken;
+
+    // ── Validate session (fast CacheService path: <5ms) ───────────────────
+    const email = _validateSession(token);
+    if (!email) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+
+    // ── Warm-path user object cache (pre-warmed by checkLogin) ───────────
+    const cu_ck = 'cu_' + token.replace(/-/g, '').substring(0, 24);
+    let user = null;
+    try { const hit = CacheService.getScriptCache().get(cu_ck); if (hit) user = JSON.parse(hit); } catch (e) {}
+
+    const ss = _getSS();
+
+    // If user object cache missed (rare), resolve user from Users sheet
+    if (!user) {
+      const usersSheet = ss.getSheetByName(USERS_SHEET);
+      if (!usersSheet) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+      const lastRow = usersSheet.getLastRow();
+      const lastCol = usersSheet.getLastColumn();
+      if (lastRow > 1 && lastCol >= 1) {
+        const usersData = usersSheet.getRange(1, 1, lastRow, lastCol).getValues();
+        for (let i = 1; i < usersData.length; i++) {
+          if (String(usersData[i][0]).trim().toLowerCase() !== email.toLowerCase()) continue;
+          const role   = String(usersData[i][2] || 'Staff');
+          const status = String(usersData[i][6] || 'Active');
+          if (status.toLowerCase() === 'inactive') return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
+          const perms = _getDefaultPermissions(role);
+          try { const c = usersData[i][7] ? JSON.parse(usersData[i][7]) : null; if (c) Object.assign(perms, c); } catch (e) {}
+          user = { email: usersData[i][0], name: usersData[i][3] || 'User', role, status, permissions: perms, team: String(usersData[i][10] || '').trim() };
+          try { CacheService.getScriptCache().put(cu_ck, JSON.stringify(user), 3600); } catch (e) {}
+          break;
+        }
       }
     }
+    if (!user) return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
 
-    const stats = _computeStatsGAS(docs, user.team);
-    return { user, docs, opts, stats, logs, users, userDirectory };
+    const initialData = _buildInitialData(token, user, ss);
+    return initialData || { user, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[], cashierStatuses:[] }, stats: {}, logs: [], users: [] };
   } catch (e) {
     Logger.log('getInitialData error: ' + e);
     return { user: null, docs: [], opts: { docTypes:[], suppliers:[], offices:[], statuses:[], endUsers:[], docCategories:[] }, stats: {}, logs: [], users: [] };
@@ -1857,29 +2011,71 @@ function _computeStatsGAS(docs, userTeam) {
 }
 
 // Parse a document sheet into the standard docs array (extracted from getAllDocuments)
+// Parse a document sheet into the standard docs array (extracted from getAllDocuments)
 function _parseDocsSheet(sheet) {
-  const data = sheet.getDataRange().getValues();
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow <= 1 || lastCol < 1) return [];
+  const data = sheet.getRange(1, 1, lastRow, lastCol).getValues();
   if (data.length <= 1) return [];
+
   const headers   = data[0].map(h => h.toString().trim());
+  const numCols   = headers.length;
   const idCol     = headers.indexOf('ID/Barcode');
-  const tsColSet  = new Set(['Doc Time Stamp','PO Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
+  const dateCol   = headers.indexOf('Date Received');
+  const statusCol = headers.indexOf('Status');
+  const tsColSet  = new Set(['Doc Time Stamp','PO Time Stamp','Endorsement Time Stamp'].map(h => headers.indexOf(h)).filter(i => i !== -1));
   const seenIds   = new Set();
   const documents = [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+  const overdueOffsetMs = OVERDUE_THRESHOLD * 86400000;
+
   for (let i = 1; i < data.length; i++) {
-    const rowId = idCol !== -1 ? data[i][idCol] : data[i][0];
+    const row = data[i];
+    const rowId = idCol !== -1 ? row[idCol] : row[0];
     if (!rowId || rowId.toString().trim() === '') continue;
     const rowIdStr = String(rowId).trim();
     if (seenIds.has(rowIdStr)) continue;
     seenIds.add(rowIdStr);
+
     const doc = {};
-    for (let j = 0; j < headers.length; j++) {
-      const v = data[i][j];
+    for (let j = 0; j < numCols; j++) {
+      const v = row[j];
       doc[headers[j]] = (v instanceof Date) ? (tsColSet.has(j) ? _fmtTs(v) : _fmtDate(v)) : v;
     }
-    if (doc['Date Received']) doc['Overdue'] = calculateOverdueStatus(doc['Date Received'], doc['Status']);
+
+    // High-performance overdue calculation
+    const st = String(statusCol !== -1 ? row[statusCol] : (doc['Status'] || '')).toLowerCase().trim();
+    if (st.includes('forwarded') || st.includes('completed') || st.includes('complete')) {
+      doc['Overdue'] = 'On time';
+    } else {
+      const rcvd = dateCol !== -1 ? row[dateCol] : doc['Date Received'];
+      if (rcvd) {
+        let rMs = 0;
+        if (rcvd instanceof Date) {
+          rMs = rcvd.getTime();
+        } else {
+          const parsed = new Date(rcvd);
+          if (!isNaN(parsed.getTime())) rMs = parsed.getTime();
+        }
+        if (rMs > 0) {
+          const diffDays = Math.floor((todayMs - rMs - overdueOffsetMs) / 86400000);
+          doc['Overdue'] = diffDays > 0 ? `${diffDays} days` : 'On time';
+        } else {
+          doc['Overdue'] = 'On time';
+        }
+      } else {
+        doc['Overdue'] = 'On time';
+      }
+    }
+
     documents.push(doc);
   }
-  _cacheSet('all_docs', JSON.stringify(documents));
+  _cacheSet('all_docs', JSON.stringify(documents), CACHE_TTL_6H);
   return documents;
 }
 
