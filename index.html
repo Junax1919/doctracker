@@ -5190,7 +5190,7 @@
                 applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
               }
               _optimisticRenderOrSkeleton();
-              initDashboard();
+              initDashboard(1, true);
             }
           } else {
             showNotif('loginNotif', (r && r.message) || 'Invalid email or password', 'error');
@@ -5261,7 +5261,7 @@
                 applyPermissions(r.user.permissions || {}, r.user.role || 'Staff');
               }
               _optimisticRenderOrSkeleton();
-              initDashboard();
+              initDashboard(1, true);
             }
           } else {
             showNotif('loginNotif', r.message || 'Access denied', 'error');
@@ -5533,10 +5533,10 @@
     }
 
 
-    function initDashboard(attempt) {
+    function initDashboard(attempt, force) {
       // If _renderInitialData was already called (e.g. login returned initialData),
-      // allDocs is already populated — nothing to do here.
-      if (allDocs && allDocs.length > 0 && currentUser) return;
+      // allDocs is already populated — nothing to do here unless force refresh is requested.
+      if (!force && allDocs && allDocs.length > 0 && currentUser) return;
       attempt = attempt || 1;
       const MAX = 3;
       if (allDocs && allDocs.length === 0) _showSkeleton(15);
@@ -5545,7 +5545,7 @@
           if (result && result.user) {
             _renderInitialData(result);
           } else if (attempt < MAX) {
-            setTimeout(function() { initDashboard(attempt + 1); }, 1500 * attempt);
+            setTimeout(function() { initDashboard(attempt + 1, force); }, 1500 * attempt);
           } else {
             toast('Session expired. Please log in again.', 'error');
             setTimeout(function() { showView('login'); }, 2000);
@@ -5554,7 +5554,7 @@
         .withFailureHandler(function (err) {
           if (attempt < MAX) {
             // Silent retry with back-off
-            setTimeout(function() { initDashboard(attempt + 1); }, 1500 * attempt);
+            setTimeout(function() { initDashboard(attempt + 1, force); }, 1500 * attempt);
           } else {
             const msg = (err && err.message && err.message.toLowerCase().includes('busy'))
               ? 'Server is busy. '
@@ -5562,7 +5562,7 @@
             const tb = document.getElementById('docTable');
             if (tb && (!allDocs || allDocs.length === 0)) {
               tb.innerHTML = '<tr><td colspan="10" class="empty-state">' + msg +
-                '<a href="#" onclick="initDashboard();return false;" style="color:var(--accent);text-decoration:underline">Retry</a></td></tr>';
+                '<a href="#" onclick="initDashboard(1, true);return false;" style="color:var(--accent);text-decoration:underline">Retry</a></td></tr>';
             }
             toast(msg + 'Tap Retry to reload.', 'error');
           }
