@@ -2428,6 +2428,13 @@
       visibility: hidden
     }
 
+    .skel-box {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e2e8f0 50%, #f0f0f0 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 4px;
+    }
+
     /* ── Dashboard loader overlay (permanently disabled for instant loading) ── */
     #dashLoader {
       display: none !important;
@@ -4894,19 +4901,43 @@
         try { if (t) localStorage.setItem(SESSION_KEY, t); else localStorage.removeItem(SESSION_KEY); } catch (e) { }
       }
 
-      // Core fetch wrapper — calls the GAS Web App via POST
+      // Core fetch wrapper — calls the GAS Web App via POST with automatic retry for transient hiccups
       async function callGAS(method, args) {
         const body = { method, args: args || [], sessionToken: getSessionToken() };
-        const resp = await fetch(GAS_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(body)
-        });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const json = await resp.json();
-        if (json.error) throw new Error(json.error);
-        return json.result;
+        const maxRetries = (method === 'checkLogin' || method === 'checkSocialLogin') ? 2 : 1;
+        let lastErr;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const resp = await fetch(GAS_URL, {
+              method: 'POST',
+              mode: 'cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+              if ((resp.status === 429 || resp.status === 503 || resp.status === 502 || resp.status === 504) && attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                continue;
+              }
+              throw new Error('HTTP ' + resp.status);
+            }
+            const json = await resp.json();
+            if (json.error) {
+              if (json.error.toLowerCase().includes('busy') && attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                continue;
+              }
+              throw new Error(json.error);
+            }
+            return json.result;
+          } catch (err) {
+            lastErr = err;
+            if (attempt < maxRetries) {
+              await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
+          }
+        }
+        throw lastErr;
       }
 
       // After a successful login store the returned session token.
@@ -4989,6 +5020,55 @@
       try { localStorage.setItem('docutracker_all_docs', JSON.stringify(allDocs)); } catch (e) { }
     }
     let _docCreatorMap = {};
+    const _historyCache = new Map(); // Client-side in-memory cache for document activity history (0ms instant display)
+    try {
+      const _cachedHist = localStorage.getItem('docutracker_all_histories');
+      if (_cachedHist) {
+        const parsed = JSON.parse(_cachedHist);
+        Object.keys(parsed).forEach(k => _historyCache.set(k, parsed[k]));
+      }
+    } catch (e) {}
+
+    function _persistHistoryCache() {
+      try {
+        const obj = {};
+        _historyCache.forEach((v, k) => { obj[k] = v; });
+        localStorage.setItem('docutracker_all_histories', JSON.stringify(obj));
+      } catch (e) {}
+    }
+
+    const _preloadingDocIds = new Set();
+    function _preloadDocHistory(docId) {
+      if (!docId || _historyCache.has(docId) || _preloadingDocIds.has(docId)) return;
+      _preloadingDocIds.add(docId);
+      if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+      google.script.run
+        .withSuccessHandler(function(hist) {
+          _preloadingDocIds.delete(docId);
+          if (hist && hist.length) {
+            _historyCache.set(docId, hist);
+            _persistHistoryCache();
+          }
+        })
+        .withFailureHandler(function() {
+          _preloadingDocIds.delete(docId);
+        })
+        .getDocumentHistory(docId);
+    }
+
+    function _preloadAllHistories() {
+      if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+      google.script.run
+        .withSuccessHandler(function(historyMap) {
+          if (!historyMap || typeof historyMap !== 'object') return;
+          Object.keys(historyMap).forEach(k => {
+            _historyCache.set(k, historyMap[k]);
+          });
+          _persistHistoryCache();
+        })
+        .withFailureHandler(function() {})
+        .getAllDocumentHistories();
+    }
     // Per-browser session token (UUID issued by the backend on login).
     // Stored in localStorage so it persists across refreshes but is NEVER
     // shared between browsers/devices — each gets its own unique token.
@@ -5120,7 +5200,18 @@
         .withFailureHandler(function (err) {
           clearTimeout(_loginTimeout);
           console.error('Login error:', err);
-          showNotif('loginNotif', (err && err.message) ? err.message : 'Connection error. Please check your network and try again.', 'error');
+          let msg = 'Connection error. Please check your network and try again.';
+          if (err && err.message) {
+            const m = String(err.message).toLowerCase();
+            if (m.includes('failed to fetch') || m.includes('networkerror')) {
+              msg = 'Unable to connect to the server. Please check your internet connection and try again.';
+            } else if (m.includes('busy') || m.includes('503') || m.includes('429')) {
+              msg = 'Server is currently busy. Please wait a moment and try again.';
+            } else {
+              msg = err.message;
+            }
+          }
+          showNotif('loginNotif', msg, 'error');
           _resetLoginBtn();
         })
         .checkLogin(email, pwd);
@@ -5178,7 +5269,18 @@
           }
         }).withFailureHandler(e => {
           console.error('Social login error:', e);
-          showNotif('loginNotif', (e && e.message) ? e.message : 'An error occurred. Please try again.', 'error');
+          let msg = 'An error occurred. Please try again.';
+          if (e && e.message) {
+            const m = String(e.message).toLowerCase();
+            if (m.includes('failed to fetch') || m.includes('networkerror')) {
+              msg = 'Unable to connect to the server. Please check your internet connection and try again.';
+            } else if (m.includes('busy') || m.includes('503') || m.includes('429')) {
+              msg = 'Server is currently busy. Please wait a moment and try again.';
+            } else {
+              msg = e.message;
+            }
+          }
+          showNotif('loginNotif', msg, 'error');
           restoreBtn();
         }).checkSocialLogin(socialEmail.trim());
       };
@@ -5389,6 +5491,9 @@
         allLogs = result.logs;
         try { localStorage.setItem('docutracker_activity_logs', JSON.stringify(allLogs)); } catch (e) { }
         buildCreatorMap();
+      } else {
+        // Server skipped the slow log scan — fetch logs in background after render
+        setTimeout(_backgroundFetchLogs, 1200);
       }
       if (currentFilter === 'logs' || (document.getElementById('logsView') && document.getElementById('logsView').classList.contains('active'))) {
         applyLogFilters();
@@ -5405,19 +5510,61 @@
       _renderChunked(allDocs, currentFilter);
 
       _startRealtimeSync();
+      setTimeout(_preloadAllHistories, 400);
     }
 
-    function initDashboard() {
-      if (!allDocs || allDocs.length === 0) {
-        _showSkeleton(15);
-      }
+    // Background-fetch activity logs without blocking the dashboard render.
+    // Called when getInitialData returned an empty logs array (cold cache path).
+    function _backgroundFetchLogs() {
+      if (typeof google === 'undefined' || !google.script || !google.script.run) return;
       google.script.run
-        .withSuccessHandler(_renderInitialData)
-        .withFailureHandler(function () {
-          toast('Failed to load dashboard data', 'error');
-          const tb = document.getElementById('docTable');
-          if (tb && (!allDocs || allDocs.length === 0)) {
-            tb.innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load. Please refresh.</td></tr>';
+        .withSuccessHandler(function(logs) {
+          if (!logs || !logs.length) return;
+          allLogs = logs;
+          try { localStorage.setItem('docutracker_activity_logs', JSON.stringify(allLogs)); } catch(e) {}
+          buildCreatorMap();
+          // If the logs view is currently active, refresh it
+          if (currentFilter === 'logs' || (document.getElementById('logsView') && document.getElementById('logsView').classList.contains('active'))) {
+            applyLogFilters();
+          }
+        })
+        .withFailureHandler(function() { /* silently ignore — not critical */ })
+        .getAllActivityLogs();
+    }
+
+
+    function initDashboard(attempt) {
+      // If _renderInitialData was already called (e.g. login returned initialData),
+      // allDocs is already populated — nothing to do here.
+      if (allDocs && allDocs.length > 0 && currentUser) return;
+      attempt = attempt || 1;
+      const MAX = 3;
+      if (allDocs && allDocs.length === 0) _showSkeleton(15);
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.user) {
+            _renderInitialData(result);
+          } else if (attempt < MAX) {
+            setTimeout(function() { initDashboard(attempt + 1); }, 1500 * attempt);
+          } else {
+            toast('Session expired. Please log in again.', 'error');
+            setTimeout(function() { showView('login'); }, 2000);
+          }
+        })
+        .withFailureHandler(function (err) {
+          if (attempt < MAX) {
+            // Silent retry with back-off
+            setTimeout(function() { initDashboard(attempt + 1); }, 1500 * attempt);
+          } else {
+            const msg = (err && err.message && err.message.toLowerCase().includes('busy'))
+              ? 'Server is busy. '
+              : 'Unable to load data. ';
+            const tb = document.getElementById('docTable');
+            if (tb && (!allDocs || allDocs.length === 0)) {
+              tb.innerHTML = '<tr><td colspan="10" class="empty-state">' + msg +
+                '<a href="#" onclick="initDashboard();return false;" style="color:var(--accent);text-decoration:underline">Retry</a></td></tr>';
+            }
+            toast(msg + 'Tap Retry to reload.', 'error');
           }
         })
         .getInitialData(_sessionToken);
@@ -5988,7 +6135,7 @@
         const disp = k => visibleColumns[k] ? 'table-cell' : 'none';
         // Escape the id for safe inline use (ids contain only alphanumeric + hyphens, but be safe)
         const safeId = id.replace(/`/g, '').replace(/\\/g, '');
-        return `<tr ondblclick="viewDoc(\`${safeId}\`)" title="Double-click to view details">
+        return `<tr ondblclick="viewDoc(\`${safeId}\`)" onmouseenter="_preloadDocHistory(\`${safeId}\`)" title="Double-click to view details">
 <td class="col-overdue" style="display:${disp('overdue')}"><span style="color:${oc};font-weight:600">${ov}</span></td>
 <td class="col-id" style="display:${disp('id')}"><span class="doc-id">${id}</span></td>
 <td class="hide-mobile col-docTs" style="display:${disp('docTs')};font-family:monospace;font-size:12px;color:var(--muted)">${docTs}</td>
@@ -6023,7 +6170,7 @@
 <td class="hide-mobile col-checkNo" style="display:${disp('checkNo')}">${checkNo}</td>
 <td class="col-attachment" style="display:${disp('attachment')};text-align:center">${att}</td>
 <td onclick="event.stopPropagation()" style="cursor:default"><div class="table-actions">
-<button class="action-btn" title="View details" onclick='viewDoc(\`${safeId}\`)' style="color:var(--blue)">
+<button class="action-btn" title="View details" onclick='viewDoc(\`${safeId}\`)' onmouseenter='_preloadDocHistory(\`${safeId}\`)' style="color:var(--blue)">
   <span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
 ${(currentUser && currentUser.permissions && currentUser.permissions.editDoc !== false) ? `<button class="action-btn" title="Edit" onclick='editDoc(\`${safeId}\`)'><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>` : ''}
 ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !== false) ? `<button class="action-btn" title="Delete" onclick='deleteDoc(\`${safeId}\`)' style="color:var(--danger)"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>` : ''}
@@ -6123,10 +6270,20 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               <span class="material-symbols-outlined" style="font-size:15px">history</span>
               Document Activity Timeline
             </div>
-            <div id="viewAuditTrail" style="display:flex;flex-direction:column">
-              <div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px">
-                <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:.4">history</span>
-                Loading history…
+            <div id="viewAuditTrail" style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+              <div class="trail-item" style="padding-bottom:14px">
+                <div class="skel-box" style="width:20px;height:20px;border-radius:50%;flex-shrink:0"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                  <div class="skel-box" style="height:13px;width:70%"></div>
+                  <div class="skel-box" style="height:10px;width:45%"></div>
+                </div>
+              </div>
+              <div class="trail-item" style="padding-bottom:14px">
+                <div class="skel-box" style="width:20px;height:20px;border-radius:50%;flex-shrink:0"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                  <div class="skel-box" style="height:13px;width:60%"></div>
+                  <div class="skel-box" style="height:10px;width:40%"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -6255,7 +6412,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       `; // close view-right + view-layout
       showModal('viewModal');
 
-      // ── Load Audit Trail async (same approach as searchTrack) ──────────────
+      // ── Load Audit Trail async (cached in-memory for instant 0ms repeated views) ──
       const auditEl = document.getElementById('viewAuditTrail');
       const iconMap = {
         'created':    { icon: 'add_circle',   cls: 'created' },
@@ -6277,39 +6434,70 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         if (al.includes('deleted')) return iconMap['deleted'];
         return iconMap[sl] || { icon: 'update', cls: 'updated' };
       };
-      google.script.run
-        .withSuccessHandler(function(hist) {
-          if (!auditEl) return;
-          if (!hist || hist.length === 0) {
-            auditEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:12px;font-style:italic">No activity history recorded for this document.</div>';
-            return;
-          }
-          auditEl.innerHTML = hist.map(function(e) {
-            const { icon, cls } = _getTrailIcon(e.action, e.status);
-            return `
-              <div class="trail-item">
-                <div class="trail-dot ${cls}">
-                  <span class="material-symbols-outlined">${icon}</span>
+
+      function _renderAuditTrail(hist) {
+        if (!auditEl) return;
+        if (!hist || hist.length === 0) {
+          auditEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:12px;font-style:italic">No activity history recorded for this document.</div>';
+          return;
+        }
+        auditEl.innerHTML = hist.map(function(e) {
+          const { icon, cls } = _getTrailIcon(e.action, e.status);
+          return `
+            <div class="trail-item">
+              <div class="trail-dot ${cls}">
+                <span class="material-symbols-outlined">${icon}</span>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="trail-action">${e.action}</div>
+                <div class="trail-meta">
+                  <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">person</span> ${e.user || 'System'}<br>
+                  <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">schedule</span> ${e.timestamp}
+                  ${e.status ? `<br><span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">label</span> <strong>${e.status}</strong>` : ''}
                 </div>
-                <div style="flex:1;min-width:0">
-                  <div class="trail-action">${e.action}</div>
-                  <div class="trail-meta">
-                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">person</span> ${e.user || 'System'}<br>
-                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">schedule</span> ${e.timestamp}
-                    ${e.status ? `<br><span class="material-symbols-outlined" style="font-size:12px;vertical-align:-2px">label</span> <strong>${e.status}</strong>` : ''}
-                  </div>
-                  ${e.remarks ? `<div class="trail-remarks">${e.remarks}</div>` : ''}
-                </div>
-              </div>`;
-          }).join('');
-        })
-        .withFailureHandler(function() {
-          if (auditEl) auditEl.innerHTML = '<div style="color:var(--muted);font-size:12px;font-style:italic;padding:12px 0">Unable to load history.</div>';
-        })
-        .getDocumentHistory(id);
-    }
+                ${e.remarks ? `<div class="trail-remarks">${e.remarks}</div>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      function _loadAuditTrail(docId, retries, isBackground) {
+        google.script.run
+          .withSuccessHandler(function(hist) {
+            const newHist = hist || [];
+            const prev = _historyCache.get(docId);
+            _historyCache.set(docId, newHist);
+            _persistHistoryCache();
+            if (!auditEl || viewingDocId !== docId) return;
+            if (!isBackground || JSON.stringify(prev) !== JSON.stringify(newHist)) {
+              _renderAuditTrail(newHist);
+            }
+          })
+          .withFailureHandler(function() {
+            if (isBackground) return;
+            if (!auditEl || viewingDocId !== docId) return;
+            if (retries > 0) {
+              auditEl.innerHTML = '<div style="color:var(--muted);font-size:12px;font-style:italic;padding:12px 0;text-align:center">Retrying…</div>';
+              setTimeout(() => _loadAuditTrail(docId, retries - 1, false), 1500);
+            } else {
+              auditEl.innerHTML = '<div style="color:var(--muted);font-size:12px;font-style:italic;padding:12px 0">Unable to load history.</div>';
+            }
+          })
+          .getDocumentHistory(docId);
+      }
+
+      if (_historyCache.has(id)) {
+        // Instant display from cache (0ms)
+        _renderAuditTrail(_historyCache.get(id));
+        // Silent background check for updates
+        _loadAuditTrail(id, 0, true);
+      } else {
+        _loadAuditTrail(id, 2, false);
+      }
+    } // end viewDoc
 
     function closeViewModal() { hideModal('viewModal'); viewingDocId = null; }
+
 
     function editDocFromView() {
       // Capture the id BEFORE closing the modal — closeViewModal() sets viewingDocId = null
@@ -6741,6 +6929,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
               } else {
                 toast('Updated!');
               }
+              try { _historyCache.delete(id); _persistHistoryCache(); } catch (e) {}
               // Reflect updated per-field ownership in local allDocs so the next editDoc() call is correct
               if (idx !== -1 && r.fieldOwners) {
                 allDocs[idx]['Field Owners'] = JSON.stringify(r.fieldOwners);
@@ -6899,6 +7088,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
             if (r.status === 'success') {
               // Remove from local store instantly
               allDocs = allDocs.filter(d => d['ID/Barcode'] !== id);
+              try { _historyCache.delete(id); _persistHistoryCache(); } catch (e) {}
               toast('Deleted!');
               populateTableFilters();
               applyFilter(currentFilter);
@@ -7096,34 +7286,66 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const query = document.getElementById('trackInput').value.trim();
       if (!query) { toast('Enter a Document ID or Doc No', 'error'); return; }
       const r = document.getElementById('trackResults');
-      r.innerHTML = '<div class="loading">Searching...</div>';
 
-      // Try by ID/Barcode first (backend), then fallback to Doc No in allDocs
-      google.script.run
-        .withSuccessHandler(doc => {
-          if (doc) {
-            // Found by ID/Barcode
-            google.script.run
-              .withSuccessHandler(hist => displayHistory(doc, hist))
-              .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history.</p></div>'; })
-              .getDocumentHistory(doc['ID/Barcode'] || query);
-          } else {
-            // Fallback: search by Doc No in already-loaded allDocs
-            const byDocNo = allDocs.find(d => (d['Doc No'] || '').toLowerCase() === query.toLowerCase());
-            if (byDocNo) {
-              const docId = byDocNo['ID/Barcode'];
-              google.script.run
-                .withSuccessHandler(hist => displayHistory(byDocNo, hist))
-                .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Error loading history.</p></div>'; })
-                .getDocumentHistory(docId);
+      // ── Step 1: resolve the document entirely client-side (zero GAS calls) ──
+      // Try exact ID/Barcode match first, then case-insensitive Doc No match.
+      const docById  = allDocs.find(d => (d['ID/Barcode'] || '').trim() === query.trim());
+      const docByNo  = !docById && allDocs.find(d => (d['Doc No'] || '').toLowerCase() === query.toLowerCase());
+      const localDoc = docById || docByNo;
+
+      function _loadHistory(doc, retries) {
+        const docId = doc['ID/Barcode'];
+        if (_historyCache.has(docId)) {
+          displayHistory(doc, _historyCache.get(docId));
+          // Silent background check to ensure fresh timeline
+          google.script.run
+            .withSuccessHandler(hist => {
+              if (hist && hist.length) {
+                _historyCache.set(docId, hist);
+                _persistHistoryCache();
+                displayHistory(doc, hist);
+              }
+            })
+            .getDocumentHistory(docId);
+          return;
+        }
+        // Show document card immediately with skeleton timeline while history loads
+        displayHistory(doc, null);
+        google.script.run
+          .withSuccessHandler(hist => {
+            _historyCache.set(docId, hist || []);
+            _persistHistoryCache();
+            displayHistory(doc, hist || []);
+          })
+          .withFailureHandler(() => {
+            if (retries > 0) {
+              setTimeout(() => _loadHistory(doc, retries - 1), 1500);
+            } else {
+              displayHistory(doc, 'error');
+            }
+          })
+          .getDocumentHistory(docId);
+      }
+
+      if (localDoc) {
+        // Document found locally — skip getDocumentById and go straight to history
+        _loadHistory(localDoc, 2);
+      } else {
+        // Not in allDocs — may be a very fresh document; fall back to backend lookup
+        r.innerHTML = '<div class="loading">Searching...</div>';
+        google.script.run
+          .withSuccessHandler(doc => {
+            if (doc) {
+              _loadHistory(doc, 2);
             } else {
               r.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined" style="font-size:60px;opacity:.2;display:block;margin-bottom:16px">search_off</span><p>No document found for: <strong>${query}</strong></p><p style="font-size:13px;margin-top:8px;color:var(--muted)">Try searching by Document ID (e.g. DOC-20251017-1234) or Doc No.</p></div>`;
             }
-          }
-        })
-        .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Connection error. Please try again.</p></div>'; })
-        .getDocumentById(query);
+          })
+          .withFailureHandler(() => { r.innerHTML = '<div class="empty-state"><p>Connection error. Please try again.</p></div>'; })
+          .getDocumentById(query);
+      }
     }
+
 
     function displayHistory(doc, hist) {
       const r = document.getElementById('trackResults');
@@ -7163,7 +7385,27 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         <div class="timeline-container">
           <div class="timeline-header"><span class="material-symbols-outlined">history</span>Document Activity Timeline</div>`;
 
-      if (!hist || hist.length === 0) {
+      if (hist === null) {
+        h += `
+          <div style="display:flex;flex-direction:column;gap:14px;padding:12px 0">
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div class="skel-box" style="width:22px;height:22px;border-radius:50%;flex-shrink:0"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                <div class="skel-box" style="height:14px;width:35%"></div>
+                <div class="skel-box" style="height:12px;width:55%"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div class="skel-box" style="width:22px;height:22px;border-radius:50%;flex-shrink:0"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                <div class="skel-box" style="height:14px;width:30%"></div>
+                <div class="skel-box" style="height:12px;width:50%"></div>
+              </div>
+            </div>
+          </div>`;
+      } else if (hist === 'error') {
+        h += `<div class="empty-state"><p style="color:var(--danger)">Error loading history. Please try again.</p></div>`;
+      } else if (!hist || hist.length === 0) {
         h += `<div class="empty-state"><p>No activity history recorded for this document.</p><p style="font-size:13px;margin-top:8px;color:var(--muted)">History is logged automatically on every Create or Update action.</p></div>`;
       } else {
         // Status-to-icon mapping
