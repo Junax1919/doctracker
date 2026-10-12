@@ -2403,6 +2403,18 @@
       white-space: normal;
       word-break: break-word
     }
+    /* Sort indicators for preview table headers */
+    .print-table th[data-psort]::after {
+      content: ' \25B2'; /* ▲ asc */
+      font-size: 9px;
+      opacity: 0.9;
+    }
+    .print-table th[data-psort="desc"]::after {
+      content: ' \25BC'; /* ▼ desc */
+    }
+    .print-table thead th:hover {
+      background: #1e293b;
+    }
 
     /* ── Skeleton shimmer for fast perceived load ── */
     @keyframes shimmer {
@@ -8132,20 +8144,21 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const dfMs = dfRaw ? new Date(dfRaw + 'T00:00:00').getTime() : null;
       const dtMs = dtRaw ? new Date(dtRaw + 'T23:59:59').getTime() : null;
 
-      // Helper: parse a doc's Date Received field to a timestamp (handles Date objects,
+      // Helper: parse a doc date field to a timestamp (handles Date objects,
       // dd-MMM-yy, ISO strings, 'YYYY-MM-DD', and other formats)
-      function parseDateReceived(val) {
+      function parseDocDate(val) {
         const dt = _parseDateSafe(val);
         return dt ? dt.getTime() : null;
       }
 
       let result = [...allDocs];
 
-      // 1. Date filter — only apply when the user has actually set a date value
+      // 1. Date filter — applies to Doc/PR Date field ('PR Date'), not Date Received.
+      // Only active when the user has actually set a date value.
       if (dfMs !== null || dtMs !== null) {
         result = result.filter(x => {
-          const ms = parseDateReceived(x['Date Received']);
-          if (ms === null) return true; // docs with no date pass through (don't exclude)
+          const ms = parseDocDate(x['PR Date']);
+          if (ms === null) return true; // docs with no PR Date pass through
           if (dfMs !== null && ms < dfMs) return false;
           if (dtMs !== null && ms > dtMs) return false;
           return true;
@@ -9041,6 +9054,74 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       }).join('');
     }
 
+    // ── Preview sort state ─────────────────────────────────────────────────────
+    // Tracks sort direction per column index, per table (identified by its DOM reference).
+    const _previewSortState = new WeakMap(); // table → { col: number, dir: 'asc'|'desc' }
+
+    // Sort a preview table in-DOM by column index — no server round-trip, no re-render.
+    function _sortPreviewTable(table, colIdx) {
+      const state = _previewSortState.get(table) || { col: -1, dir: 'asc' };
+      const dir = (state.col === colIdx && state.dir === 'asc') ? 'desc' : 'asc';
+      _previewSortState.set(table, { col: colIdx, dir });
+
+      // Update header indicators
+      const ths = table.querySelectorAll('thead th');
+      ths.forEach((th, i) => {
+        th.removeAttribute('data-psort');
+        if (i === colIdx) th.setAttribute('data-psort', dir);
+      });
+
+      // Collect, sort, and re-insert tbody rows (skip grand-total / section rows)
+      const tbodies = table.querySelectorAll('tbody');
+      tbodies.forEach(tbody => {
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => {
+          // Skip summary/total rows (bold background rows used in reports)
+          return !r.style.fontWeight && !r.classList.contains('grand-total') &&
+                 !r.querySelector('td[colspan]');
+        });
+        const totalRows = Array.from(tbody.querySelectorAll('tr')).filter(r =>
+          r.style.fontWeight || r.classList.contains('grand-total') ||
+          r.querySelector('td[colspan]')
+        );
+
+        rows.sort((a, b) => {
+          const ac = a.cells[colIdx], bc = b.cells[colIdx];
+          if (!ac || !bc) return 0;
+          let av = ac.textContent.trim(), bv = bc.textContent.trim();
+          // Numeric sort: strip currency/comma formatting
+          const an = parseFloat(av.replace(/[^0-9.-]/g, ''));
+          const bn = parseFloat(bv.replace(/[^0-9.-]/g, ''));
+          let cmp;
+          if (!isNaN(an) && !isNaN(bn)) {
+            cmp = an - bn;
+          } else {
+            // Date sort: try to parse; fall back to string
+            const ad = _parseDateSafe(av), bd = _parseDateSafe(bv);
+            if (ad && bd) {
+              cmp = ad.getTime() - bd.getTime();
+            } else {
+              cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+            }
+          }
+          return dir === 'asc' ? cmp : -cmp;
+        });
+
+        // Re-insert sorted rows then total rows at the bottom
+        [...rows, ...totalRows].forEach(r => tbody.appendChild(r));
+      });
+    }
+
+    // Wire click-to-sort onto every <th> inside .print-table elements in the preview div.
+    function _wirePreviewSort(previewEl) {
+      previewEl.querySelectorAll('table.print-table').forEach(table => {
+        table.querySelectorAll('thead th').forEach((th, idx) => {
+          th.style.cursor = 'pointer';
+          th.title = 'Click to sort';
+          th.addEventListener('click', function() { _sortPreviewTable(table, idx); });
+        });
+      });
+    }
+
     function generatePreview() {
       const type = document.getElementById('reportType').value, data = getPrintFilteredData();
       let h = '';
@@ -9060,6 +9141,8 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const prev = document.getElementById('reportPreview');
       prev.innerHTML = h;
       prev.classList.add('show');
+      // Wire sortable column headers after content is in the DOM
+      _wirePreviewSort(prev);
       prev.scrollIntoView({ behavior: 'smooth' });
     }
 
