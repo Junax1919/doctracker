@@ -1302,6 +1302,20 @@
       min-height: 100px
     }
 
+    /* ---- Required field left empty (highlighted on Save) ---- */
+    .form-input.field-missing,
+    .form-select.field-missing {
+      border-color: var(--danger);
+      background-color: #fef2f2;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, .15)
+    }
+
+    .form-input.field-missing:focus,
+    .form-select.field-missing:focus {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, .25)
+    }
+
     .modal-footer {
       padding: 16px 24px;
       border-top: 1px solid var(--border);
@@ -6666,9 +6680,10 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const ptsEl = document.getElementById('poTimeStamp'); if (ptsEl) ptsEl.value = '(set when PO No. is first saved)';
       const etsEl = document.getElementById('endorsementTimeStamp'); if (etsEl) etsEl.value = '(set when Office/Department is saved)';
       removeFile();
+      _clearMissingHighlights();
       showModal('docModal');
     }
-    function closeModal() { _unlockAllEditFields(); hideModal('docModal'); }
+    function closeModal() { _unlockAllEditFields(); _clearMissingHighlights(); hideModal('docModal'); }
     function editDoc(id) {
       const doc = allDocs.find(d => d['ID/Barcode'] === id);
       if (!doc) { toast('Document not found', 'error'); return; }
@@ -6789,6 +6804,7 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
         _addBadge(FIELD_ELS[col], owner);
       });
 
+      _clearMissingHighlights();
       showModal('docModal');
     }
 
@@ -6835,6 +6851,36 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     }
     function _clearFieldError(elId) { _showFieldError(elId, ''); }
 
+    // ── Required-field highlighting ──────────────────────────────────────────
+    function _clearMissingHighlights() {
+      document.querySelectorAll('#docModal .field-missing').forEach(el => el.classList.remove('field-missing'));
+    }
+    function _highlightMissingFields(ids) {
+      let first = null;
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('field-missing');
+        if (!first) first = el;
+      });
+      if (!first) return;
+      // Bring the first empty field into view inside the scrolling modal, then focus it
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
+      toast('Please fill in the highlighted required fields.', 'error');
+    }
+    // Remove a field's highlight as soon as the user fills it in
+    (function () {
+      const modal = document.getElementById('docModal');
+      if (!modal) return;
+      const clearIfFilled = e => {
+        const t = e.target;
+        if (t && t.classList && t.classList.contains('field-missing') && t.value) t.classList.remove('field-missing');
+      };
+      modal.addEventListener('input', clearIfFilled);
+      modal.addEventListener('change', clearIfFilled);
+    })();
+
     function saveDoc() {
       const currentId = isEdit ? (document.getElementById('editId').value || '') : '';
       const docNo = document.getElementById('docNo').value.trim();
@@ -6852,8 +6898,18 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
       const desc = document.getElementById('desc').value;
       const office = document.getElementById('office').value;
       const docCategory = document.getElementById('docCategory') ? document.getElementById('docCategory').value : '';
-      if (!docType || !docNo || !docCategory || !desc || !prDate || !endUser || !office) {
-        showAlertModal('Required Fields Missing', 'Please fill in all required fields:<br><br><strong>Document Type, Doc/PR Number, Document Category, Description, Doc/PR Date, End User,</strong> and <strong>Office/Department (Endorsed To)</strong>.', 'error');
+      // Highlight every required field left empty (listed in on-screen order)
+      _clearMissingHighlights();
+      const missing = [];
+      if (!docType) missing.push('docType');
+      if (!docNo) missing.push('docNo');
+      if (!docCategory) missing.push('docCategory');
+      if (!desc) missing.push('desc');
+      if (!prDate) missing.push('prDate');
+      if (!endUser) missing.push('endUser');
+      if (!office) missing.push('office');
+      if (missing.length) {
+        _highlightMissingFields(missing);
         return;
       }
 
