@@ -6812,15 +6812,16 @@ ${(currentUser && currentUser.permissions && currentUser.permissions.deleteDoc !
     }
     // ── Duplicate-check helpers ──────────────────────────────────────────────
     // Returns true if value is already used by another document in allDocs.
+    // String() coercion: Sheets stores numeric-looking Doc/PO numbers as numbers, which have no .trim().
     function _isDuplicateDocNo(value, currentId) {
       if (!value) return false;
       const v = value.trim().toLowerCase();
-      return allDocs.some(d => d['Doc No'] && d['Doc No'].trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
+      return allDocs.some(d => d['Doc No'] && String(d['Doc No']).trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
     }
     function _isDuplicatePoNo(value, currentId) {
       if (!value) return false;
       const v = value.trim().toLowerCase();
-      return allDocs.some(d => d['PO No'] && d['PO No'].trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
+      return allDocs.some(d => d['PO No'] && String(d['PO No']).trim().toLowerCase() === v && d['ID/Barcode'] !== currentId);
     }
 
     function _showFieldError(elId, msg) {
